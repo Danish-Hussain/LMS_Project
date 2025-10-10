@@ -1,0 +1,164 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id        String   @id @default(cuid())
+  email     String   @unique
+  name      String
+  password  String
+  role      Role     @default(STUDENT)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  // Relations
+  enrollments Enrollment[]
+  batches     Batch[]      @relation("BatchStudents")
+  createdCourses Course[]  @relation("CourseCreator")
+  progress    Progress[]
+  payments    Payment[]
+
+  @@map("users")
+}
+
+model Course {
+  id          String   @id @default(cuid())
+  title       String
+  description String?
+  thumbnail   String?
+  price       Float?   // Course price
+  isPublished Boolean  @default(false)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+  creatorId   String
+
+  // Relations
+  creator     User         @relation("CourseCreator", fields: [creatorId], references: [id])
+  sessions    Session[]
+  enrollments Enrollment[]
+  batches     Batch[]
+  payments    Payment[]
+
+  @@map("courses")
+}
+
+model Session {
+  id          String   @id @default(cuid())
+  title       String
+  description String?
+  videoUrl    String
+  duration    Int?     // in minutes
+  // Optional scheduled timing for this session
+  startTime   DateTime?
+  endTime     DateTime?
+  order       Int
+  isPublished Boolean  @default(false)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+  courseId    String
+  batchId     String   // Session belongs to a specific batch
+
+  // Relations
+  course   Course    @relation(fields: [courseId], references: [id], onDelete: Cascade)
+  batch    Batch     @relation(fields: [batchId], references: [id], onDelete: Cascade)
+  progress Progress[]
+
+  @@map("sessions")
+}
+
+model Batch {
+  id          String   @id @default(cuid())
+  name        String
+  description String?
+  startDate   DateTime
+  endDate     DateTime?
+  isActive    Boolean  @default(true)
+  courseId    String   // Batch belongs to a specific course
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  // Relations
+  course      Course       @relation(fields: [courseId], references: [id], onDelete: Cascade)
+  students    User[]       @relation("BatchStudents")
+  enrollments Enrollment[]
+  sessions    Session[]
+  payments    Payment[]
+
+  @@map("batches")
+}
+
+model Enrollment {
+  id         String   @id @default(cuid())
+  userId     String
+  courseId   String
+  batchId    String
+  isPaid     Boolean  @default(false)
+  paymentId  String?
+  enrolledAt DateTime @default(now())
+
+  // Relations
+  user   User   @relation(fields: [userId], references: [id])
+  course Course @relation(fields: [courseId], references: [id])
+  batch  Batch  @relation(fields: [batchId], references: [id])
+
+  @@unique([userId, courseId, batchId])
+  @@map("enrollments")
+}
+
+model Progress {
+  id          String   @id @default(cuid())
+  userId      String
+  sessionId   String
+  completed   Boolean  @default(false)
+  watchedTime Int      @default(0) // in seconds
+  completedAt DateTime?
+  updatedAt   DateTime @updatedAt
+
+  // Relations
+  user    User    @relation(fields: [userId], references: [id])
+  session Session @relation(fields: [sessionId], references: [id])
+
+  @@unique([userId, sessionId])
+  @@map("progress")
+}
+
+model Payment {
+  id          String   @id @default(cuid())
+  userId      String
+  courseId    String
+  batchId     String
+  amount      Float
+  status      PaymentStatus @default(PENDING)
+  paymentMethod String?
+  transactionId String?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  // Relations
+  user   User   @relation(fields: [userId], references: [id])
+  course Course @relation(fields: [courseId], references: [id])
+  batch  Batch  @relation(fields: [batchId], references: [id])
+
+  @@map("payments")
+}
+
+enum Role {
+  ADMIN
+  INSTRUCTOR
+  STUDENT
+}
+
+enum PaymentStatus {
+  PENDING
+  COMPLETED
+  FAILED
+  REFUNDED
+}
