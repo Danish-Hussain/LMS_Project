@@ -23,9 +23,9 @@ export default function RootLayout({
         <AuthProvider>
           <ToastProvider>
             <Navbar />
-            <div className="pt-14 w-full max-w-[1920px] mx-auto">
+            <main className="pt-14 flex-1 w-full max-w-[1920px] mx-auto px-4 sm:px-6">
               {children}
-            </div>
+            </main>
           </ToastProvider>
         </AuthProvider>
       </body>

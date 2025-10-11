@@ -98,8 +98,8 @@ export default function CreateSessionPage() {
 
       if (response.ok) {
         const created = await response.json()
-        // redirect back to sessions listing and pass created id + section for UI highlight
-        router.push(`/batches/${batchId}/sessions?createdSessionId=${created.id}&sectionId=${created.sectionId || ''}`)
+        // Redirect to edit page so user can immediately fine-tune the created session
+        router.push(`/batches/${batchId}/sessions/${created.id}/edit`)
       } else {
         const errorData = await response.json()
         setError(errorData.error || 'Failed to create session')

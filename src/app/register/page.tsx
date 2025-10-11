@@ -1,14 +1,21 @@
-'use client'
+ 'use client'
 
 import { useState } from 'react'
 import { useAuth } from '@/contexts/AuthContext'
 import { useRouter } from 'next/navigation'
 import Link from 'next/link'
 import { BookOpen, Eye, EyeOff } from 'lucide-react'
-// import { Role } from '@prisma/client'
+// Local Role type to match Prisma enum values
+type Role = 'ADMIN' | 'INSTRUCTOR' | 'STUDENT'
 
 export default function RegisterPage() {
-  const [formData, setFormData] = useState({
+  const [formData, setFormData] = useState<{
+    name: string
+    email: string
+    password: string
+    confirmPassword: string
+    role: Role
+  }>({
     name: '',
     email: '',
     password: '',
@@ -50,7 +57,7 @@ export default function RegisterPage() {
         formData.email,
         formData.password,
         formData.name,
-        formData.role
+        formData.role as any
       )
       if (success) {
         router.push('/dashboard')

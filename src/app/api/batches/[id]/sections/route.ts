@@ -4,7 +4,7 @@ import { verifyToken } from '@/lib/auth'
 
 export async function GET(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  context: { params: any }
 ) {
   try {
     const token = request.cookies.get('auth-token')?.value
@@ -23,9 +23,11 @@ export async function GET(
       )
     }
 
+    const { id } = await context.params
+
     const sections = await prisma.courseSection.findMany({
       where: {
-        batchId: params.id
+        batchId: id
       },
       include: {
         sessions: {
@@ -50,7 +52,7 @@ export async function GET(
 
 export async function POST(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  context: { params: any }
 ) {
   try {
     const token = request.cookies.get('auth-token')?.value
@@ -78,8 +80,10 @@ export async function POST(
       )
     }
 
-    const body = await request.json()
-    const { title, description, courseId } = body
+  const { id } = await context.params
+
+  const body = await request.json()
+  const { title, description, courseId } = body
 
     console.log('Received body:', body)
 
@@ -98,9 +102,11 @@ export async function POST(
     }
 
     // Verify that the batch exists and belongs to the course
-    const batch = await prisma.batch.findUnique({
+    // Verify that the batch exists and belongs to the course
+    // use findFirst since the composite lookup above was invalid for findUnique
+    const batch = await prisma.batch.findFirst({
       where: {
-        id: params.id,
+        id,
         courseId: courseId
       }
     })
@@ -114,7 +120,7 @@ export async function POST(
 
     // Get the highest order number
     const lastSection = await prisma.courseSection.findFirst({
-      where: { batchId: params.id },
+      where: { batchId: id },
       orderBy: { order: 'desc' },
       select: { order: true }
     })
@@ -124,7 +130,7 @@ export async function POST(
       data: {
         title,
         description,
-        batchId: params.id,
+        batchId: id,
         courseId,
         order: (lastSection?.order ?? 0) + 1
       },
@@ -145,7 +151,7 @@ export async function POST(
 
 export async function PUT(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  context: { params: any }
 ) {
   try {
     const token = request.cookies.get('auth-token')?.value
@@ -164,8 +170,10 @@ export async function PUT(
       )
     }
 
-    const body = await request.json()
-    const { sections } = body
+  const { id } = await context.params
+
+  const body = await request.json()
+  const { sections } = body
 
     if (!Array.isArray(sections)) {
       return NextResponse.json(

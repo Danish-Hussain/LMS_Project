@@ -1,7 +1,10 @@
 'use client'
 
 import React, { createContext, useContext, useEffect, useState } from 'react'
-import { Role } from '@prisma/client'
+import { useRouter } from 'next/navigation'
+
+// Local Role type to avoid importing Prisma types in client bundle
+export type Role = 'ADMIN' | 'INSTRUCTOR' | 'STUDENT'
 
 export interface User {
   id: string
@@ -23,6 +26,7 @@ const AuthContext = createContext<AuthContextType | undefined>(undefined)
 export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [user, setUser] = useState<User | null>(null)
   const [loading, setLoading] = useState(true)
+  const router = useRouter()
 
   useEffect(() => {
     checkAuth()
@@ -86,6 +90,12 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     try {
       await fetch('/api/auth/logout', { method: 'POST' })
       setUser(null)
+      // Redirect to home screen after logout
+      try {
+        router.push('/')
+      } catch (e) {
+        // noop
+      }
     } catch (error) {
       console.error('Logout failed:', error)
     }

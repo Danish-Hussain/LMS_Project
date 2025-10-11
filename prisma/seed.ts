@@ -52,7 +52,7 @@ async function main() {
     update: {},
     create: {
       id: 'sample-batch',
-      title: 'Sample Batch',
+      name: 'Sample Batch',
       courseId: course.id,
       startDate: new Date(),
       endDate: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000) // 30 days from now

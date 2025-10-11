@@ -5,7 +5,7 @@ import { verifyToken } from '@/lib/auth'
 
 export async function GET(
   request: Request,
-  { params }: { params: Promise<{ id: string }> }
+  context: { params: any }
 ) {
   try {
     const cookieStore = await cookies()
@@ -21,7 +21,7 @@ export async function GET(
       return new NextResponse("Unauthorized", { status: 401 })
     }
 
-    const { id } = await params
+  const { id } = await context.params
 
     const sessions = await prisma.session.findMany({
       where: {
@@ -58,7 +58,7 @@ export async function GET(
 
 export async function POST(
   request: Request,
-  { params }: { params: { id: string } }
+  context: { params: any }
 ) {
   try {
     const cookieStore = await cookies()
@@ -75,7 +75,7 @@ export async function POST(
     }
 
     const { title, description, videoUrl, duration, sectionId } = await request.json()
-    const { id } = await params
+  const { id } = await context.params
 
     // Ensure batch exists and get courseId for required relation
     const batch = await prisma.batch.findUnique({ where: { id } })

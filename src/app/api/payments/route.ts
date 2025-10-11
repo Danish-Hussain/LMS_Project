@@ -42,11 +42,10 @@ export async function POST(request: NextRequest) {
       data: {
         userId: user.id,
         courseId,
-        batchId,
+        enrollmentId: '', // enrollmentId will be set after creating enrollment
         amount,
         status: 'COMPLETED', // Simulate successful payment
-        paymentMethod,
-        transactionId
+        method: paymentMethod
       }
     })
 
@@ -55,10 +54,15 @@ export async function POST(request: NextRequest) {
       data: {
         userId: user.id,
         courseId,
-        batchId,
-        isPaid: true,
-        paymentId: payment.id
+        batchId: batchId || '',
+        status: 'APPROVED'
       }
+    })
+
+    // link payment to enrollment
+    await prisma.payment.update({
+      where: { id: payment.id },
+      data: { enrollmentId: enrollment.id }
     })
 
     return NextResponse.json({
@@ -102,19 +106,13 @@ export async function GET(request: NextRequest) {
       },
       include: {
         course: {
-          select: {
-            title: true
-          }
+          select: { title: true }
         },
-        batch: {
-          select: {
-            name: true
-          }
+        enrollment: {
+          select: { id: true }
         }
       },
-      orderBy: {
-        createdAt: 'desc'
-      }
+      orderBy: { createdAt: 'desc' }
     })
 
     return NextResponse.json(payments)

@@ -4,7 +4,7 @@ import { verifyToken } from '@/lib/auth'
 
 export async function GET(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  context: { params: any }
 ) {
   try {
     const { searchParams } = new URL(request.url)
@@ -17,9 +17,10 @@ export async function GET(
       )
     }
 
+    const { id } = await context.params
     const sections = await prisma.courseSection.findMany({
       where: {
-        courseId: params.id,
+        courseId: id,
         batchId: batchId
       },
       include: {
@@ -46,7 +47,7 @@ export async function GET(
 
 export async function POST(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  context: { params: any }
 ) {
   try {
     const token = request.cookies.get('auth-token')?.value
@@ -78,9 +79,10 @@ export async function POST(
     }
 
     // Get the highest order number
+    const { id } = await context.params
     const lastSection = await prisma.courseSection.findFirst({
       where: {
-        courseId: params.id,
+        courseId: id,
         batchId: batchId
       },
       orderBy: {
@@ -95,7 +97,7 @@ export async function POST(
         title,
         description,
         order,
-        courseId: params.id,
+        courseId: id,
         batchId
       },
       include: {

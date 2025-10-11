@@ -5,7 +5,7 @@ import { cookies } from 'next/headers'
 
 export async function GET(
   request: NextRequest,
-  { params }: { params: Promise<{ id: string }> }
+  context: { params: any }
 ) {
   try {
     const cookieStore = await cookies()
@@ -27,7 +27,7 @@ export async function GET(
       )
     }
 
-    const { id: sessionId } = await params
+  const { id: sessionId } = await context.params
 
     const session = await prisma.session.findUnique({
       where: { id: sessionId },
@@ -63,7 +63,7 @@ export async function GET(
 
 export async function PUT(
   request: NextRequest,
-  { params }: { params: Promise<{ id: string }> }
+  context: { params: any }
 ) {
   try {
     const cookieStore = await cookies()
@@ -85,7 +85,7 @@ export async function PUT(
       )
     }
 
-    const { id: sessionId } = await params
+  const { id: sessionId } = await context.params
     const body = await request.json()
 
     const session = await prisma.session.findUnique({
@@ -125,7 +125,7 @@ export async function PUT(
 
 export async function DELETE(
   request: NextRequest,
-  { params }: { params: Promise<{ id: string }> }
+  context: { params: any }
 ) {
   try {
     const cookieStore = await cookies()
@@ -147,7 +147,7 @@ export async function DELETE(
       )
     }
 
-    const { id: sessionId } = await params
+  const { id: sessionId } = await context.params
 
     const session = await prisma.session.findUnique({
       where: { id: sessionId }

@@ -36,6 +36,7 @@ export function SectionList({ batchId, isInstructor = false, onEditSection, onDe
   const [expandedSections, setExpandedSections] = useState<Set<string>>(new Set())
   const [isLoading, setIsLoading] = useState(true)
   const [activeSessionId, setActiveSessionId] = useState<string | null>(null)
+  const [grabbedId, setGrabbedId] = useState<string | null>(null)
   const [inFlight, setInFlight] = useState<Set<string>>(new Set())
   const pendingDeletes = useRef<Map<string, { session: Session; timeoutId: ReturnType<typeof setTimeout> }>>(new Map())
   // site-wide toast helpers
@@ -196,6 +197,14 @@ export function SectionList({ batchId, isInstructor = false, onEditSection, onDe
   const handleDragStart = (e: React.DragEvent, sessionId: string, sectionId: string) => {
     dragItem.current = { sessionId, fromSectionId: sectionId }
     e.dataTransfer.effectAllowed = 'move'
+    setGrabbedId(sessionId)
+    // ARIA: mark element as grabbed
+    try { (e.currentTarget as HTMLElement).setAttribute('aria-grabbed', 'true') } catch (e) { /* noop */ }
+  }
+
+  const handleDragEnd = (e: React.DragEvent) => {
+    setGrabbedId(null)
+    try { (e.currentTarget as HTMLElement).setAttribute('aria-grabbed', 'false') } catch (e) { /* noop */ }
   }
 
   const handleDragOver = (e: React.DragEvent) => {
@@ -308,22 +317,67 @@ export function SectionList({ batchId, isInstructor = false, onEditSection, onDe
               ) : (
                 <div className="space-y-3 p-4">
                   {section.sessions.map((session, idx) => (
-                    <div key={session.id} className="border rounded-md p-3 flex items-center justify-between bg-white" draggable onDragStart={(e) => handleDragStart(e, session.id, section.id)} onDragOver={handleDragOver} onDrop={(e) => handleDropOnSession(e, session.id, section.id)}>
-                      <div className="flex items-center gap-4">
-                        <div className="w-12 h-8 flex items-center justify-center bg-gray-50 border rounded text-sm font-mono text-gray-700">{session.order ?? idx + 1}</div>
-                        <div>
-                          <div className="text-sm font-medium">{session.title}</div>
-                          <div className="text-xs text-gray-500 mt-1">{session.duration ? `${session.duration} minutes` : ''}</div>
+                    <div
+                      key={session.id}
+                      className="session-card"
+                      role="group"
+                      aria-labelledby={`session-title-${session.id}`}
+                      tabIndex={0}
+                      draggable
+                      onDragStart={(e) => handleDragStart(e, session.id, section.id)}
+                      onDragEnd={handleDragEnd}
+                      onDragOver={handleDragOver}
+                      onDrop={(e) => handleDropOnSession(e, session.id, section.id)}
+                      onKeyDown={(e) => {
+                        if (e.key === 'ArrowUp') { e.preventDefault(); handleMoveSession(session.id, 'up') }
+                        if (e.key === 'ArrowDown') { e.preventDefault(); handleMoveSession(session.id, 'down') }
+                        if (e.key === 'Delete') { e.preventDefault(); handleDeleteSession(session.id) }
+                      }}
+                    >
+                      <div className="session-left">
+                        <div className="session-order">{idx + 1}</div>
+
+                        {/* optional thumbnail if available (guarded via any to stay optional) */}
+                        {(() => {
+                          const thumb = (session as any).thumbnailUrl as string | undefined;
+                          return thumb ? (
+                            <div className="session-thumb">
+                              <img src={thumb} alt={`${session.title} thumbnail`} />
+                            </div>
+                          ) : null;
+                        })()}
+
+                        <div className="session-meta">
+                          <div id={`session-title-${session.id}`} className="session-title">{session.title}</div>
+                          <div className="session-sub">{session.duration ? `${session.duration} minutes` : ''}</div>
                         </div>
                       </div>
-                      <div className="flex items-center gap-3">
-                        <Link href={`/batches/${batchId}/sessions/${session.id}`} className="text-sm px-3 py-1 border rounded">View</Link>
-                        <Link href={`/batches/${batchId}/sessions/${session.id}/edit`} className="text-gray-600 hover:text-gray-800" onClick={(e) => e.stopPropagation()}><Edit className="h-4 w-4" /></Link>
-                        <button onClick={(e) => { e.preventDefault(); e.stopPropagation(); if (!inFlight.has(session.id)) handleTogglePublish(session.id, !session.isPublished) }} className="text-gray-600" title={session.isPublished ? 'Unpublish' : 'Publish'}>{inFlight.has(session.id) ? <span className="inline-block w-4 h-4 border-2 border-gray-300 rounded-full animate-spin" /> : (session.isPublished ? <Eye className="h-4 w-4" /> : <EyeOff className="h-4 w-4" />)}</button>
-                        <button onClick={(e) => { e.preventDefault(); e.stopPropagation(); if (!inFlight.has(session.id)) handleMoveSession(session.id, 'up') }} className="text-gray-600"><ArrowUp className="h-4 w-4" /></button>
-                        <button onClick={(e) => { e.preventDefault(); e.stopPropagation(); if (!inFlight.has(session.id)) handleMoveSession(session.id, 'down') }} className="text-gray-600"><ArrowDown className="h-4 w-4" /></button>
-                        <button onClick={(e) => { e.preventDefault(); e.stopPropagation(); if (!inFlight.has(session.id)) handleDeleteSession(session.id) }} className="text-red-600"><Trash2 className="h-4 w-4" /></button>
-                        {!session.isPublished && isInstructor && <div className="text-xs px-2 py-1 rounded-full bg-yellow-100 text-yellow-800">Draft</div>}
+
+                      <div className="session-actions">
+                        <button onClick={(e) => { e.preventDefault(); e.stopPropagation(); }} title="Edit" className="p-2 text-gray-600 hover:text-gray-800" aria-label={`Edit session ${session.title}`}> 
+                          <Link href={`/batches/${batchId}/sessions/${session.id}/edit`} onClick={(e) => e.stopPropagation()} aria-label={`Open editor for ${session.title}`}>
+                            <Edit className="h-4 w-4" />
+                          </Link>
+                        </button>
+
+                        <button onClick={(e) => { e.preventDefault(); e.stopPropagation(); if (!inFlight.has(session.id)) handleTogglePublish(session.id, !session.isPublished) }} className="icon-btn" title={session.isPublished ? 'Unpublish' : 'Publish'}>
+                          {inFlight.has(session.id) ? <span className="inline-block w-4 h-4 border-2 border-gray-300 rounded-full animate-spin" /> : (session.isPublished ? <Eye className="h-4 w-4" /> : <EyeOff className="h-4 w-4" />)}
+                        </button>
+
+                        <div className="divider" />
+
+                        <button onClick={(e) => { e.preventDefault(); e.stopPropagation(); if (!inFlight.has(session.id)) handleMoveSession(session.id, 'up') }} className="icon-btn" title="Move up" aria-label={`Move ${session.title} up`}>
+                          <ArrowUp className="h-4 w-4" />
+                        </button>
+                        <button onClick={(e) => { e.preventDefault(); e.stopPropagation(); if (!inFlight.has(session.id)) handleMoveSession(session.id, 'down') }} className="icon-btn" title="Move down" aria-label={`Move ${session.title} down`}>
+                          <ArrowDown className="h-4 w-4" />
+                        </button>
+
+                        <button onClick={(e) => { e.preventDefault(); e.stopPropagation(); if (!inFlight.has(session.id)) handleDeleteSession(session.id) }} className="icon-btn text-red-600" title="Delete">
+                          <Trash2 className="h-4 w-4" />
+                        </button>
+
+                        {/* Draft badge intentionally removed per UI request */}
                       </div>
                     </div>
                   ))}

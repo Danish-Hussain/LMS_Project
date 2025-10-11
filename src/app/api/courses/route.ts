@@ -248,7 +248,7 @@ export async function POST(request: NextRequest) {
       })
 
       // Use a transaction to ensure data consistency
-      const course = await prisma.$transaction(async (tx: typeof prisma) => {
+  const course = await prisma.$transaction(async (tx: any) => {
         // Double check user exists within transaction
         const userExists = await tx.user.findUnique({
           where: { id: user.id },
@@ -283,7 +283,7 @@ export async function POST(request: NextRequest) {
       console.log('Course created successfully:', {
         id: course.id,
         title: course.title,
-        creator: course.creator.name,
+        creator: course.creator?.name,
         isPublished: course.isPublished
       })
 

@@ -6,7 +6,7 @@ import { cookies } from 'next/headers'
 
 export async function GET(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  context: { params: any }
 ) {
   try {
     const cookieStore = await cookies()
@@ -28,7 +28,7 @@ export async function GET(
       )
     }
 
-    const { id: sessionId } = params
+  const { id: sessionId } = await context.params
 
     // First verify session exists
     const session = await prisma.session.findUnique({
@@ -56,7 +56,7 @@ export async function GET(
 
 export async function POST(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  context: { params: any }
 ) {
   try {
     const cookieStore = await cookies()
@@ -78,7 +78,7 @@ export async function POST(
       )
     }
 
-    const { id: sessionId } = params
+  const { id: sessionId } = await context.params
     const { fileName, fileUrl, fileType, fileSize } = await request.json()
 
     const document = await prisma.sessionDocument.create({
@@ -103,7 +103,7 @@ export async function POST(
 
 export async function DELETE(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  context: { params: any }
 ) {
   try {
     const cookieStore = await cookies()
@@ -125,7 +125,7 @@ export async function DELETE(
       )
     }
 
-    const { id: documentId } = params
+  const { id: documentId } = await context.params
 
     await prisma.sessionDocument.delete({
       where: { id: documentId }

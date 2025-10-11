@@ -4,9 +4,14 @@
   "private": true,
   "scripts": {
     "dev": "next dev --turbopack",
+  "seed": "ts-node prisma/seed.ts",
     "build": "next build --turbopack",
     "start": "next start",
     "lint": "eslint",
+  "test:e2e": "playwright test",
+    "ci:e2e": "start-server-and-test 'npm run dev' http://localhost:3001 'npm run test:e2e'",
+    "test:auth": "playwright test tests/e2e/auth.spec.ts",
+  "auth:setup": "rm -f tests/e2e/storageState.json && npm run test:auth",
     "prisma:seed": "ts-node --compiler-options {\"module\":\"CommonJS\"} prisma/seed.ts"
   },
   "dependencies": {
@@ -28,6 +33,7 @@
     "react-player": "^3.3.3"
   },
   "devDependencies": {
+    "@playwright/test": "^1.39.2",
     "@eslint/eslintrc": "^3",
     "@tailwindcss/postcss": "^4",
     "@types/node": "^20",
@@ -37,6 +43,7 @@
     "eslint-config-next": "15.5.4",
     "tailwindcss": "^4",
     "ts-node": "^10.9.2",
-    "typescript": "^5"
+    "typescript": "^5",
+    "start-server-and-test": "^1.14.0"
   }
 }

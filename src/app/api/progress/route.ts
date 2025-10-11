@@ -22,7 +22,7 @@ export async function POST(request: NextRequest) {
       )
     }
 
-    const { sessionId, watchedTime, completed } = await request.json()
+  const { sessionId, watchedTime, completed } = await request.json()
 
     if (!sessionId || watchedTime === undefined) {
       return NextResponse.json(
@@ -32,27 +32,31 @@ export async function POST(request: NextRequest) {
     }
 
     // Upsert progress record
-    const progress = await prisma.progress.upsert({
-      where: {
-        userId_sessionId: {
-          userId: user.id,
-          sessionId
-        }
-      },
-      update: {
-        watchedTime: Math.floor(watchedTime),
-        completed: completed || false,
-        completedAt: completed ? new Date() : null,
-        updatedAt: new Date()
-      },
-      create: {
-        userId: user.id,
-        sessionId,
-        watchedTime: Math.floor(watchedTime),
-        completed: completed || false,
-        completedAt: completed ? new Date() : null
-      }
+    // Use findFirst + update/create to match schema where unique composite name isn't present
+    const existing = await prisma.progress.findFirst({
+      where: { userId: user.id, sessionId }
     })
+
+    let progress
+    if (existing) {
+      progress = await prisma.progress.update({
+        where: { id: existing.id },
+        data: {
+          watchedTime: Math.floor(watchedTime),
+          completed: completed || false,
+          updatedAt: new Date()
+        }
+      })
+    } else {
+      progress = await prisma.progress.create({
+        data: {
+          userId: user.id,
+          sessionId,
+          watchedTime: Math.floor(watchedTime),
+          completed: completed || false
+        }
+      })
+    }
 
     return NextResponse.json(progress)
   } catch (error) {
@@ -89,13 +93,8 @@ export async function GET(request: NextRequest) {
 
     if (sessionId) {
       // Get progress for specific session
-      const progress = await prisma.progress.findUnique({
-        where: {
-          userId_sessionId: {
-            userId: user.id,
-            sessionId
-          }
-        }
+      const progress = await prisma.progress.findFirst({
+        where: { userId: user.id, sessionId }
       })
 
       return NextResponse.json(progress)

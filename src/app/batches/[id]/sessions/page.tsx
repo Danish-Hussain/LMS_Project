@@ -382,38 +382,26 @@ export default function BatchSessionsPage({ params }: { params: Promise<{ id: st
                   </div>
                 ) : (
                   <div className="space-y-2">
-                    {sessions
+                      {sessions
                       .filter(session => session.sectionId === section.id)
-                      .map(session => (
-                        <div
-                          key={session.id}
-                          className={`session-item p-3 rounded-md border ${activeSessionId === session.id ? 'session-item active' : ''}`}
-                          data-session-id={session.id}
-                        >
-                          <div className="flex justify-between items-start">
-                            <div className="flex-1">
-                              <h4 className="session-title">{session.title}</h4>
-                              {session.duration && (
-                                <p className="session-meta">{session.duration} minutes • order {session.order}</p>
-                              )}
+                      .map((session, idx) => (
+                        <div key={session.id} className={`session-card ${activeSessionId === session.id ? 'ring-2 ring-green-200' : ''}`} data-session-id={session.id}>
+                              <div className="session-left">
+                                <div className="session-order">{idx + 1}</div>
+                                <div className="session-meta">
+                                  <div className="session-title">{session.title}</div>
+                                  {session.duration && <div className="session-sub">{session.duration} minutes • order {idx + 1}</div>}
+                                </div>
+                              </div>
+
+                              <div className="session-actions">
+                                <Link href={`/batches/${batchId}/sessions/${session.id}/edit`} title="Edit" className="icon-btn"><Edit className="h-4 w-4" /></Link>
+                                <button title="Publish/Unpublish" onClick={() => handleTogglePublish(session.id, !session.isPublished)} className="icon-btn">{session.isPublished ? <Eye className="h-4 w-4" /> : <EyeOff className="h-4 w-4" />}</button>
+                                <button title="Move up" onClick={() => handleMoveSession(session.id, 'up')} className="icon-btn"><ArrowUp className="h-4 w-4" /></button>
+                                <button title="Move down" onClick={() => handleMoveSession(session.id, 'down')} className="icon-btn"><ArrowDown className="h-4 w-4" /></button>
+                                <button title="Delete" onClick={() => setConfirmDeleteSessionId(session.id)} className="icon-btn text-red-600"><Trash2 className="h-4 w-4" /></button>
+                              </div>
                             </div>
-                            <div className="flex gap-2 items-center">
-                              <Link href={`/batches/${batchId}/sessions/${session.id}`} className="btn btn-sm">View</Link>
-                              <Link href={`/batches/${batchId}/sessions/${session.id}/edit`} className="btn btn-ghost btn-sm" title="Edit"><Edit size={14} /></Link>
-                              <button className="btn btn-ghost btn-sm" title="Publish/Unpublish" onClick={() => handleTogglePublish(session.id, !session.isPublished)}>
-                                {session.isPublished ? <Eye size={14} /> : <EyeOff size={14} />}
-                              </button>
-                              <button className="btn btn-ghost btn-sm" title="Move up" onClick={() => handleMoveSession(session.id, 'up')}><ArrowUp size={14} /></button>
-                              <button className="btn btn-ghost btn-sm" title="Move down" onClick={() => handleMoveSession(session.id, 'down')}><ArrowDown size={14} /></button>
-                              <button className="btn btn-ghost btn-sm text-red-600" title="Delete" onClick={() => setConfirmDeleteSessionId(session.id)}><Trash2 size={14} /></button>
-                            </div>
-                          </div>
-                          {!session.isPublished && (
-                            <div className="mt-2">
-                              <span className="px-2 py-1 text-xs bg-yellow-100 text-yellow-800 rounded-full">Draft</span>
-                            </div>
-                          )}
-                        </div>
                       ))}
                   </div>
                 )}

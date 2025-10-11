@@ -1,46 +1,23 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { prisma } from '@/lib/db'
 import { verifyToken } from '@/lib/auth'
-import { PrismaClient } from '@prisma/client'
-
-type Course = PrismaClient['course']['payload']['default']
-type Progress = PrismaClient['progress']['payload']['default']
-type Session = PrismaClient['session']['payload']['default']
 
 type AuthUser = {
   id: string
   role: string
 }
 
-type SessionWithProgress = Session & {
-  progress: Progress | null
-}
-
-type CourseWithRelations = Course & {
-  creator: {
-    id: string
-    name: string
-  }
-  sessions: SessionWithProgress[]
-  batches: {
-    id: string
-    _count: {
-      students: number
-    }
-  }[]
-  _count: {
-    enrollments: number
-  }
-}
+// Use flexible types for DB shapes to avoid tight coupling to generated Prisma types
+type AnyDB = any
 
 export async function GET(
   req: NextRequest,
-  { params }: { params: { id: string } }
+  context: { params: any }
 ) {
   try {
     const token = req.cookies.get('auth-token')?.value
     // `params` may be a promise-like proxy in some Next runtimes; await it to be safe
-    const resolvedParams = (await params) as { id: string }
+  const resolvedParams = (await context.params) as { id: string }
     
     // Check authentication
     if (!token) {
@@ -97,7 +74,7 @@ export async function GET(
           }
         }
       }
-    }) as CourseWithRelations | null
+  }) as AnyDB | null
 
     if (!course) {
       return NextResponse.json(
@@ -133,8 +110,8 @@ export async function GET(
 
     // Get progress for each session if user is enrolled
     const finalSessions = isEnrolled 
-      ? await Promise.all(
-          course.sessions.map(async (session: Session) => {
+    ? await Promise.all(
+      (course.sessions as any[]).map(async (session: any) => {
             const progress = await prisma.progress.findFirst({
               where: {
                 userId: user.id,
@@ -172,7 +149,7 @@ export async function GET(
 
 export async function PUT(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  context: { params: any }
 ) {
   try {
     const token = request.cookies.get('auth-token')?.value
@@ -193,7 +170,7 @@ export async function PUT(
       )
     }
 
-  const resolvedParams = (await params) as { id: string }
+  const resolvedParams = (await context.params) as { id: string }
   const courseId = resolvedParams.id
     const { title, description, thumbnail, isPublished } = await request.json()
 
@@ -269,7 +246,7 @@ export async function PUT(
 
 export async function DELETE(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  context: { params: any }
 ) {
   try {
     const token = request.cookies.get('auth-token')?.value
@@ -290,7 +267,7 @@ export async function DELETE(
       )
     }
 
-    const courseId = params.id
+  const courseId = (await context.params).id
 
     const course = await prisma.course.findUnique({
       where: { id: courseId }

@@ -5,7 +5,7 @@ import { cookies } from 'next/headers'
 
 export async function GET(
   request: NextRequest,
-  { params }: { params: Promise<{ id: string }> }
+  context: { params: any }
 ) {
   try {
     const cookieStore = await cookies()
@@ -27,7 +27,7 @@ export async function GET(
       )
     }
 
-    const { id: batchId } = await params
+  const { id: batchId } = await context.params
 
     const batch = await prisma.batch.findUnique({
       where: { id: batchId },
@@ -84,7 +84,7 @@ export async function GET(
 
 export async function PUT(
   request: NextRequest,
-  { params }: { params: Promise<{ id: string }> }
+  context: { params: any }
 ) {
   try {
     const cookieStore = await cookies()
@@ -106,7 +106,7 @@ export async function PUT(
       )
     }
 
-    const { id: batchId } = await params
+  const { id: batchId } = await context.params
     const { name, description, startDate, endDate, isActive } = await request.json()
 
     const batch = await prisma.batch.findUnique({
@@ -159,7 +159,7 @@ export async function PUT(
 
 export async function DELETE(
   request: NextRequest,
-  { params }: { params: Promise<{ id: string }> }
+  context: { params: any }
 ) {
   try {
     const cookieStore = await cookies()
@@ -181,7 +181,7 @@ export async function DELETE(
       )
     }
 
-    const { id: batchId } = await params
+  const { id: batchId } = await context.params
 
     const batch = await prisma.batch.findUnique({
       where: { id: batchId }

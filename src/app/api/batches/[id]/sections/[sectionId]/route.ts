@@ -4,7 +4,7 @@ import { verifyToken } from '@/lib/auth'
 
 export async function GET(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  context: { params: any }
 ) {
   try {
     const token = request.cookies.get('auth-token')?.value
@@ -23,9 +23,10 @@ export async function GET(
       )
     }
 
+    const { id } = context.params
     const sections = await prisma.courseSection.findMany({
       where: {
-        batchId: params.id
+        batchId: id
       },
       include: {
         sessions: {
@@ -51,7 +52,7 @@ export async function GET(
 
 export async function POST(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  context: { params: any }
 ) {
   try {
     const token = request.cookies.get('auth-token')?.value
@@ -80,9 +81,10 @@ export async function POST(
       )
     }
 
-    // Get the batch to verify it exists and get courseId
+  // Get the batch to verify it exists and get courseId
+  const { id } = context.params
     const batch = await prisma.batch.findUnique({
-      where: { id: params.id },
+      where: { id },
       select: { courseId: true }
     })
 
@@ -95,19 +97,19 @@ export async function POST(
 
     // Get the highest order number
     const lastSection = await prisma.courseSection.findFirst({
-      where: { batchId: params.id },
+      where: { batchId: id },
       orderBy: { order: 'desc' },
       select: { order: true }
     })
 
     const newOrder = lastSection ? lastSection.order + 1 : 1
 
-    const section = await prisma.section.create({
+    const section = await prisma.courseSection.create({
       data: {
         title,
         description,
         order: newOrder,
-        batchId: params.id,
+        batchId: id,
         courseId: batch.courseId
       },
       include: {
@@ -127,7 +129,7 @@ export async function POST(
 
 export async function PUT(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  context: { params: any }
 ) {
   try {
     const token = request.cookies.get('auth-token')?.value
@@ -159,7 +161,7 @@ export async function PUT(
     // Update section orders in a transaction
     await prisma.$transaction(
       sections.map((section) =>
-        prisma.section.update({
+        prisma.courseSection.update({
           where: { id: section.id },
           data: { order: section.order }
         })
@@ -178,7 +180,7 @@ export async function PUT(
 
 export async function DELETE(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  context: { params: any }
 ) {
   try {
     const token = request.cookies.get('auth-token')?.value
@@ -197,8 +199,9 @@ export async function DELETE(
       )
     }
 
+    const { id } = context.params
     await prisma.courseSection.delete({
-      where: { id: params.id }
+      where: { id }
     })
 
     return NextResponse.json({ success: true })
