@@ -24,6 +24,8 @@ export default function Navbar() {
   const [contactDefaults, setContactDefaults] = useState<ContactDefaults>({})
   const [isAccountOpen, setIsAccountOpen] = useState(false)
   const accountRef = useRef<HTMLDivElement | null>(null)
+  const menuRef = useRef<HTMLDivElement | null>(null)
+  const firstMenuItemRef = useRef<HTMLAnchorElement | null>(null)
 
   const openContact = () => {
     const defaults: ContactDefaults = { name: user?.name ?? undefined, email: user?.email ?? undefined }
@@ -47,6 +49,14 @@ export default function Navbar() {
       window.removeEventListener('keydown', handleKey)
     }
   }, [])
+
+  // When account menu opens, move focus to the first actionable item for accessibility
+  useEffect(() => {
+    if (isAccountOpen) {
+      // small delay to ensure element exists in DOM
+      setTimeout(() => firstMenuItemRef.current?.focus(), 0)
+    }
+  }, [isAccountOpen])
 
   const handleLogout = async () => {
     await logout()
@@ -99,14 +109,15 @@ export default function Navbar() {
                     <div className="text-xs text-gray-500">{user.role}</div>
                   </div>
                   <div className="relative" ref={accountRef}>
-                    <button onClick={() => setIsAccountOpen(!isAccountOpen)} className="p-1 rounded-full hover:bg-gray-100 w-9 h-9 flex items-center justify-center bg-gray-50">
+                    <button id="account-button" aria-haspopup="true" aria-expanded={isAccountOpen} onClick={() => setIsAccountOpen(!isAccountOpen)} className="p-1 rounded-full hover:bg-gray-100 w-9 h-9 flex items-center justify-center bg-gray-50 focus:outline-none focus:ring-2 focus:ring-blue-500" aria-label="Open account menu">
                       <span className="text-sm font-medium text-gray-700">{(user?.name || '').split(' ').map(n => n[0]).slice(0,2).join('').toUpperCase() || 'U'}</span>
                     </button>
                     {isAccountOpen && (
-                      <div className="absolute right-0 mt-2 w-48 bg-white border rounded-md shadow-md z-50">
-                        <Link href="/account" className="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-50">Account details</Link>
-                        <Link href="/account/change-password" className="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-50">Change password</Link>
-                        <button onClick={handleLogout} className="w-full text-left px-4 py-2 text-sm text-red-600 hover:bg-gray-50">Log out</button>
+                      <div ref={menuRef} role="menu" aria-orientation="vertical" aria-labelledby="account-button" className="absolute right-0 mt-2 w-56 bg-white border rounded-lg shadow-lg ring-1 ring-black ring-opacity-5 z-50">
+                        <Link href="/account" ref={firstMenuItemRef} role="menuitem" tabIndex={-1} className="block px-4 py-3 text-sm text-gray-700 hover:bg-gray-50 focus:bg-gray-50 focus:outline-none">Account details</Link>
+                        <Link href="/account/change-password" role="menuitem" tabIndex={-1} className="block px-4 py-3 text-sm text-gray-700 hover:bg-gray-50 focus:bg-gray-50 focus:outline-none">Change password</Link>
+                        <div className="border-t" />
+                        <button onClick={handleLogout} role="menuitem" tabIndex={-1} className="w-full text-left px-4 py-3 text-sm text-red-600 hover:bg-gray-50 focus:bg-gray-50 focus:outline-none">Log out</button>
                       </div>
                     )}
                   </div>
