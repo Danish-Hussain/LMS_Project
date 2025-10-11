@@ -31,23 +31,133 @@ export default function CreateCoursePage() {
     setIsSubmitting(true)
 
     try {
+      // Check authentication first
+      if (!user || !user.id) {
+        setError('You must be logged in to create a course')
+        return
+      }
+
+      // Check authorization
+      if (user.role !== 'ADMIN' && user.role !== 'INSTRUCTOR') {
+        setError('Only admins and instructors can create courses')
+        return
+      }
+
+      // Validate form data
+      if (!formData.title.trim()) {
+        setError('Course title is required')
+        return
+      }
+
+      if (formData.title.trim().length > 255) {
+        setError('Course title cannot exceed 255 characters')
+        return
+      }
+
+      if (formData.price) {
+        const price = parseFloat(formData.price)
+        if (isNaN(price)) {
+          setError('Price must be a valid number')
+          return
+        }
+        if (price < 0) {
+          setError('Price cannot be negative')
+          return
+        }
+        if (price > 999999.99) {
+          setError('Price is too high')
+          return
+        }
+      }
+
+      // Validate thumbnail URL if provided
+      if (formData.thumbnail) {
+        try {
+          new URL(formData.thumbnail)
+        } catch (e) {
+          setError('Please enter a valid URL for the thumbnail')
+          return
+        }
+      }
+
+      // Log the validated form data being sent
+      console.log('Submitting course data:', {
+        ...formData,
+        userId: user.id,
+        userRole: user.role
+      })
+
+      // Log the request being made
+      console.log('Making request with user context:', { 
+        userId: user?.id,
+        userRole: user?.role,
+        isAuthenticated: !!user 
+      })
+
       const response = await fetch('/api/courses', {
         method: 'POST',
         headers: {
-          'Content-Type': 'application/json'
+          'Content-Type': 'application/json',
+          // Add credentials for authentication
+          credentials: 'include'
         },
-        body: JSON.stringify(formData)
+        body: JSON.stringify({
+          ...formData,
+          price: formData.price ? parseFloat(formData.price) : null
+        })
       })
 
-      if (response.ok) {
-        const course = await response.json()
-        router.push(`/courses/${course.id}`)
+      let data
+      try {
+        const text = await response.text()
+        data = text ? JSON.parse(text) : {}
+      } catch (parseError) {
+        console.error('Error parsing response:', parseError)
+        setError('Invalid response from server')
+        return
+      }
+
+      console.log('Server response:', {
+        status: response.status,
+        statusText: response.statusText,
+        data
+      })
+      
+      if (response.ok && data.data?.id) {
+        console.log('Course created successfully:', data.data)
+        router.push(`/courses/${data.data.id}`)
       } else {
-        const errorData = await response.json()
-        setError(errorData.error || 'Failed to create course')
+        // Handle specific error cases
+        switch (response.status) {
+          case 401:
+            setError('Session expired. Please log in again')
+            router.push('/login')
+            break
+          case 403:
+            setError('You do not have permission to create courses')
+            break
+          case 404:
+            setError('User account not found. Please log out and log in again')
+            break
+          case 409:
+            setError('A course with this title already exists')
+            break
+          case 400:
+            setError(data.error || 'Please check the form fields and try again')
+            break
+          default:
+            console.error('Failed to create course:', {
+              status: response.status,
+              statusText: response.statusText,
+              error: data.error,
+              data
+            })
+            setError(data.error || 'Failed to create course. Please try again later.')
+        }
       }
     } catch (err) {
-      setError('An error occurred. Please try again.')
+      console.error('Course creation error:', err)
+      setError('An error occurred while creating the course. Please try again.')
     } finally {
       setIsSubmitting(false)
     }

@@ -41,12 +41,19 @@ export default function CreateBatchPage() {
         const data = await response.json()
         setCourses(data)
       } else {
-        const err = await response.text()
-        console.error('Failed to fetch courses:', err)
+        const errData = await response.json()
+        console.error('Failed to fetch courses:', {
+          status: response.status,
+          error: errData
+        })
+        setError(errData.error || 'Failed to fetch courses')
         setCourses([])
       }
     } catch (error) {
-      console.error('Failed to fetch courses:', error)
+      console.error('Failed to fetch courses:', {
+        error,
+        message: error instanceof Error ? error.message : String(error)
+      })
     }
   }
 

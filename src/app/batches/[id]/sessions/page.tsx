@@ -4,7 +4,7 @@ import { useAuth } from '@/contexts/AuthContext'
 import { useEffect, useState } from 'react'
 import { useParams } from 'next/navigation'
 import Link from 'next/link'
-import { ArrowLeft, Plus, Play, Edit, Trash2 } from 'lucide-react'
+import { ArrowLeft, Plus, Edit, Trash2 } from 'lucide-react'
 
 interface Session {
   id: string
@@ -135,7 +135,6 @@ export default function BatchSessionsPage() {
         <div className="bg-white rounded-lg shadow-md">
           {sessions.length === 0 ? (
             <div className="text-center py-12">
-              <Play className="h-12 w-12 text-gray-400 mx-auto mb-4" />
               <h3 className="text-lg font-medium text-gray-900 mb-2">No sessions yet</h3>
               <p className="text-gray-600 mb-8">Add video sessions to this batch.</p>
               <Link
@@ -153,7 +152,6 @@ export default function BatchSessionsPage() {
                 <div key={session.id} className="p-6 hover:bg-gray-50">
                   <div className="flex items-center justify-between">
                     <div className="flex items-center">
-                      <Play className="h-5 w-5 text-gray-400 mr-3" />
                       <div>
                         <h3 className="text-lg font-semibold text-gray-900">
                           {session.title}

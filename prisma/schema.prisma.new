@@ -1,0 +1,555 @@
+generator client {// This is your Prisma schema file,// This is your Prisma schema file,
+
+  provider = "prisma-client-js"
+
+}// learn more about it in the docs: https://pris.ly/d/prisma-schema// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+
+
+datasource db {
+
+  provider = "sqlite"
+
+  url      = env("DATABASE_URL")generator client {generator client {
+
+}
+
+  provider = "prisma-client-js"  provider = "prisma-client-js"
+
+model User {
+
+  id        String   @id @default(cuid())}}
+
+  email     String   @unique
+
+  name      String
+
+  password  String
+
+  role      Role     @default(STUDENT)datasource db {datasource db {
+
+  createdAt DateTime @default(now())
+
+  updatedAt DateTime @updatedAt  provider = "sqlite"  provider = "sqlite"
+
+
+
+  // Relations  url      = env("DATABASE_URL")  url      = env("DATABASE_URL")
+
+  enrollments Enrollment[]
+
+  batches     Batch[]      @relation("BatchStudents")}}
+
+  createdCourses Course[]  @relation("CourseCreator")
+
+  progress    Progress[]
+
+  payments    Payment[]
+
+model User {model User {
+
+  @@map("users")
+
+}  id        String   @id @default(cuid())  id        String   @id @default(cuid())
+
+
+
+model Course {
+  id          String   @id @default(cuid())
+  title       String
+  description String?
+  thumbnail   String?  @url
+  price       Float?
+  isPublished Boolean  @default(false)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+  creatorId   String
+
+  // Relations
+
+  creator     User         @relation("CourseCreator", fields: [creatorId], references: [id])
+
+  sessions    Session[]
+
+  enrollments Enrollment[]  // Relations  // Relations
+
+  batches     Batch[]
+
+  payments    Payment[]  enrollments Enrollment[]  enrollments Enrollment[]
+
+
+
+  @@map("courses")  batches     Batch[]      @relation("BatchStudents")  batches     Batch[]      @relation("BatchStudents")
+
+}
+
+  createdCourses Course[]  @relation("CourseCreator")  createdCourses Course[]  @relation("CourseCreator")
+
+model Session {
+
+  id          String   @id @default(cuid())  progress    Progress[]  progress    Progress[]
+
+  title       String
+
+  description String?  payments    Payment[]  payments    Payment[]
+
+  videoUrl    String
+
+  duration    Int?
+
+  startTime   DateTime?
+
+  endTime     DateTime?  @@map("users")  @@map("users")
+
+  order       Int
+
+  isPublished Boolean  @default(false)}}
+
+  createdAt   DateTime @default(now())
+
+  updatedAt   DateTime @updatedAt
+
+  courseId    String
+
+  batchId     Stringmodel Course {model Course {
+
+
+
+  // Relations  id          String   @id @default(cuid())  id          String   @id @default(cuid())
+
+  course    Course    @relation(fields: [courseId], references: [id], onDelete: Cascade)
+
+  batch     Batch     @relation(fields: [batchId], references: [id], onDelete: Cascade)  title       String  title       String
+
+  progress  Progress[]
+
+  documents SessionDocument[]  description String?  description String?
+
+
+
+  @@map("sessions")  thumbnail   String?  thumbnail   String?
+
+}
+
+  price       Float?   // Course price  price       Float?   // Course price
+
+model SessionDocument {
+
+  id        String   @id @default(cuid())  isPublished Boolean  @default(false)  isPublished Boolean  @default(false)
+
+  fileName  String
+
+  fileUrl   String  createdAt   DateTime @default(now())  createdAt   DateTime @default(now())
+
+  fileType  String
+
+  fileSize  Int  updatedAt   DateTime @updatedAt  updatedAt   DateTime @updatedAt
+
+  createdAt DateTime @default(now())
+
+  updatedAt DateTime @updatedAt  creatorId   String  creatorId   String
+
+  sessionId String
+
+
+
+  // Relations
+
+  session   Session  @relation(fields: [sessionId], references: [id], onDelete: Cascade)  // Relations  // Relations
+
+
+
+  @@map("session_documents")  creator     User         @relation("CourseCreator", fields: [creatorId], references: [id])  creator     User         @relation("CourseCreator", fields: [creatorId], references: [id])
+
+}
+
+  sessions    Session[]  sessions    Session[]
+
+model Batch {
+
+  id          String   @id @default(cuid())  enrollments Enrollment[]  enrollments Enrollment[]
+
+  name        String
+
+  description String?  batches     Batch[]  batches     Batch[]
+
+  startDate   DateTime
+
+  endDate     DateTime?  payments    Payment[]  payments    Payment[]
+
+  isActive    Boolean  @default(true)
+
+  courseId    String
+
+  createdAt   DateTime @default(now())
+
+  updatedAt   DateTime @updatedAt  @@map("courses")  @@map("courses")
+
+
+
+  // Relations}}
+
+  course      Course       @relation(fields: [courseId], references: [id], onDelete: Cascade)
+
+  students    User[]       @relation("BatchStudents")
+
+  enrollments Enrollment[]
+
+  sessions    Session[]model Session {model Session {
+
+  payments    Payment[]
+
+  id          String   @id @default(cuid())  id          String   @id @default(cuid())
+
+  @@map("batches")
+
+}  title       String  title       String
+
+
+
+model Enrollment {  description String?  description String?
+
+  id        String   @id @default(cuid())
+
+  userId    String  videoUrl    String  videoUrl    String
+
+  courseId  String
+
+  batchId   String  duration    Int?     // in minutes  duration    Int?     // in minutes
+
+  status    EnrollmentStatus @default(PENDING)
+
+  createdAt DateTime @default(now())  // Optional scheduled timing for this session  // Optional scheduled timing for this session
+
+  updatedAt DateTime @updatedAt
+
+  startTime   DateTime?  startTime   DateTime?
+
+  // Relations
+
+  user    User    @relation(fields: [userId], references: [id], onDelete: Cascade)  endTime     DateTime?  endTime     DateTime?
+
+  course  Course  @relation(fields: [courseId], references: [id], onDelete: Cascade)
+
+  batch   Batch   @relation(fields: [batchId], references: [id], onDelete: Cascade)  order       Int  order       Int
+
+
+
+  @@unique([userId, courseId, batchId])  isPublished Boolean  @default(false)  isPublished Boolean  @default(false)
+
+  @@map("enrollments")
+
+}  createdAt   DateTime @default(now())  createdAt   DateTime @default(now())
+
+
+
+model Progress {  updatedAt   DateTime @updatedAt  updatedAt   DateTime @updatedAt
+
+  id          String   @id @default(cuid())
+
+  userId      String  courseId    String  courseId    String
+
+  sessionId   String
+
+  status      ProgressStatus @default(IN_PROGRESS)  batchId     String   // Session belongs to a specific batch  batchId     String   // Session belongs to a specific batch
+
+  watchedTime Int      @default(0)
+
+  completed   Boolean  @default(false)
+
+  completedAt DateTime?
+
+  createdAt   DateTime @default(now())  // Relations  // Relations
+
+  updatedAt   DateTime @updatedAt
+
+  course   Course    @relation(fields: [courseId], references: [id], onDelete: Cascade)  course   Course    @relation(fields: [courseId], references: [id], onDelete: Cascade)
+
+  // Relations
+
+  user    User    @relation(fields: [userId], references: [id], onDelete: Cascade)  batch    Batch     @relation(fields: [batchId], references: [id], onDelete: Cascade)  batch    Batch     @relation(fields: [batchId], references: [id], onDelete: Cascade)
+
+  session Session @relation(fields: [sessionId], references: [id], onDelete: Cascade)
+
+  progress Progress[]  progress Progress[]
+
+  @@unique([userId, sessionId])
+
+  @@map("progress")  documents SessionDocument[]  documents SessionDocument[]
+
+}
+
+
+
+model Payment {
+
+  id        String   @id @default(cuid())  @@map("sessions")  @@map("sessions")
+
+  userId    String
+
+  courseId  String}}
+
+  batchId   String
+
+  amount    Float
+
+  status    PaymentStatus @default(PENDING)
+
+  createdAt DateTime @default(now())model SessionDocument {model SessionDocument {
+
+  updatedAt DateTime @updatedAt
+
+  id        String   @id @default(cuid())  id        String   @id @default(cuid())
+
+  // Relations
+
+  user    User    @relation(fields: [userId], references: [id], onDelete: Cascade)  fileName  String  fileName  String
+
+  course  Course  @relation(fields: [courseId], references: [id], onDelete: Cascade)
+
+  batch   Batch   @relation(fields: [batchId], references: [id], onDelete: Cascade)  fileUrl   String  fileUrl   String
+
+
+
+  @@map("payments")  fileType  String  fileType  String
+
+}
+
+  fileSize  Int  fileSize  Int
+
+enum Role {
+
+  ADMIN  createdAt DateTime @default(now())  createdAt DateTime @default(now())
+
+  INSTRUCTOR
+
+  STUDENT  updatedAt DateTime @updatedAt  updatedAt DateTime @updatedAt
+
+}
+
+  sessionId String  sessionId String
+
+enum EnrollmentStatus {
+
+  PENDING
+
+  APPROVED
+
+  REJECTED  // Relations  // Relations
+
+}
+
+  session   Session  @relation(fields: [sessionId], references: [id], onDelete: Cascade)  session   Session  @relation(fields: [sessionId], references: [id], onDelete: Cascade)
+
+enum ProgressStatus {
+
+  NOT_STARTED
+
+  IN_PROGRESS
+
+  COMPLETED  @@map("session_documents")  @@map("session_documents")
+
+}
+
+}}
+
+enum PaymentStatus {
+
+  PENDING
+
+  COMPLETED
+
+  FAILEDmodel Batch {model Batch {
+
+}
+  id          String   @id @default(cuid())  id          String   @id @default(cuid())
+
+  name        String  name        String
+
+  description String?  description String?
+
+  startDate   DateTime  startDate   DateTime
+
+  endDate     DateTime?  endDate     DateTime?
+
+  isActive    Boolean  @default(true)  isActive    Boolean  @default(true)
+
+  courseId    String   // Batch belongs to a specific course  courseId    String   // Batch belongs to a specific course
+
+  createdAt   DateTime @default(now())  createdAt   DateTime @default(now())
+
+  updatedAt   DateTime @updatedAt  updatedAt   DateTime @updatedAt
+
+
+
+  // Relations  // Relations
+
+  course      Course       @relation(fields: [courseId], references: [id], onDelete: Cascade)  course      Course       @relation(fields: [courseId], references: [id], onDelete: Cascade)
+
+  students    User[]       @relation("BatchStudents")  students    User[]       @relation("BatchStudents")
+
+  enrollments Enrollment[]  enrollments Enrollment[]
+
+  sessions    Session[]  sessions    Session[]
+
+  payments    Payment[]  payments    Payment[]
+
+
+
+  @@map("batches")  @@map("batches")
+
+}}
+
+
+
+model Enrollment {model Enrollment {
+
+  id         String   @id @default(cuid())  id         String   @id @default(cuid())
+
+  userId     String  userId     String
+
+  courseId   String  courseId   String
+
+  batchId    String  batchId    String
+
+  status     EnrollmentStatus @default(PENDING)  status     EnrollmentStatus @default(PENDING)
+
+  createdAt  DateTime @default(now())  createdAt  DateTime @default(now())
+
+  updatedAt  DateTime @updatedAt  updatedAt  DateTime @updatedAt
+
+
+
+  // Relations  // Relations
+
+  user      User      @relation(fields: [userId], references: [id], onDelete: Cascade)  user      User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  course    Course    @relation(fields: [courseId], references: [id], onDelete: Cascade)  course    Course    @relation(fields: [courseId], references: [id], onDelete: Cascade)
+
+  batch     Batch     @relation(fields: [batchId], references: [id], onDelete: Cascade)  batch     Batch     @relation(fields: [batchId], references: [id], onDelete: Cascade)
+
+
+
+  @@unique([userId, courseId, batchId])  @@map("enrollments")
+
+  @@map("enrollments")}
+
+}
+
+model Progress {
+
+model Progress {  id        String   @id @default(cuid())
+
+  id        String   @id @default(cuid())  userId    String
+
+  userId    String  sessionId String
+
+  sessionId String  status    ProgressStatus @default(IN_PROGRESS)
+
+  status    ProgressStatus @default(IN_PROGRESS)  createdAt DateTime @default(now())
+
+  watchedTime Int     @default(0)  updatedAt DateTime @updatedAt
+
+  completed  Boolean  @default(false)
+
+  completedAt DateTime?  // Relations
+
+  createdAt DateTime @default(now())  user     User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  updatedAt DateTime @updatedAt  session  Session  @relation(fields: [sessionId], references: [id], onDelete: Cascade)
+
+
+
+  // Relations  @@map("progress")
+
+  user     User     @relation(fields: [userId], references: [id], onDelete: Cascade)}
+
+  session  Session  @relation(fields: [sessionId], references: [id], onDelete: Cascade)
+
+model Payment {
+
+  @@unique([userId, sessionId])  id          String   @id @default(cuid())
+
+  @@map("progress")  userId      String
+
+}  courseId    String
+
+  batchId     String
+
+model Payment {  amount      Float
+
+  id          String   @id @default(cuid())  status      PaymentStatus @default(PENDING)
+
+  userId      String  createdAt   DateTime @default(now())
+
+  courseId    String  updatedAt   DateTime @updatedAt
+
+  batchId     String
+
+  amount      Float  // Relations
+
+  status      PaymentStatus @default(PENDING)  user     User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  createdAt   DateTime @default(now())  course   Course   @relation(fields: [courseId], references: [id], onDelete: Cascade)
+
+  updatedAt   DateTime @updatedAt  batch    Batch    @relation(fields: [batchId], references: [id], onDelete: Cascade)
+
+
+
+  // Relations  @@map("payments")
+
+  user     User     @relation(fields: [userId], references: [id], onDelete: Cascade)}
+
+  course   Course   @relation(fields: [courseId], references: [id], onDelete: Cascade)
+
+  batch    Batch    @relation(fields: [batchId], references: [id], onDelete: Cascade)enum Role {
+
+  ADMIN
+
+  @@map("payments")  INSTRUCTOR
+
+}  STUDENT
+
+}
+
+enum Role {
+
+  ADMINenum EnrollmentStatus {
+
+  INSTRUCTOR  PENDING
+
+  STUDENT  APPROVED
+
+}  REJECTED
+
+}
+
+enum EnrollmentStatus {
+
+  PENDINGenum ProgressStatus {
+
+  APPROVED  NOT_STARTED
+
+  REJECTED  IN_PROGRESS
+
+}  COMPLETED
+
+}
+
+enum ProgressStatus {
+
+  NOT_STARTEDenum PaymentStatus {
+
+  IN_PROGRESS  PENDING
+
+  COMPLETED  COMPLETED
+
+}  FAILED
+
+}
+
+enum PaymentStatus {
+  PENDING
+  COMPLETED
+  FAILED
+}

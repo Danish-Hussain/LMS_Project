@@ -56,7 +56,7 @@ type CourseContentProps = {
   selectedSession: Session | null
   setSelectedSession: (session: Session) => void
   isEnrolled: boolean
-  handleSessionComplete: () => void
+  handleSessionComplete: (sessionId: string) => Promise<void>
   handleEnroll: (batchId: string) => Promise<void>
   enrolledBatchIds: string[]
 }
@@ -120,9 +120,7 @@ function CourseContent({
             <p className="text-gray-600 mb-6">Select a batch to enroll in this course.</p>
             
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-              {course.batches
-                .filter(batch => batch.isActive)
-                .map((batch) => (
+              {course.batches.map((batch) => (
                 <div key={batch.id} className="border border-gray-200 rounded-lg p-4 hover:border-blue-300 transition-colors">
                   <h3 className="font-semibold text-gray-900 mb-2">{batch.name}</h3>
                   <div className="text-sm text-gray-600 mb-3">
@@ -159,27 +157,24 @@ function CourseContent({
           <div className="lg:col-span-3 lg:min-h-[calc(100vh-6rem)]">
             <div className="bg-white rounded-xl shadow-sm h-full sticky top-4 border border-gray-100">
               <div className="p-4">
-                <div className="flex items-center justify-between mb-6">
+                <div className="mb-6">
                   <h3 className="text-xl font-semibold text-gray-900">{course.title}</h3>
-                  <div className="flex items-center gap-3 text-sm text-gray-600">
-                    <div className="flex items-center bg-gray-50 px-2 py-1 rounded">
-                      <div className="w-2 h-2 rounded-full bg-green-500 mr-2"></div>
-                      <span>Completed</span>
-                    </div>
-                    <div className="flex items-center bg-gray-50 px-2 py-1 rounded">
-                      <div className="w-2 h-2 rounded-full bg-yellow-500 mr-2"></div>
-                      <span>In Progress</span>
-                    </div>
-                  </div>
                 </div>
                 <div className="space-y-2">
                   {course.sessions
                     .sort((a, b) => a.order - b.order)
                     .map((session) => (
-                      <button
+                      <div
                         key={session.id}
                         onClick={() => setSelectedSession(session)}
-                        className={`w-full text-left p-4 rounded-lg transition-all ${
+                        role="button"
+                        tabIndex={0}
+                        onKeyDown={(e) => {
+                          if (e.key === 'Enter' || e.key === ' ') {
+                            setSelectedSession(session);
+                          }
+                        }}
+                        className={`w-full text-left p-4 rounded-lg transition-all cursor-pointer ${
                           selectedSession?.id === session.id
                             ? 'bg-blue-50 border border-blue-200 shadow-sm'
                             : session.progress?.completed
@@ -200,15 +195,6 @@ function CourseContent({
                                 ? 'bg-yellow-100 text-yellow-600'
                                 : 'bg-gray-100 text-gray-500'
                             }`}>
-                              {session.progress?.completed ? (
-                                <CheckCircle className="h-4 w-4" />
-                              ) : session.progress?.watchedTime ? (
-                                <Clock className="h-4 w-4" />
-                              ) : (
-                                <Play className="h-4 w-4" />
-                              )}
-                            </div>
-                            <div className="flex-grow">
                               <span className={`font-medium ${
                                 selectedSession?.id === session.id
                                   ? 'text-blue-900'
@@ -226,15 +212,19 @@ function CourseContent({
                               )}
                             </div>
                           </div>
-                          <div className="ml-2 flex items-center space-x-2">
-                            {session.progress?.completed ? (
-                              <span className="text-xs font-medium px-2 py-1 rounded-full bg-green-100 text-green-800">Completed</span>
-                            ) : session.progress?.watchedTime ? (
-                              <span className="text-xs font-medium px-2 py-1 rounded-full bg-yellow-100 text-yellow-800">In Progress</span>
-                            ) : (
-                              <span className="text-xs font-medium px-2 py-1 rounded-full bg-gray-100 text-gray-800">Not Started</span>
-                            )}
-                          </div>
+                          <button 
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              handleSessionComplete(session.id);
+                            }}
+                            className={`ml-2 p-1 rounded-full transition-colors ${
+                              session.progress?.completed 
+                                ? 'bg-green-100 text-green-600 hover:bg-green-200' 
+                                : 'bg-gray-100 text-gray-400 hover:bg-gray-200'
+                            }`}
+                          >
+                            <CheckCircle className="h-5 w-5" />
+                          </button>
                         </div>
                         {session.duration && (
                           <div className="flex items-center mt-2 text-sm text-gray-500 ml-8">
@@ -242,7 +232,7 @@ function CourseContent({
                             <span>{Math.floor(session.duration)} min</span>
                           </div>
                         )}
-                      </button>
+                      </div>
                     ))}
                 </div>
               </div>
@@ -264,14 +254,14 @@ function CourseContent({
                       videoUrl={selectedSession.videoUrl}
                       sessionId={selectedSession.id}
                       userId={user.id}
-                      onComplete={handleSessionComplete}
+                      onComplete={(sessionId) => handleSessionComplete(sessionId)}
                     />
                   ) : (
                     <VideoPlayer
                       videoUrl={selectedSession.videoUrl}
                       sessionId={selectedSession.id}
                       userId={user.id}
-                      onComplete={handleSessionComplete}
+                      onComplete={(sessionId) => handleSessionComplete(sessionId)}
                     />
                   )}
                   {selectedSession.description && (
@@ -325,56 +315,90 @@ export default function CourseDetailPage() {
   const [enrolledBatchIds, setEnrolledBatchIds] = useState<string[]>([])
 
   useEffect(() => {
-    if (user && courseId) {
-      fetchCourse()
-    }
-  }, [user, courseId])
+    const initializeCourse = async () => {
+      if (!user || !courseId) {
+        setIsLoading(false);
+        return;
+      }
+      
+      setIsLoading(true);
+      await fetchCourseData();
+      setIsLoading(false);
+    };
 
-  const fetchCourse = async () => {
+    initializeCourse();
+  }, [user, courseId]);
+
+  const fetchCourseData = async () => {
+    if (!user || !courseId) return;
+    
     try {
-      const response = await fetch(`/api/courses/${courseId}`)
+      const response = await fetch(`/api/courses/${courseId}`, {
+        headers: {
+          'Authorization': `Bearer ${localStorage.getItem('token')}`,
+          'Content-Type': 'application/json'
+        }
+      });
+      
       if (response.ok) {
-        const data = await response.json()
-        setCourse(data.course)
-        setIsEnrolled(data.isEnrolled)
-        setEnrolledBatchIds(data.enrolledBatchIds || [])
-        if (data.course.sessions.length > 0) {
-          setSelectedSession(data.course.sessions[0])
+        const data = await response.json();
+        setCourse(data.course);
+        setIsEnrolled(data.isEnrolled);
+        setEnrolledBatchIds(data.enrolledBatchIds || []);
+        if (data.course?.sessions?.length > 0 && !selectedSession) {
+          setSelectedSession(data.course.sessions[0]);
         }
       }
     } catch (error) {
-      console.error('Failed to fetch course:', error)
-    } finally {
-      setIsLoading(false)
+      console.error('Failed to fetch course:', error);
     }
-  }
+  };
 
   const handleEnroll = async (batchId: string) => {
     try {
       if (course?.price && course.price > 0) {
-        window.location.href = `/payment?courseId=${courseId}&batchId=${batchId}`
-        return
+        window.location.href = `/payment?courseId=${courseId}&batchId=${batchId}`;
+        return;
       }
 
       const response = await fetch('/api/enrollments', {
         method: 'POST',
         headers: {
+          'Authorization': `Bearer ${localStorage.getItem('token')}`,
           'Content-Type': 'application/json'
         },
         body: JSON.stringify({ courseId, batchId })
-      })
+      });
 
       if (response.ok) {
-        await fetchCourse()
+        await fetchCourseData();
       }
     } catch (error) {
-      console.error('Failed to enroll:', error)
+      console.error('Failed to enroll:', error);
     }
-  }
+  };
 
-  const handleSessionComplete = async () => {
-    await fetchCourse()
-  }
+  const handleSessionComplete = async (sessionId: string) => {
+    try {
+      const response = await fetch('/api/progress', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${localStorage.getItem('token')}`
+        },
+        body: JSON.stringify({
+          sessionId,
+          completed: true
+        })
+      });
+
+      if (response.ok) {
+        await fetchCourseData();
+      }
+    } catch (error) {
+      console.error('Failed to mark session as complete:', error);
+    }
+  };
 
   if (loading || isLoading) {
     return (

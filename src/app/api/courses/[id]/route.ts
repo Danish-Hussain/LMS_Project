@@ -1,16 +1,42 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { prisma } from '@/lib/db'
 import { verifyToken } from '@/lib/auth'
-import { cookies } from 'next/headers'
+import { Course, Progress, Session, User } from '@prisma/client'
+
+type AuthUser = {
+  id: string
+  role: string
+}
+
+type SessionWithProgress = Session & {
+  progress: Progress | null
+}
+
+type CourseWithRelations = Course & {
+  creator: {
+    id: string
+    name: string
+  }
+  sessions: SessionWithProgress[]
+  batches: {
+    id: string
+    _count: {
+      students: number
+    }
+  }[]
+  _count: {
+    enrollments: number
+  }
+}
 
 export async function GET(
-  request: NextRequest,
-  { params }: { params: Promise<{ id: string }> }
+  req: NextRequest,
+  { params }: { params: { id: string } }
 ) {
   try {
-    const cookieStore = await cookies()
-    const token = cookieStore.get('auth-token')?.value
-
+    const token = req.cookies.get('auth-token')?.value
+    
+    // Check authentication
     if (!token) {
       return NextResponse.json(
         { error: 'Not authenticated' },
@@ -18,22 +44,22 @@ export async function GET(
       )
     }
 
-    const user = verifyToken(token)
+    const user = await verifyToken(token) as AuthUser
 
     if (!user) {
       return NextResponse.json(
-        { error: 'Invalid token' },
+        { error: 'Invalid authentication' },
         { status: 401 }
       )
     }
 
-    const { id: courseId } = await params
-
+    // Fetch course with all related data
     const course = await prisma.course.findUnique({
-      where: { id: courseId },
+      where: { id: params.id },
       include: {
         creator: {
           select: {
+            id: true,
             name: true
           }
         },
@@ -44,7 +70,18 @@ export async function GET(
         },
         batches: {
           include: {
-            _count: { select: { students: true } }
+            _count: {
+              select: {
+                students: true
+              }
+            }
+          },
+          where: {
+            OR: [
+              { isActive: true },
+              { courseId: params.id },
+              user.role === 'ADMIN' ? {} : undefined
+            ].filter(Boolean) as any[]
           }
         },
         _count: {
@@ -53,7 +90,7 @@ export async function GET(
           }
         }
       }
-    })
+    }) as CourseWithRelations | null
 
     if (!course) {
       return NextResponse.json(
@@ -62,62 +99,65 @@ export async function GET(
       )
     }
 
-    const isAdmin = user.role === 'ADMIN' || user.role === 'INSTRUCTOR'
+    // Check access rights
+    const isAdmin = user.role === 'ADMIN'
     const isCreator = course.creatorId === user.id
 
-    // Check if user is enrolled in this course and which batches
-    const enrollments = await prisma.enrollment.findMany({
-      where: {
-        userId: user.id,
-        courseId: courseId
-      },
-      select: { batchId: true }
-    })
-    const isEnrolled = enrollments.length > 0
-    const enrolledBatchIds = enrollments.map(e => e.batchId)
-
-    // If not admin, creator, or enrolled, and course is not published, deny access
-    if (!isAdmin && !isCreator && !isEnrolled && !course.isPublished) {
+    if (!isAdmin && !isCreator && !course.isPublished) {
       return NextResponse.json(
         { error: 'Course not published' },
         { status: 403 }
       )
     }
 
-    // Get progress for each session
-    const sessionsWithProgress = await Promise.all(
-      course.sessions.map(async (session: any) => {
-        const progress = await prisma.progress.findUnique({
-          where: {
-            userId_sessionId: {
-              userId: user.id,
-              sessionId: session.id
-            }
-          }
-        })
+    // Get enrollment status
+    const enrollments = await prisma.enrollment.findMany({
+      where: {
+        courseId: course.id,
+        userId: user.id
+      },
+      select: {
+        batchId: true
+      }
+    })
 
-        return {
-          ...session,
-          progress: progress ? {
-            watchedTime: progress.watchedTime,
-            completed: progress.completed
-          } : null
-        }
-      })
-    )
+    const isEnrolled = enrollments.length > 0
+    const enrolledBatchIds = enrollments.map(e => e.batchId)
+
+    // Get progress for each session if user is enrolled
+    const finalSessions = isEnrolled 
+      ? await Promise.all(
+          course.sessions.map(async (session) => {
+            const progress = await prisma.progress.findFirst({
+              where: {
+                userId: user.id,
+                sessionId: session.id
+              }
+            })
+            
+            return {
+              ...session,
+              progress
+            }
+          })
+        )
+      : course.sessions
+
+    const courseWithProgress = {
+      ...course,
+      sessions: finalSessions
+    }
 
     return NextResponse.json({
-      course: {
-        ...course,
-        sessions: sessionsWithProgress
-      },
+      course: courseWithProgress,
       isEnrolled,
       enrolledBatchIds
     })
+
   } catch (error) {
-    console.error('Course fetch error:', error)
+    console.error('Error fetching course:', error)
     return NextResponse.json(
-      { error: 'Internal server error' },
+      { error: 'Failed to fetch course' },
       { status: 500 }
     )
   }
@@ -125,7 +165,7 @@ export async function GET(
 
 export async function PUT(
   request: NextRequest,
-  { params }: { params: Promise<{ id: string }> }
+  { params }: { params: { id: string } }
 ) {
   try {
     const token = request.cookies.get('auth-token')?.value
@@ -137,17 +177,35 @@ export async function PUT(
       )
     }
 
-    const user = verifyToken(token)
+    const user = await verifyToken(token) as AuthUser
 
-    if (!user || (user.role !== 'ADMIN' && user.role !== 'INSTRUCTOR')) {
+    if (!user || !['ADMIN', 'INSTRUCTOR'].includes(user.role)) {
       return NextResponse.json(
         { error: 'Unauthorized' },
         { status: 403 }
       )
     }
 
-    const { id: courseId } = await params
+    const courseId = params.id
     const { title, description, thumbnail, isPublished } = await request.json()
+
+    // Validate thumbnail URL if provided
+    if (thumbnail !== undefined && thumbnail !== null) {
+      if (typeof thumbnail !== 'string') {
+        return NextResponse.json(
+          { error: 'Thumbnail must be a URL string' },
+          { status: 400 }
+        )
+      }
+      try {
+        new URL(thumbnail)
+      } catch (e) {
+        return NextResponse.json(
+          { error: 'Thumbnail must be a valid URL starting with http:// or https://' },
+          { status: 400 }
+        )
+      }
+    }
 
     const course = await prisma.course.findUnique({
       where: { id: courseId }
@@ -215,9 +273,9 @@ export async function DELETE(
       )
     }
 
-    const user = verifyToken(token)
+    const user = await verifyToken(token) as AuthUser
 
-    if (!user || (user.role !== 'ADMIN' && user.role !== 'INSTRUCTOR')) {
+    if (!user || !['ADMIN', 'INSTRUCTOR'].includes(user.role)) {
       return NextResponse.json(
         { error: 'Unauthorized' },
         { status: 403 }
@@ -245,11 +303,15 @@ export async function DELETE(
       )
     }
 
+    // Delete the course and all related data
     await prisma.course.delete({
       where: { id: courseId }
     })
 
-    return NextResponse.json({ message: 'Course deleted successfully' })
+    return NextResponse.json({
+      success: true,
+      message: 'Course deleted successfully'
+    })
   } catch (error) {
     console.error('Course deletion error:', error)
     return NextResponse.json(

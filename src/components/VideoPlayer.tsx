@@ -3,19 +3,22 @@
 import { useState, useEffect, useRef } from 'react'
 import { Play, Pause, Volume2, VolumeX, Maximize, RotateCcw } from 'lucide-react'
 import ReactPlayer from 'react-player'
+import { DocumentList } from './DocumentList'
 
 interface VideoPlayerProps {
   videoUrl: string
   sessionId: string
   userId: string
+  isInstructor?: boolean
   onProgressUpdate?: (progress: number) => void
-  onComplete?: () => void
+  onComplete?: (sessionId: string) => void
 }
 
 export default function VideoPlayer({ 
   videoUrl, 
   sessionId, 
-  userId, 
+  userId,
+  isInstructor = false,
   onProgressUpdate,
   onComplete 
 }: VideoPlayerProps) {
@@ -34,6 +37,25 @@ export default function VideoPlayer({
   // For external providers (Vimeo/YouTube) we should mount ReactPlayer immediately
   const [isLoading, setIsLoading] = useState(() => (externalProvider ? false : true))
   const [loadError, setLoadError] = useState<string | null>(null)
+
+  const handleEnded = () => {
+    setIsPlaying(false)
+    
+    // Mark the session as completed
+    fetch('/api/progress', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        sessionId,
+        completed: true,
+        watchedTime: currentTime
+      })
+    }).catch(console.error)
+
+    if (onComplete) {
+      onComplete(sessionId)
+    }
+  }
 
   useEffect(() => {
     const video = videoRef.current
@@ -64,17 +86,10 @@ export default function VideoPlayer({
       }
     }
 
-    const handleEnded = () => {
-      setIsPlaying(false)
-      if (onComplete) {
-        onComplete()
-      }
-    }
-
     video.addEventListener('loadedmetadata', handleLoadedMetadata)
     video.addEventListener('timeupdate', handleTimeUpdate)
     video.addEventListener('ended', handleEnded)
-  video.addEventListener('error', handleVideoError)
+    video.addEventListener('error', handleVideoError)
 
     return () => {
       video.removeEventListener('loadedmetadata', handleLoadedMetadata)
@@ -82,7 +97,7 @@ export default function VideoPlayer({
       video.removeEventListener('ended', handleEnded)
       video.removeEventListener('error', handleVideoError)
     }
-  }, [onProgressUpdate, onComplete])
+  }, [sessionId, currentTime, onProgressUpdate, onComplete])
 
   // helpers to detect if the URL is a direct file or an external provider (Vimeo/YouTube)
   const isExternalProvider = (url: string) => {
@@ -315,7 +330,7 @@ export default function VideoPlayer({
               }}
               onEnded={() => {
                 setIsPlaying(false)
-                if (onComplete) onComplete()
+                if (onComplete) onComplete(sessionId)
               }}
               onError={(err: any) => {
                 console.error('ReactPlayer load error:', err)
@@ -436,6 +451,8 @@ export default function VideoPlayer({
           </div>
         </div>
       </div>
+
+      <DocumentList sessionId={sessionId} isInstructor={isInstructor} />
 
       <style jsx>{`
         .slider::-webkit-slider-thumb {

@@ -4,6 +4,7 @@ import { useAuth } from '@/contexts/AuthContext'
 import { useEffect, useState } from 'react'
 import Link from 'next/link'
 import { BookOpen, Plus, Play, Users, Clock } from 'lucide-react'
+import CourseThumbnail from '@/components/CourseThumbnail'
 
 interface Course {
   id: string
@@ -112,17 +113,10 @@ export default function CoursesPage() {
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
             {courses.map((course) => (
               <div key={course.id} className="bg-white rounded-lg shadow-md overflow-hidden hover:shadow-lg transition-shadow">
-                {course.thumbnail ? (
-                  <img
-                    src={course.thumbnail}
-                    alt={course.title}
-                    className="w-full h-48 object-cover"
-                  />
-                ) : (
-                  <div className="w-full h-48 bg-gray-200 flex items-center justify-center">
-                    <BookOpen className="h-12 w-12 text-gray-400" />
-                  </div>
-                )}
+                <CourseThumbnail
+                  thumbnail={course.thumbnail}
+                  title={course.title}
+                />
                 
                 <div className="p-6">
                   <div className="flex items-center justify-between mb-2">

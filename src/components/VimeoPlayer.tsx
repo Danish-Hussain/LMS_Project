@@ -7,7 +7,7 @@ interface Props {
   sessionId?: string;
   userId?: string;
   onProgress?: (progress: number) => void;
-  onComplete?: () => void;
+  onComplete?: (sessionId: string) => void;
 }
 
 export default function VimeoPlayer(props: Props) {

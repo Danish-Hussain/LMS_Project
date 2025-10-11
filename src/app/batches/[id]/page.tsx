@@ -1,10 +1,11 @@
 'use client'
 
 import { useAuth } from '@/contexts/AuthContext'
-import { useEffect, useState } from 'react'
+import { useEffect, useState, useMemo } from 'react'
 import { useParams } from 'next/navigation'
 import Link from 'next/link'
-import { ArrowLeft, Users, Calendar, Play, Plus, Edit, Trash2 } from 'lucide-react'
+import { ArrowLeft, Users, Calendar, Plus, Edit, Trash2 } from 'lucide-react'
+import { SessionListItem } from '@/components/SessionListItem'
 
 interface Session {
   id: string
@@ -42,12 +43,46 @@ export default function BatchDetailPage() {
   
   const [batch, setBatch] = useState<Batch | null>(null)
   const [isLoading, setIsLoading] = useState(true)
+  const [progress, setProgress] = useState<Record<string, { completed: boolean }>>({})
+  
+  const isAdmin = useMemo(() => 
+    user?.role === 'ADMIN' || user?.role === 'INSTRUCTOR'
+  , [user?.role])
 
   useEffect(() => {
     if (user && batchId) {
       fetchBatch()
     }
   }, [user, batchId])
+
+  useEffect(() => {
+    if (user && batch && !isAdmin) {
+      fetchProgress()
+    }
+  }, [user, batch, isAdmin])
+
+  const fetchProgress = async () => {
+    try {
+      const promises = batch?.sessions.map(async (session) => {
+        const response = await fetch(`/api/progress?sessionId=${session.id}`)
+        if (response.ok) {
+          const data = await response.json()
+          return [session.id, data]
+        }
+        return null
+      }) || []
+
+      const results = await Promise.all(promises)
+      const progressMap = Object.fromEntries(
+        results
+          .filter((result): result is [string, any] => result !== null)
+          .map(([id, data]) => [id, { completed: data?.completed || false }])
+      )
+      setProgress(progressMap)
+    } catch (error) {
+      console.error('Failed to fetch progress:', error)
+    }
+  }
 
   const fetchBatch = async () => {
     try {
@@ -93,7 +128,7 @@ export default function BatchDetailPage() {
       <div className="min-h-screen bg-gray-50 flex items-center justify-center">
         <div className="text-center">
           <h1 className="text-2xl font-bold text-gray-900 mb-4">Access Denied</h1>
-          <p className="text-gray-600 mb-8">Please log in to view this batch.</p>
+          <p className="text-gray-600 mb-8">Please log in to view batches.</p>
           <Link
             href="/login"
             className="bg-blue-600 hover:bg-blue-700 text-white px-6 py-2 rounded-lg font-semibold transition-colors"
@@ -104,8 +139,6 @@ export default function BatchDetailPage() {
       </div>
     )
   }
-
-  const isAdmin = user.role === 'ADMIN' || user.role === 'INSTRUCTOR'
 
   if (!isAdmin) {
     return (
@@ -215,7 +248,6 @@ export default function BatchDetailPage() {
                 
                 {batch.sessions.length === 0 ? (
                   <div className="text-center py-8">
-                    <Play className="h-12 w-12 text-gray-400 mx-auto mb-4" />
                     <h3 className="text-lg font-medium text-gray-900 mb-2">No sessions yet</h3>
                     <p className="text-gray-600 mb-4">Add video sessions to this batch.</p>
                     <Link
@@ -230,38 +262,25 @@ export default function BatchDetailPage() {
                     {batch.sessions
                       .sort((a, b) => a.order - b.order)
                       .map((session) => (
-                      <div
+                      <SessionListItem
                         key={session.id}
-                        className="flex items-center justify-between p-4 border border-gray-200 rounded-lg hover:border-gray-300 transition-colors"
-                      >
-                        <div className="flex items-center">
-                          <Play className="h-5 w-5 text-gray-400 mr-3" />
-                          <div>
-                            <h4 className="font-medium text-gray-900">{session.title}</h4>
-                            {session.description && (
-                              <p className="text-sm text-gray-600">{session.description}</p>
-                            )}
-                            {session.duration && (
-                              <p className="text-xs text-gray-500">
-                                {Math.floor(session.duration)} minutes
-                              </p>
-                            )}
-                          </div>
-                        </div>
-                        <div className="flex items-center space-x-2">
-                          {!session.isPublished && (
-                            <span className="bg-yellow-100 text-yellow-800 text-xs font-medium px-2.5 py-0.5 rounded-full">
-                              Draft
-                            </span>
-                          )}
-                          <Link
-                            href={`/batches/${batchId}/sessions/${session.id}/edit`}
-                            className="text-blue-600 hover:text-blue-700 text-sm font-medium"
-                          >
-                            Edit
-                          </Link>
-                        </div>
-                      </div>
+                        id={session.id}
+                        title={session.title}
+                        description={session.description}
+                        duration={session.duration}
+                        isPublished={session.isPublished}
+                        isInstructor={isAdmin}
+                        isCompleted={progress[session.id]?.completed}
+                        onStatusChange={async (id, completed) => {
+                          setProgress(prev => ({
+                            ...prev,
+                            [id]: { completed }
+                          }))
+                        }}
+                        onEdit={(id) => {
+                          window.location.href = `/batches/${batchId}/sessions/${id}/edit`
+                        }}
+                      />
                     ))}
                   </div>
                 )}
