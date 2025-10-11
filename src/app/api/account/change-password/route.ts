@@ -7,9 +7,13 @@ import nodemailer from 'nodemailer'
 export async function POST(request: Request) {
   try {
     const body = await request.json()
-    const { currentPassword, newPassword } = body || {}
-    if (!currentPassword || !newPassword) {
+    const { currentPassword, newPassword, confirmPassword } = body || {}
+    if (!currentPassword || !newPassword || !confirmPassword) {
       return NextResponse.json({ error: 'Missing fields' }, { status: 400 })
+    }
+
+    if (newPassword !== confirmPassword) {
+      return NextResponse.json({ error: 'New password and confirm password do not match' }, { status: 400 })
     }
 
     const token = (request as any).cookies?.get?.('auth-token')?.value
