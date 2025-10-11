@@ -6,6 +6,7 @@ import useToast from '@/hooks/useToast'
 export default function ChangePasswordPage() {
   const [currentPassword, setCurrentPassword] = useState('')
   const [newPassword, setNewPassword] = useState('')
+  const [confirmPassword, setConfirmPassword] = useState('')
   const [loading, setLoading] = useState(false)
   const toast = useToast()
 
@@ -13,6 +14,12 @@ export default function ChangePasswordPage() {
     e.preventDefault()
     setLoading(true)
     try {
+      if (newPassword !== confirmPassword) {
+        toast.error('New password and confirm password do not match')
+        setLoading(false)
+        return
+      }
+
       const res = await fetch('/api/account/change-password', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -21,7 +28,8 @@ export default function ChangePasswordPage() {
       if (!res.ok) throw new Error(await res.text())
       toast.success('Password changed')
       setCurrentPassword('')
-      setNewPassword('')
+  setNewPassword('')
+  setConfirmPassword('')
     } catch (err) {
       toast.error('Failed to change password')
     } finally {
@@ -39,7 +47,11 @@ export default function ChangePasswordPage() {
         </div>
         <div>
           <label className="block text-sm font-medium text-gray-700">New password</label>
-          <input type="password" value={newPassword} onChange={(e) => setNewPassword(e.target.value)} className="mt-1 block w-full border rounded-md px-3 py-2" required />
+            <input type="password" value={newPassword} onChange={(e) => setNewPassword(e.target.value)} className="mt-1 block w-full border rounded-md px-3 py-2" required />
+          </div>
+          <div>
+            <label className="block text-sm font-medium text-gray-700">Confirm new password</label>
+            <input type="password" value={confirmPassword} onChange={(e) => setConfirmPassword(e.target.value)} className="mt-1 block w-full border rounded-md px-3 py-2" required />
         </div>
         <div className="flex justify-end">
           <button type="submit" disabled={loading} className="px-4 py-2 bg-blue-600 text-white rounded-md">{loading ? 'Saving...' : 'Change password'}</button>
