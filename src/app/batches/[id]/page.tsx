@@ -4,6 +4,7 @@ import { useAuth } from '@/contexts/AuthContext'
 import { useEffect, useState, useMemo } from 'react'
 import { useParams } from 'next/navigation'
 import Link from 'next/link'
+import ConfirmDialog from '@/components/ui/ConfirmDialog'
 import { ArrowLeft, Users, Calendar, Plus, Edit, Trash2 } from 'lucide-react'
 import { SessionListItem } from '@/components/SessionListItem'
 
@@ -99,8 +100,12 @@ export default function BatchDetailPage() {
   }
 
   const handleDelete = async () => {
-    if (!confirm('Are you sure you want to delete this batch?')) return
+    // handled by ConfirmDialog
+  }
 
+  const [confirmDeleteOpen, setConfirmDeleteOpen] = useState(false)
+
+  const doDeleteBatch = async () => {
     try {
       const response = await fetch(`/api/batches/${batchId}`, {
         method: 'DELETE'
@@ -218,7 +223,7 @@ export default function BatchDetailPage() {
                 Edit Batch
               </Link>
               <button
-                onClick={handleDelete}
+                onClick={() => setConfirmDeleteOpen(true)}
                 className="bg-red-600 hover:bg-red-700 text-white px-4 py-2 rounded-lg font-semibold transition-colors flex items-center"
               >
                 <Trash2 className="h-4 w-4 mr-2" />
@@ -335,6 +340,16 @@ export default function BatchDetailPage() {
           </div>
         </div>
       </div>
+      <ConfirmDialog
+        open={confirmDeleteOpen}
+        title="Delete Batch"
+        message="Are you sure you want to delete this batch?"
+        onCancel={() => setConfirmDeleteOpen(false)}
+        onConfirm={() => {
+          doDeleteBatch()
+          setConfirmDeleteOpen(false)
+        }}
+      />
     </div>
   )
 }

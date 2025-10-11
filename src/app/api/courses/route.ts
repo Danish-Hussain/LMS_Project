@@ -53,7 +53,7 @@ export async function GET(request: NextRequest) {
         createdAt: 'desc'
       }
     })
-    console.log('Query results:', { count: courses.length, courses: courses.map(c => ({ id: c.id, title: c.title })) })
+    console.log('Query results:', { count: courses.length, courses: courses.map((c: { id: string; title: string }) => ({ id: c.id, title: c.title })) })
 
     return NextResponse.json(courses)
   } catch (error) {
@@ -241,8 +241,14 @@ export async function POST(request: NextRequest) {
     console.log('Creating course with validated data:', courseData)
 
     try {
+      // Log the course data being created
+      console.log('Creating course with data:', {
+        ...courseData,
+        creatorId: user.id
+      })
+
       // Use a transaction to ensure data consistency
-      const course = await prisma.$transaction(async (tx) => {
+      const course = await prisma.$transaction(async (tx: typeof prisma) => {
         // Double check user exists within transaction
         const userExists = await tx.user.findUnique({
           where: { id: user.id },
@@ -308,30 +314,45 @@ export async function POST(request: NextRequest) {
       stack: error instanceof Error ? error.stack : undefined,
       message: error instanceof Error ? error.message : String(error)
     })
-    
+
     // Return appropriate error based on the type
     if (error instanceof Error) {
       // Handle specific Prisma errors
       if (error.message.includes('foreign key constraint failed')) {
         return NextResponse.json(
-          { error: 'Invalid creator ID provided' },
+          { 
+            error: 'Invalid creator ID provided',
+            details: error.message
+          },
           { status: 400 }
         )
       }
 
+      if (error.message.includes('Unique constraint failed')) {
+        return NextResponse.json(
+          {
+            error: 'A course with this title already exists',
+            details: error.message
+          },
+          { status: 409 }
+        )
+      }
+
       return NextResponse.json(
-        { error: 'Failed to create course: ' + error.message },
+        { 
+          error: 'Failed to create course',
+          message: error.message,
+          details: error.stack
+        },
         { status: 500 }
       )
     }
     
     return NextResponse.json(
-      { error: 'An unexpected error occurred while creating the course' },
-      { status: 500 }
-    )
-      
-    return NextResponse.json(
-      { error: 'An unexpected error occurred while creating the course' },
+      { 
+        error: 'An unexpected error occurred while creating the course',
+        details: String(error)
+      },
       { status: 500 }
     )
   }

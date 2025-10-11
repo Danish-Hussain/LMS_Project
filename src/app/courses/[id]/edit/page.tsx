@@ -1,6 +1,7 @@
 'use client'
 
 import { useEffect, useState } from 'react'
+import useToast from '@/hooks/useToast'
 import { useParams, useRouter } from 'next/navigation'
 import { useAuth } from '@/contexts/AuthContext'
 import Link from 'next/link'
@@ -19,6 +20,7 @@ export default function EditCoursePage() {
     isPublished: false
   })
   const [isSubmitting, setIsSubmitting] = useState(false)
+  const { info: toastInfo, error: toastError, success: toastSuccess } = useToast()
 
   useEffect(() => {
     if (user && courseId) fetchCourse()
@@ -67,13 +69,13 @@ export default function EditCoursePage() {
 
       if (res.ok) {
         router.push(`/courses/${courseId}`)
-      } else {
+        } else {
         const data = await res.json()
-        alert(data.error || 'Failed to update course')
+        toastError(data.error || 'Failed to update course')
       }
     } catch (err) {
       console.error('Update failed:', err)
-      alert('An error occurred')
+      toastError('An error occurred')
     } finally {
       setIsSubmitting(false)
     }

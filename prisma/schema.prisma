@@ -5,11 +5,6 @@ generator client {
   provider = "prisma-client-js"
 }
 
-// This will set up seeding
-generator seed {
-  provider = "ts-node prisma/seed.ts"
-}
-
 datasource db {
   provider = "sqlite"
   url      = env("DATABASE_URL")
@@ -48,11 +43,30 @@ model Course {
   // Relations
   creator     User          @relation("CourseCreator", fields: [creatorId], references: [id])
   sessions    Session[]
+  sections    CourseSection[]
   enrollments Enrollment[]
   batches     Batch[]
   payments    Payment[]
 
   @@map("courses")
+}
+
+model CourseSection {
+  id          String    @id @default(cuid())
+  title       String
+  description String?
+  order       Int
+  courseId    String
+  batchId     String
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+
+  // Relations
+  course      Course    @relation(fields: [courseId], references: [id], onDelete: Cascade)
+  batch       Batch     @relation(fields: [batchId], references: [id], onDelete: Cascade)
+  sessions    Session[]
+
+  @@map("course_sections")
 }
 
 model Session {
@@ -69,10 +83,12 @@ model Session {
   updatedAt   DateTime  @updatedAt
   courseId    String
   batchId     String
+  sectionId   String?
 
   // Relations
   course      Course            @relation(fields: [courseId], references: [id], onDelete: Cascade)
   batch       Batch             @relation(fields: [batchId], references: [id], onDelete: Cascade)
+  section     CourseSection?    @relation(fields: [sectionId], references: [id])
   progress    Progress[]
   documents   SessionDocument[]
 
@@ -110,6 +126,7 @@ model Batch {
   course      Course      @relation(fields: [courseId], references: [id], onDelete: Cascade)
   students    User[]      @relation("BatchStudents")
   sessions    Session[]
+  sections    CourseSection[]
   enrollments Enrollment[]
 
   @@map("batches")

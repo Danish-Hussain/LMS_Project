@@ -16,6 +16,7 @@ interface Session {
   duration: number | null
   order: number
   isPublished: boolean
+  sectionId?: string | null
   progress?: {
     watchedTime: number
     completed: boolean
@@ -71,6 +72,25 @@ function CourseContent({
   handleEnroll,
   enrolledBatchIds
 }: CourseContentProps) {
+  const [sections, setSections] = useState<{ id: string; title: string; order: number; description?: string | null }[]>([])
+  const enrolledBatchId = enrolledBatchIds && enrolledBatchIds.length > 0 ? enrolledBatchIds[0] : null
+
+  // fetch sections for the enrolled batch when available
+  useEffect(() => {
+    const fetchSections = async () => {
+      if (!enrolledBatchId) return
+      try {
+        const res = await fetch(`/api/batches/${enrolledBatchId}/sections`, { credentials: 'same-origin' })
+        if (res.ok) {
+          const data = await res.json()
+          setSections(data || [])
+        }
+      } catch (err) {
+        console.error('Failed to fetch sections for batch:', err)
+      }
+    }
+    fetchSections()
+  }, [enrolledBatchId])
   const isAdmin = user.role === 'ADMIN' || user.role === 'INSTRUCTOR'
   const canAccess = isAdmin || isEnrolled
 
@@ -161,79 +181,135 @@ function CourseContent({
                   <h3 className="text-xl font-semibold text-gray-900">{course.title}</h3>
                 </div>
                 <div className="space-y-2">
-                  {course.sessions
-                    .sort((a, b) => a.order - b.order)
-                    .map((session) => (
-                      <div
-                        key={session.id}
-                        onClick={() => setSelectedSession(session)}
-                        role="button"
-                        tabIndex={0}
-                        onKeyDown={(e) => {
-                          if (e.key === 'Enter' || e.key === ' ') {
-                            setSelectedSession(session);
-                          }
-                        }}
-                        className={`w-full text-left p-4 rounded-lg transition-all cursor-pointer ${
-                          selectedSession?.id === session.id
-                            ? 'bg-blue-50 border border-blue-200 shadow-sm'
-                            : session.progress?.completed
-                            ? 'bg-green-50 border border-transparent hover:border-green-200'
-                            : session.progress?.watchedTime
-                            ? 'bg-yellow-50 border border-transparent hover:border-yellow-200'
-                            : 'hover:bg-gray-50 border border-transparent hover:border-gray-200'
-                        }`}
-                      >
-                        <div className="flex items-center justify-between">
-                          <div className="flex items-center flex-grow">
-                            <div className={`rounded-full p-1.5 mr-3 ${
-                              selectedSession?.id === session.id
-                                ? 'bg-blue-100 text-blue-600'
-                                : session.progress?.completed
-                                ? 'bg-green-100 text-green-600'
-                                : session.progress?.watchedTime
-                                ? 'bg-yellow-100 text-yellow-600'
-                                : 'bg-gray-100 text-gray-500'
-                            }`}>
-                              <span className={`font-medium ${
-                                selectedSession?.id === session.id
-                                  ? 'text-blue-900'
-                                  : 'text-gray-900'
-                              }`}>
-                                {session.title}
-                              </span>
-                              {session.progress?.watchedTime && !session.progress.completed && (
-                                <div className="h-1 bg-gray-200 rounded-full mt-2">
-                                  <div 
-                                    className="h-1 bg-yellow-500 rounded-full" 
-                                    style={{ width: `${(session.progress.watchedTime / (session.duration || 1)) * 100}%` }}
-                                  />
+                  {sections && sections.length > 0 ? (
+                    // Render grouped by section for enrolled batch
+                    sections
+                      .sort((a, b) => a.order - b.order)
+                      .map((section) => (
+                        <div key={section.id} className="mb-2">
+                          <div className="px-3 py-2 text-sm font-semibold text-gray-800">{section.title}</div>
+                          <div className="pl-3">
+                            {course.sessions
+                              .filter((s) => s.sectionId === section.id)
+                              .sort((a, b) => a.order - b.order)
+                              .map((session) => (
+                                <div
+                                  key={session.id}
+                                  onClick={() => setSelectedSession(session)}
+                                  role="button"
+                                  tabIndex={0}
+                                  onKeyDown={(e) => {
+                                    if (e.key === 'Enter' || e.key === ' ') setSelectedSession(session)
+                                  }}
+                                  className={`w-full text-left p-4 rounded-lg transition-all cursor-pointer ${
+                                    selectedSession?.id === session.id
+                                      ? 'bg-blue-50 border border-blue-200 shadow-sm'
+                                      : session.progress?.completed
+                                      ? 'bg-green-50 border border-transparent hover:border-green-200'
+                                      : session.progress?.watchedTime
+                                      ? 'bg-yellow-50 border border-transparent hover:border-yellow-200'
+                                      : 'hover:bg-gray-50 border border-transparent hover:border-gray-200'
+                                  }`}
+                                >
+                                  <div className="flex items-center justify-between">
+                                    <div className="flex items-center flex-grow">
+                                      <div className={`rounded-full p-1.5 mr-3 ${
+                                        selectedSession?.id === session.id
+                                          ? 'bg-blue-100 text-blue-600'
+                                          : session.progress?.completed
+                                          ? 'bg-green-100 text-green-600'
+                                          : session.progress?.watchedTime
+                                          ? 'bg-yellow-100 text-yellow-600'
+                                          : 'bg-gray-100 text-gray-500'
+                                      }`}>
+                                        <span className={`font-medium ${
+                                          selectedSession?.id === session.id
+                                            ? 'text-blue-900'
+                                            : 'text-gray-900'
+                                        }`}>{session.title}</span>
+                                        {session.progress?.watchedTime && !session.progress.completed && (
+                                          <div className="h-1 bg-gray-200 rounded-full mt-2">
+                                            <div className="h-1 bg-yellow-500 rounded-full" style={{ width: `${(session.progress.watchedTime / (session.duration || 1)) * 100}%` }} />
+                                          </div>
+                                        )}
+                                      </div>
+                                    </div>
+                                    <button onClick={(e) => { e.stopPropagation(); handleSessionComplete(session.id); }} className={`ml-2 p-1 rounded-full transition-colors ${ session.progress?.completed ? 'bg-green-100 text-green-600 hover:bg-green-200' : 'bg-gray-100 text-gray-400 hover:bg-gray-200' }` }>
+                                      <CheckCircle className="h-5 w-5" />
+                                    </button>
+                                  </div>
+                                  {session.duration && (
+                                    <div className="flex items-center mt-2 text-sm text-gray-500 ml-8">
+                                      <Clock className="h-4 w-4 mr-1.5" />
+                                      <span>{Math.floor(session.duration)} min</span>
+                                    </div>
+                                  )}
                                 </div>
-                              )}
-                            </div>
+                              ))}
                           </div>
-                          <button 
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              handleSessionComplete(session.id);
-                            }}
-                            className={`ml-2 p-1 rounded-full transition-colors ${
-                              session.progress?.completed 
-                                ? 'bg-green-100 text-green-600 hover:bg-green-200' 
-                                : 'bg-gray-100 text-gray-400 hover:bg-gray-200'
-                            }`}
-                          >
-                            <CheckCircle className="h-5 w-5" />
-                          </button>
                         </div>
-                        {session.duration && (
-                          <div className="flex items-center mt-2 text-sm text-gray-500 ml-8">
-                            <Clock className="h-4 w-4 mr-1.5" />
-                            <span>{Math.floor(session.duration)} min</span>
+                      ))
+                  ) : (
+                    // Fallback to flat list if no sections
+                    course.sessions
+                      .sort((a, b) => a.order - b.order)
+                      .map((session) => (
+                        <div
+                          key={session.id}
+                          onClick={() => setSelectedSession(session)}
+                          role="button"
+                          tabIndex={0}
+                          onKeyDown={(e) => {
+                            if (e.key === 'Enter' || e.key === ' ') {
+                              setSelectedSession(session);
+                            }
+                          }}
+                          className={`w-full text-left p-4 rounded-lg transition-all cursor-pointer ${
+                            selectedSession?.id === session.id
+                              ? 'bg-blue-50 border border-blue-200 shadow-sm'
+                              : session.progress?.completed
+                              ? 'bg-green-50 border border-transparent hover:border-green-200'
+                              : session.progress?.watchedTime
+                              ? 'bg-yellow-50 border border-transparent hover:border-yellow-200'
+                              : 'hover:bg-gray-50 border border-transparent hover:border-gray-200'
+                          }`}
+                        >
+                          <div className="flex items-center justify-between">
+                            <div className="flex items-center flex-grow">
+                              <div className={`rounded-full p-1.5 mr-3 ${
+                                selectedSession?.id === session.id
+                                  ? 'bg-blue-100 text-blue-600'
+                                  : session.progress?.completed
+                                  ? 'bg-green-100 text-green-600'
+                                  : session.progress?.watchedTime
+                                  ? 'bg-yellow-100 text-yellow-600'
+                                  : 'bg-gray-100 text-gray-500'
+                              }`}>
+                                <span className={`font-medium ${
+                                  selectedSession?.id === session.id
+                                    ? 'text-blue-900'
+                                    : 'text-gray-900'
+                                }`}>{session.title}</span>
+                                {session.progress?.watchedTime && !session.progress.completed && (
+                                  <div className="h-1 bg-gray-200 rounded-full mt-2">
+                                    <div className="h-1 bg-yellow-500 rounded-full" style={{ width: `${(session.progress.watchedTime / (session.duration || 1)) * 100}%` }} />
+                                  </div>
+                                )}
+                              </div>
+                            </div>
+                            <button onClick={(e) => { e.stopPropagation(); handleSessionComplete(session.id); }} className={`ml-2 p-1 rounded-full transition-colors ${ session.progress?.completed ? 'bg-green-100 text-green-600 hover:bg-green-200' : 'bg-gray-100 text-gray-400 hover:bg-gray-200' }` }>
+                              <CheckCircle className="h-5 w-5" />
+                            </button>
                           </div>
-                        )}
-                      </div>
-                    ))}
+                          {session.duration && (
+                            <div className="flex items-center mt-2 text-sm text-gray-500 ml-8">
+                              <Clock className="h-4 w-4 mr-1.5" />
+                              <span>{Math.floor(session.duration)} min</span>
+                            </div>
+                          )}
+                        </div>
+                      ))
+                  )}
                 </div>
               </div>
             </div>

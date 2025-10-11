@@ -5,6 +5,7 @@ import { useAuth } from '@/contexts/AuthContext'
 import { useRouter, useSearchParams } from 'next/navigation'
 import Link from 'next/link'
 import { ArrowLeft, CreditCard, CheckCircle, Lock } from 'lucide-react'
+import useToast from '@/hooks/useToast'
 
 interface Course {
   id: string
@@ -32,6 +33,7 @@ export default function PaymentPage() {
   const [batch, setBatch] = useState<Batch | null>(null)
   const [isLoading, setIsLoading] = useState(true)
   const [isProcessing, setIsProcessing] = useState(false)
+  const { info: toastInfo, error: toastError, success: toastSuccess } = useToast()
   const [paymentMethod, setPaymentMethod] = useState('card')
   const [cardDetails, setCardDetails] = useState({
     number: '',
@@ -91,11 +93,11 @@ export default function PaymentPage() {
         // Redirect to course page after successful payment
         router.push(`/courses/${courseId}`)
       } else {
-        alert('Payment failed. Please try again.')
+        toastError('Payment failed. Please try again.')
       }
     } catch (error) {
       console.error('Payment error:', error)
-      alert('Payment failed. Please try again.')
+      toastError('Payment failed. Please try again.')
     } finally {
       setIsProcessing(false)
     }
@@ -323,4 +325,6 @@ export default function PaymentPage() {
     </div>
   )
 }
+
+
 

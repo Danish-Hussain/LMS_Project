@@ -1,8 +1,9 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { useAuth } from '@/contexts/AuthContext'
 import { useParams, useRouter } from 'next/navigation'
+import { useSearchParams } from 'next/navigation'
 import Link from 'next/link'
 import { ArrowLeft, Save } from 'lucide-react'
 
@@ -12,15 +13,29 @@ export default function CreateSessionPage() {
   const router = useRouter()
   const batchId = params.id as string
   
-  const [formData, setFormData] = useState({
+  type FormShape = {
+    title: string
+    description: string
+    videoUrl: string
+    duration: string
+    order: string
+    startTime: string
+    endTime: string
+    sectionId?: string | null
+  }
+
+  const [formData, setFormData] = useState<FormShape>({
     title: '',
     description: '',
     videoUrl: '',
     duration: '',
     order: '',
     startTime: '',
-    endTime: ''
+    endTime: '',
+    sectionId: null
   })
+  const [sections, setSections] = useState<Array<{id:string;title:string}>>([])
+  const searchParams = useSearchParams()
   const [isSubmitting, setIsSubmitting] = useState(false)
   const [error, setError] = useState('')
 
@@ -63,21 +78,28 @@ export default function CreateSessionPage() {
         }
       }
 
-      const response = await fetch('/api/sessions', {
+      const response = await fetch(`/api/batches/${batchId}/sessions`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json'
         },
         body: JSON.stringify({
-          ...formData,
+          title: formData.title,
+          description: formData.description,
+          videoUrl: formData.videoUrl,
           batchId,
           duration: formData.duration ? parseInt(formData.duration) : null,
-          order: parseInt(formData.order) || 1
+          order: parseInt(formData.order) || 1,
+          startTime: formData.startTime || null,
+          endTime: formData.endTime || null,
+          sectionId: (formData as any).sectionId || null
         })
       })
 
       if (response.ok) {
-        router.push(`/batches/${batchId}/sessions`)
+        const created = await response.json()
+        // redirect back to sessions listing and pass created id + section for UI highlight
+        router.push(`/batches/${batchId}/sessions?createdSessionId=${created.id}&sectionId=${created.sectionId || ''}`)
       } else {
         const errorData = await response.json()
         setError(errorData.error || 'Failed to create session')
@@ -88,6 +110,27 @@ export default function CreateSessionPage() {
       setIsSubmitting(false)
     }
   }
+
+  useEffect(() => {
+    // preload sections for the batch and preselect section via query param if provided
+    const load = async () => {
+      try {
+        const res = await fetch(`/api/batches/${batchId}/sections`, { credentials: 'same-origin' })
+        if (res.ok) {
+          const data = await res.json()
+          setSections(data)
+          const sectionId = searchParams?.get('sectionId')
+          if (sectionId) {
+            setFormData(prev => ({ ...prev, sectionId }))
+          }
+        }
+      } catch (e) {
+        console.error('Failed to load sections', e)
+      }
+    }
+
+    load()
+  }, [batchId, searchParams])
 
   if (loading) {
     return (
@@ -141,6 +184,23 @@ export default function CreateSessionPage() {
             )}
 
             <div className="space-y-6">
+              <div>
+                <label htmlFor="sectionId" className="block text-sm font-medium text-gray-700 mb-2">
+                  Section
+                </label>
+                <select
+                  id="sectionId"
+                  name="sectionId"
+                  value={formData.sectionId || ''}
+                  onChange={(e) => setFormData(prev => ({ ...prev, sectionId: e.target.value }))}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-blue-500 focus:border-blue-500"
+                >
+                  <option value="">Unassigned</option>
+                  {sections.map(s => (
+                    <option key={s.id} value={s.id}>{s.title}</option>
+                  ))}
+                </select>
+              </div>
               <div>
                 <label htmlFor="title" className="block text-sm font-medium text-gray-700 mb-2">
                   Session Title *

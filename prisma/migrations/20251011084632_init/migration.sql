@@ -24,6 +24,20 @@ CREATE TABLE "courses" (
 );
 
 -- CreateTable
+CREATE TABLE "course_sections" (
+    "id" TEXT NOT NULL PRIMARY KEY,
+    "title" TEXT NOT NULL,
+    "description" TEXT,
+    "order" INTEGER NOT NULL,
+    "courseId" TEXT NOT NULL,
+    "batchId" TEXT NOT NULL,
+    "createdAt" DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    "updatedAt" DATETIME NOT NULL,
+    CONSTRAINT "course_sections_courseId_fkey" FOREIGN KEY ("courseId") REFERENCES "courses" ("id") ON DELETE CASCADE ON UPDATE CASCADE,
+    CONSTRAINT "course_sections_batchId_fkey" FOREIGN KEY ("batchId") REFERENCES "batches" ("id") ON DELETE CASCADE ON UPDATE CASCADE
+);
+
+-- CreateTable
 CREATE TABLE "sessions" (
     "id" TEXT NOT NULL PRIMARY KEY,
     "title" TEXT NOT NULL,
@@ -38,8 +52,10 @@ CREATE TABLE "sessions" (
     "updatedAt" DATETIME NOT NULL,
     "courseId" TEXT NOT NULL,
     "batchId" TEXT NOT NULL,
+    "sectionId" TEXT,
     CONSTRAINT "sessions_courseId_fkey" FOREIGN KEY ("courseId") REFERENCES "courses" ("id") ON DELETE CASCADE ON UPDATE CASCADE,
-    CONSTRAINT "sessions_batchId_fkey" FOREIGN KEY ("batchId") REFERENCES "batches" ("id") ON DELETE CASCADE ON UPDATE CASCADE
+    CONSTRAINT "sessions_batchId_fkey" FOREIGN KEY ("batchId") REFERENCES "batches" ("id") ON DELETE CASCADE ON UPDATE CASCADE,
+    CONSTRAINT "sessions_sectionId_fkey" FOREIGN KEY ("sectionId") REFERENCES "course_sections" ("id") ON DELETE SET NULL ON UPDATE CASCADE
 );
 
 -- CreateTable

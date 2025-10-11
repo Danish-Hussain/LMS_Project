@@ -36,7 +36,19 @@ export async function GET(
           select: {
             id: true,
             title: true,
+            description: true,
             price: true
+          }
+        },
+        sections: {
+          select: {
+            id: true,
+            title: true,
+            description: true,
+            order: true
+          },
+          orderBy: {
+            order: 'asc'
           }
         },
         sessions: {
@@ -195,4 +207,6 @@ export async function DELETE(
     )
   }
 }
+
+
 

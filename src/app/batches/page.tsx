@@ -3,6 +3,7 @@
 import { useAuth } from '@/contexts/AuthContext'
 import { useEffect, useState } from 'react'
 import Link from 'next/link'
+import ConfirmDialog from '@/components/ui/ConfirmDialog'
 import { Plus, Users, Calendar, Edit, Trash2 } from 'lucide-react'
 
 interface Batch {
@@ -44,9 +45,9 @@ export default function BatchesPage() {
     }
   }
 
-  const handleDelete = async (batchId: string) => {
-    if (!confirm('Are you sure you want to delete this batch?')) return
+  const [confirmDeleteId, setConfirmDeleteId] = useState<string | null>(null)
 
+  const handleDelete = async (batchId: string) => {
     try {
       const response = await fetch(`/api/batches/${batchId}`, {
         method: 'DELETE'
@@ -157,7 +158,7 @@ export default function BatchesPage() {
                         <Edit className="h-4 w-4" />
                       </Link>
                       <button
-                        onClick={() => handleDelete(batch.id)}
+                        onClick={() => setConfirmDeleteId(batch.id)}
                         className="text-gray-400 hover:text-red-600 transition-colors"
                       >
                         <Trash2 className="h-4 w-4" />
@@ -200,6 +201,16 @@ export default function BatchesPage() {
             ))}
           </div>
         )}
+        <ConfirmDialog
+          open={!!confirmDeleteId}
+          title="Delete Batch"
+          message="Are you sure you want to delete this batch?"
+          onCancel={() => setConfirmDeleteId(null)}
+          onConfirm={() => {
+            if (confirmDeleteId) handleDelete(confirmDeleteId)
+            setConfirmDeleteId(null)
+          }}
+        />
       </div>
     </div>
   )

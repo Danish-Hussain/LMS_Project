@@ -1,7 +1,11 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { prisma } from '@/lib/db'
 import { verifyToken } from '@/lib/auth'
-import { Course, Progress, Session, User } from '@prisma/client'
+import { PrismaClient } from '@prisma/client'
+
+type Course = PrismaClient['course']['payload']['default']
+type Progress = PrismaClient['progress']['payload']['default']
+type Session = PrismaClient['session']['payload']['default']
 
 type AuthUser = {
   id: string
@@ -35,6 +39,8 @@ export async function GET(
 ) {
   try {
     const token = req.cookies.get('auth-token')?.value
+    // `params` may be a promise-like proxy in some Next runtimes; await it to be safe
+    const resolvedParams = (await params) as { id: string }
     
     // Check authentication
     if (!token) {
@@ -53,9 +59,10 @@ export async function GET(
       )
     }
 
+    const courseId = resolvedParams.id
     // Fetch course with all related data
     const course = await prisma.course.findUnique({
-      where: { id: params.id },
+      where: { id: courseId },
       include: {
         creator: {
           select: {
@@ -79,7 +86,7 @@ export async function GET(
           where: {
             OR: [
               { isActive: true },
-              { courseId: params.id },
+              { courseId: courseId },
               user.role === 'ADMIN' ? {} : undefined
             ].filter(Boolean) as any[]
           }
@@ -122,12 +129,12 @@ export async function GET(
     })
 
     const isEnrolled = enrollments.length > 0
-    const enrolledBatchIds = enrollments.map(e => e.batchId)
+    const enrolledBatchIds = enrollments.map((e: { batchId: string }) => e.batchId)
 
     // Get progress for each session if user is enrolled
     const finalSessions = isEnrolled 
       ? await Promise.all(
-          course.sessions.map(async (session) => {
+          course.sessions.map(async (session: Session) => {
             const progress = await prisma.progress.findFirst({
               where: {
                 userId: user.id,
@@ -186,7 +193,8 @@ export async function PUT(
       )
     }
 
-    const courseId = params.id
+  const resolvedParams = (await params) as { id: string }
+  const courseId = resolvedParams.id
     const { title, description, thumbnail, isPublished } = await request.json()
 
     // Validate thumbnail URL if provided

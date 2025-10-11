@@ -22,6 +22,12 @@ export async function POST(request: NextRequest) {
       )
     }
 
+    // Ensure the token corresponds to an existing user record
+    const dbUser = await prisma.user.findUnique({ where: { id: user.id } })
+    if (!dbUser) {
+      return NextResponse.json({ error: 'User not found' }, { status: 401 })
+    }
+
     const { courseId, batchId } = await request.json()
 
     if (!courseId) {
@@ -68,11 +74,20 @@ export async function POST(request: NextRequest) {
 
     // If enrolling into a batch, ensure no time conflicts with user's existing enrolled batches
     if (batchId) {
+      // Ensure the batch exists and belongs to the same course
+      const batch = await prisma.batch.findUnique({ where: { id: batchId } })
+      if (!batch) {
+        return NextResponse.json({ error: 'Batch not found' }, { status: 400 })
+      }
+
+      if (batch.courseId !== courseId) {
+        return NextResponse.json({ error: 'Batch does not belong to the specified course' }, { status: 400 })
+      }
       // Fetch sessions for the target batch
       const targetSessions = await prisma.session.findMany({
         where: { batchId },
         select: { startTime: true, endTime: true }
-      })
+      }) as { startTime?: string | null; endTime?: string | null }[]
 
       if (targetSessions.length > 0) {
         // Fetch user's existing enrollments with their batches' sessions
@@ -89,14 +104,18 @@ export async function POST(request: NextRequest) {
           }
         })
 
-        const hasConflict = userEnrollments.some(en => {
-          const otherSessions = en.batch?.sessions || []
-          return otherSessions.some(os => {
+        const hasConflict = userEnrollments.some((en: any) => {
+          const otherSessions = (en.batch?.sessions || []) as { startTime?: string | null; endTime?: string | null }[]
+          return otherSessions.some((os) => {
             if (!os.startTime || !os.endTime) return false
-            return targetSessions.some(ts => {
+            return targetSessions.some((ts) => {
               if (!ts.startTime || !ts.endTime) return false
               // Overlap if ts.start < os.end && os.start < ts.end
-              return new Date(ts.startTime) < new Date(os.endTime) && new Date(os.startTime) < new Date(ts.endTime)
+              const tsStart = new Date(ts.startTime as string)
+              const tsEnd = new Date(ts.endTime as string)
+              const osStart = new Date(os.startTime as string)
+              const osEnd = new Date(os.endTime as string)
+              return tsStart < osEnd && osStart < tsEnd
             })
           })
         })

@@ -45,6 +45,72 @@ async function main() {
     }
   })
   console.log('Sample course created:', course)
+
+  // Create a sample batch
+  const batch = await prisma.batch.upsert({
+    where: { id: 'sample-batch' },
+    update: {},
+    create: {
+      id: 'sample-batch',
+      title: 'Sample Batch',
+      courseId: course.id,
+      startDate: new Date(),
+      endDate: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000) // 30 days from now
+    }
+  })
+  console.log('Sample batch created:', batch)
+
+  // Create a sample section
+  const section = await prisma.courseSection.upsert({
+    where: { id: 'sample-section' },
+    update: {},
+    create: {
+      id: 'sample-section',
+      title: 'Introduction',
+      description: 'Introduction to the course',
+      order: 1,
+      courseId: course.id,
+      batchId: batch.id
+    }
+  })
+  console.log('Sample section created:', section)
+
+  // Create sample sessions
+  const session1 = await prisma.session.upsert({
+    where: { id: 'sample-session-1' },
+    update: {},
+    create: {
+      id: 'sample-session-1',
+      title: 'Getting Started',
+      description: 'First session of the course',
+      videoUrl: 'https://example.com/video1.mp4',
+      duration: 60,
+      order: 1,
+      isPublished: true,
+      courseId: course.id,
+      batchId: batch.id,
+      sectionId: section.id
+    }
+  })
+  console.log('Sample session 1 created:', session1)
+
+  const session2 = await prisma.session.upsert({
+    where: { id: 'sample-session-2' },
+    update: {},
+    create: {
+      id: 'sample-session-2',
+      title: 'Basic Concepts',
+      description: 'Understanding the basics',
+      videoUrl: 'https://example.com/video2.mp4',
+      duration: 45,
+      order: 2,
+      isPublished: true,
+      courseId: course.id,
+      batchId: batch.id,
+      sectionId: section.id
+    }
+  })
+  console.log('Sample session 2 created:', session2)
 }
 
 main()

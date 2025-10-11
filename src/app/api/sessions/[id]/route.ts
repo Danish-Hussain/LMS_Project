@@ -86,7 +86,7 @@ export async function PUT(
     }
 
     const { id: sessionId } = await params
-    const { title, description, videoUrl, duration, order, isPublished } = await request.json()
+    const body = await request.json()
 
     const session = await prisma.session.findUnique({
       where: { id: sessionId }
@@ -99,16 +99,18 @@ export async function PUT(
       )
     }
 
+    // Build update data only with provided fields to avoid accidentally clearing values
+    const updateData: any = {}
+    if (typeof body.title !== 'undefined') updateData.title = body.title
+    if (typeof body.description !== 'undefined') updateData.description = body.description
+    if (typeof body.videoUrl !== 'undefined') updateData.videoUrl = body.videoUrl
+    if (typeof body.duration !== 'undefined') updateData.duration = body.duration === null ? null : parseInt(body.duration)
+    if (typeof body.order !== 'undefined') updateData.order = parseInt(body.order)
+    if (typeof body.isPublished !== 'undefined') updateData.isPublished = body.isPublished
+
     const updatedSession = await prisma.session.update({
       where: { id: sessionId },
-      data: {
-        title,
-        description,
-        videoUrl,
-        duration: duration ? parseInt(duration) : null,
-        order: order ? parseInt(order) : session.order,
-        isPublished
-      }
+      data: updateData
     })
 
     return NextResponse.json(updatedSession)
@@ -171,4 +173,6 @@ export async function DELETE(
     )
   }
 }
+
+
 
