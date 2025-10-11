@@ -21,7 +21,9 @@ export default function RootLayout({
       <body className={inter.className} suppressHydrationWarning={true}>
         <AuthProvider>
           <Navbar />
-          {children}
+          <div className="pt-14 w-full max-w-[1920px] mx-auto">
+            {children}
+          </div>
         </AuthProvider>
       </body>
     </html>

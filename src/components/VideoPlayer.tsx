@@ -91,6 +91,16 @@ export default function VideoPlayer({
     return /vimeo\.com|youtube\.com|youtu\.be|dailymotion\.com/.test(url)
   }
 
+  const getVimeoId = (url: string): string | null => {
+    const match = url.match(/(?:vimeo\.com\/|player\.vimeo\.com\/video\/)?(\d+)/)
+    return match ? match[1] : null
+  }
+
+  const getVimeoEmbedUrl = (url: string): string => {
+    const id = getVimeoId(url)
+    return id ? `https://player.vimeo.com/video/${id}` : url
+  }
+
   const updateProgress = async (watchedTime: number) => {
     try {
       await fetch('/api/progress', {
@@ -270,11 +280,28 @@ export default function VideoPlayer({
           {isExternalProvider(videoUrl) ? (
           <div className="w-full h-auto">
             <AnyReactPlayer
-              url={videoUrl}
+              url={getVimeoEmbedUrl(videoUrl)}
               ref={playerRef}
               playing={isPlaying}
               width="100%"
-              height="auto"
+              height="100%"
+              config={{
+                vimeo: {
+                  playerOptions: {
+                    responsive: true,
+                    autopause: false,
+                    autoplay: false,
+                    byline: false,
+                    portrait: false,
+                    title: false,
+                    transparent: false,
+                    controls: true
+                  },
+                  iframeParams: {
+                    allow: 'autoplay; fullscreen; picture-in-picture'
+                  }
+                }
+              }}
               onProgress={(state: any) => {
                 const playedSeconds = (state.playedSeconds ?? state.played) || 0
                 setCurrentTime(playedSeconds)
