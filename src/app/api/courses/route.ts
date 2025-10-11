@@ -13,7 +13,7 @@ export async function GET(request: NextRequest) {
     let user = null
     if (token) {
       try {
-        user = verifyToken(token)
+        user = await verifyToken(token as string)
         console.log('User verified:', { role: user?.role, id: user?.id })
       } catch (e) {
         console.log('Token verification failed:', e)
@@ -83,8 +83,8 @@ export async function POST(request: NextRequest) {
       )
     }
 
-    const user = verifyToken(token)
-    console.log('User verified:', { id: user?.id, role: user?.role })
+  const user = await verifyToken(token as string)
+  console.log('User verified:', { id: user?.id, role: user?.role })
 
     if (!user || !user.id) {
       console.log('Invalid user data:', { user })

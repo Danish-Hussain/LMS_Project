@@ -15,7 +15,7 @@ export async function GET(
       )
     }
 
-    const user = verifyToken(token)
+  const user = await verifyToken(token)
     if (!user) {
       return NextResponse.json(
         { error: 'Invalid token' },
@@ -63,7 +63,7 @@ export async function POST(
       )
     }
 
-    const user = verifyToken(token)
+  const user = await verifyToken(token)
     if (!user) {
       return NextResponse.json(
         { error: 'Invalid token' },
@@ -162,7 +162,7 @@ export async function PUT(
       )
     }
 
-    const user = verifyToken(token)
+  const user = await verifyToken(token)
     if (!user || (user.role !== 'ADMIN' && user.role !== 'INSTRUCTOR')) {
       return NextResponse.json(
         { error: 'Not authorized' },

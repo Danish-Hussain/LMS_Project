@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createUser, generateToken } from '@/lib/auth'
+import { prisma } from '@/lib/db'
 import { cookies } from 'next/headers'
 // import { Role } from '@prisma/client'
 
@@ -19,7 +20,9 @@ export async function POST(request: NextRequest) {
     const userRole = role && validRoles.includes(role) ? role : 'STUDENT'
 
     const user = await createUser(email, password, name, userRole)
-    const token = generateToken(user)
+  // Newly created user should have tokenVersion on DB (default 0). Fetch to be explicit.
+  const dbUser = await prisma.user.findUnique({ where: { id: user.id } })
+  const token = generateToken(user, dbUser?.tokenVersion)
     
     // Set HTTP-only cookie
     const cookieStore = await cookies()

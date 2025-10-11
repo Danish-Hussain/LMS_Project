@@ -18,7 +18,7 @@ export async function GET(
       )
     }
 
-    const user = verifyToken(token)
+  const user = await verifyToken(token)
 
     if (!user) {
       return NextResponse.json(
@@ -76,7 +76,7 @@ export async function PUT(
       )
     }
 
-    const user = verifyToken(token)
+  const user = await verifyToken(token)
 
     if (!user || (user.role !== 'ADMIN' && user.role !== 'INSTRUCTOR')) {
       return NextResponse.json(
@@ -138,7 +138,7 @@ export async function DELETE(
       )
     }
 
-    const user = verifyToken(token)
+  const user = await verifyToken(token)
 
     if (!user || (user.role !== 'ADMIN' && user.role !== 'INSTRUCTOR')) {
       return NextResponse.json(

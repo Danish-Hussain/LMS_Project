@@ -1,0 +1,64 @@
+import { NextResponse } from 'next/server'
+import { verifyToken } from '@/lib/auth'
+import { prisma } from '@/lib/db'
+import { verifyPassword, hashPassword } from '@/lib/auth'
+import nodemailer from 'nodemailer'
+
+export async function POST(request: Request) {
+  try {
+    const body = await request.json()
+    const { currentPassword, newPassword } = body || {}
+    if (!currentPassword || !newPassword) {
+      return NextResponse.json({ error: 'Missing fields' }, { status: 400 })
+    }
+
+    const token = (request as any).cookies?.get?.('auth-token')?.value
+    if (!token) {
+      return NextResponse.json({ error: 'Not authenticated' }, { status: 401 })
+    }
+
+  const user = await verifyToken(token as string)
+    if (!user || !user.id) {
+      return NextResponse.json({ error: 'Invalid token' }, { status: 401 })
+    }
+
+    const dbUser = await prisma.user.findUnique({ where: { id: user.id } })
+    if (!dbUser) return NextResponse.json({ error: 'User not found' }, { status: 404 })
+
+    const match = await verifyPassword(currentPassword, dbUser.password)
+    if (!match) return NextResponse.json({ error: 'Current password is incorrect' }, { status: 403 })
+
+    const newHash = await hashPassword(newPassword)
+
+    // Use typed Prisma update to set new password and increment tokenVersion
+    const updated = await prisma.user.update({ where: { id: user.id }, data: { password: newHash, tokenVersion: { increment: 1 } } })
+
+    // Send confirmation email if SMTP configured
+    const host = process.env.SMTP_HOST
+    const port = process.env.SMTP_PORT ? parseInt(process.env.SMTP_PORT) : undefined
+    const userSmtp = process.env.SMTP_USER
+    const passSmtp = process.env.SMTP_PASS
+    const receiver = updated.email
+
+    if (host && port && userSmtp && passSmtp) {
+      try {
+        const transporter = nodemailer.createTransport({ host, port, secure: port === 465, auth: { user: userSmtp, pass: passSmtp } })
+        await transporter.sendMail({
+          from: userSmtp,
+          to: receiver,
+          subject: 'Your password has been changed',
+          text: `Hello ${updated.name},\n\nThis is a confirmation that your account password was changed. If you did not perform this action, please contact support immediately.`,
+        })
+      } catch (mailErr) {
+        console.error('Failed to send confirmation email', mailErr)
+      }
+    } else {
+      console.log('SMTP not configured; skipping confirmation email')
+    }
+
+    return NextResponse.json({ ok: true })
+  } catch (err) {
+    console.error('Change password error', err)
+    return NextResponse.json({ error: 'Failed to change password' }, { status: 500 })
+  }
+}

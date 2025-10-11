@@ -15,7 +15,7 @@ export async function GET(
       return new NextResponse("Unauthorized", { status: 401 })
     }
 
-    const user = verifyToken(token)
+  const user = await verifyToken(token)
 
     if (!user) {
       return new NextResponse("Unauthorized", { status: 401 })
@@ -68,7 +68,7 @@ export async function POST(
       return new NextResponse("Unauthorized", { status: 401 })
     }
 
-    const user = verifyToken(token)
+  const user = await verifyToken(token)
 
     if (!user) {
       return new NextResponse("Unauthorized", { status: 401 })

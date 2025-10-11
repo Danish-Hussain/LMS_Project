@@ -23,7 +23,7 @@ export async function POST(request: NextRequest) {
 		const token = request.cookies.get('auth-token')?.value
 		if (!token) return NextResponse.json({ error: 'Not authenticated' }, { status: 401 })
 
-		const user = verifyToken(token)
+		const user = await verifyToken(token)
 		if (!user) return NextResponse.json({ error: 'Invalid token' }, { status: 401 })
 
 		if (!['ADMIN', 'INSTRUCTOR'].includes(user.role)) {

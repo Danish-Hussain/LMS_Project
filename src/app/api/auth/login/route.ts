@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { authenticateUser, generateToken } from '@/lib/auth'
+import { prisma } from '@/lib/db'
 import { cookies } from 'next/headers'
 
 export async function POST(request: NextRequest) {
@@ -22,7 +23,9 @@ export async function POST(request: NextRequest) {
       )
     }
 
-    const token = generateToken(user)
+  // Fetch tokenVersion from DB and include it in token payload
+  const dbUser = await prisma.user.findUnique({ where: { id: user.id } })
+  const token = generateToken(user, dbUser?.tokenVersion)
     
     // Set HTTP-only cookie
     const cookieStore = await cookies()

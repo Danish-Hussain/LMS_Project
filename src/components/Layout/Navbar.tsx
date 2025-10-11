@@ -1,7 +1,7 @@
 'use client'
 
 import { useAuth } from '@/contexts/AuthContext'
-import { useState } from 'react'
+import { useState, useRef, useEffect } from 'react'
 import Link from 'next/link'
 import { 
   User, 
@@ -13,10 +13,40 @@ import {
   Settings,
   Home
 } from 'lucide-react'
+import ContactModal from '@/components/ContactModal'
+
+type ContactDefaults = { name?: string; email?: string }
 
 export default function Navbar() {
   const { user, logout } = useAuth()
   const [isMenuOpen, setIsMenuOpen] = useState(false)
+  const [isContactOpen, setIsContactOpen] = useState(false)
+  const [contactDefaults, setContactDefaults] = useState<ContactDefaults>({})
+  const [isAccountOpen, setIsAccountOpen] = useState(false)
+  const accountRef = useRef<HTMLDivElement | null>(null)
+
+  const openContact = () => {
+    const defaults: ContactDefaults = { name: user?.name ?? undefined, email: user?.email ?? undefined }
+    setContactDefaults(defaults)
+    setIsContactOpen(true)
+  }
+
+  useEffect(() => {
+    function handleClick(e: MouseEvent) {
+      if (accountRef.current && !accountRef.current.contains(e.target as Node)) {
+        setIsAccountOpen(false)
+      }
+    }
+    window.addEventListener('click', handleClick)
+    function handleKey(e: KeyboardEvent) {
+      if (e.key === 'Escape') setIsAccountOpen(false)
+    }
+    window.addEventListener('keydown', handleKey)
+    return () => {
+      window.removeEventListener('click', handleClick)
+      window.removeEventListener('keydown', handleKey)
+    }
+  }, [])
 
   const handleLogout = async () => {
     await logout()
@@ -54,25 +84,32 @@ export default function Navbar() {
                 {item.name}
               </Link>
             ))}
+            <button onClick={openContact} className="text-gray-700 hover:text-blue-600 px-3 py-2 rounded-md text-sm font-medium">
+              Contact Us
+            </button>
           </div>
 
           {/* User Menu */}
           <div className="hidden md:flex items-center space-x-4">
             {user ? (
               <div className="flex items-center space-x-4">
-                <span className="text-sm text-gray-700">
-                  Welcome, {user.name}
-                </span>
-                <div className="flex items-center space-x-2">
-                  <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-blue-100 text-blue-800">
-                    {user.role}
-                  </span>
-                  <button
-                    onClick={handleLogout}
-                    className="text-gray-700 hover:text-red-600 transition-colors"
-                  >
-                    <LogOut className="h-5 w-5" />
-                  </button>
+                <div className="flex items-center space-x-3">
+                  <div className="text-sm text-gray-700">
+                    <div>Welcome, {user.name}</div>
+                    <div className="text-xs text-gray-500">{user.role}</div>
+                  </div>
+                  <div className="relative" ref={accountRef}>
+                    <button onClick={() => setIsAccountOpen(!isAccountOpen)} className="p-1 rounded-full hover:bg-gray-100 w-9 h-9 flex items-center justify-center bg-gray-50">
+                      <span className="text-sm font-medium text-gray-700">{(user?.name || '').split(' ').map(n => n[0]).slice(0,2).join('').toUpperCase() || 'U'}</span>
+                    </button>
+                    {isAccountOpen && (
+                      <div className="absolute right-0 mt-2 w-48 bg-white border rounded-md shadow-md z-50">
+                        <Link href="/account" className="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-50">Account details</Link>
+                        <Link href="/account/change-password" className="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-50">Change password</Link>
+                        <button onClick={handleLogout} className="w-full text-left px-4 py-2 text-sm text-red-600 hover:bg-gray-50">Log out</button>
+                      </div>
+                    )}
+                  </div>
                 </div>
               </div>
             ) : (
@@ -85,10 +122,13 @@ export default function Navbar() {
                 </Link>
                 <Link
                   href="/register"
-                  className="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-md text-sm font-medium transition-colors"
+                  className="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-md text-sm font-medium"
                 >
                   Register
                 </Link>
+                <button onClick={openContact} className="text-gray-700 hover:text-blue-600 px-3 py-2 rounded-md text-sm font-medium">
+                  Contact Us
+                </button>
               </div>
             )}
           </div>
@@ -118,7 +158,9 @@ export default function Navbar() {
                   {item.name}
                 </Link>
               ))}
-              
+              <button onClick={() => { openContact(); setIsMenuOpen(false) }} className="text-gray-700 hover:text-blue-600 block px-3 py-2 rounded-md text-base font-medium w-full text-left">
+                Contact Us
+              </button>
               {user ? (
                 <div className="border-t pt-4">
                   <div className="px-3 py-2">
@@ -127,6 +169,8 @@ export default function Navbar() {
                       {user.role}
                     </span>
                   </div>
+                  <Link href="/account" className="text-gray-700 block px-3 py-2 rounded-md text-base font-medium w-full text-left" onClick={() => setIsMenuOpen(false)}>Account details</Link>
+                  <Link href="/account/change-password" className="text-gray-700 block px-3 py-2 rounded-md text-base font-medium w-full text-left" onClick={() => setIsMenuOpen(false)}>Change password</Link>
                   <button
                     onClick={handleLogout}
                     className="text-gray-700 hover:text-red-600 block px-3 py-2 rounded-md text-base font-medium w-full text-left"
@@ -155,6 +199,7 @@ export default function Navbar() {
             </div>
           </div>
         )}
+        <ContactModal open={isContactOpen} onClose={() => setIsContactOpen(false)} defaultName={contactDefaults.name} defaultEmail={contactDefaults.email} />
       </div>
     </nav>
   )

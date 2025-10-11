@@ -59,7 +59,7 @@ export async function POST(
       )
     }
 
-    const user = verifyToken(token)
+  const user = await verifyToken(token)
 
     if (!user || !['ADMIN', 'INSTRUCTOR'].includes(user.role)) {
       return NextResponse.json(

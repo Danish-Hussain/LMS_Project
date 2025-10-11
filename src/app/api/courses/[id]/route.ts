@@ -27,7 +27,7 @@ export async function GET(
       )
     }
 
-    const user = await verifyToken(token) as AuthUser
+  const user = await verifyToken(token) as AuthUser
 
     if (!user) {
       return NextResponse.json(

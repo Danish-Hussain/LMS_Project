@@ -9,6 +9,13 @@ export interface AuthUser {
   role: 'ADMIN' | 'INSTRUCTOR' | 'STUDENT'
 }
 
+export interface TokenPayload {
+  userId: string
+  email: string
+  role: string
+  tokenVersion?: number
+}
+
 export async function hashPassword(password: string): Promise<string> {
   return bcrypt.hash(password, 12)
 }
@@ -17,24 +24,27 @@ export async function verifyPassword(password: string, hashedPassword: string): 
   return bcrypt.compare(password, hashedPassword)
 }
 
-export function generateToken(user: AuthUser): string {
-  return jwt.sign(
-    { userId: user.id, email: user.email, role: user.role },
-    process.env.JWT_SECRET || 'fallback-secret',
-    { expiresIn: '7d' }
-  )
+export function generateToken(user: AuthUser, tokenVersion?: number): string {
+  const payload: TokenPayload = { userId: user.id, email: user.email, role: user.role }
+  if (typeof tokenVersion === 'number') payload.tokenVersion = tokenVersion
+  return jwt.sign(payload, process.env.JWT_SECRET || 'fallback-secret', { expiresIn: '7d' })
 }
 
-export function verifyToken(token: string): AuthUser | null {
+export async function verifyToken(token: string): Promise<AuthUser | null> {
   try {
-    const decoded = jwt.verify(token, process.env.JWT_SECRET || 'fallback-secret') as { userId: string; email: string; name: string; role: string }
+    const decoded = jwt.verify(token, process.env.JWT_SECRET || 'fallback-secret') as TokenPayload
+    if (!decoded?.userId) return null
+    const dbUser = await prisma.user.findUnique({ where: { id: decoded.userId } })
+    if (!dbUser) return null
+    // If tokenVersion exists on token and doesn't match DB, token is invalid
+    if (typeof decoded.tokenVersion === 'number' && decoded.tokenVersion !== dbUser.tokenVersion) return null
     return {
-      id: decoded.userId,
-      email: decoded.email,
-      name: decoded.name,
-      role: decoded.role as 'ADMIN' | 'INSTRUCTOR' | 'STUDENT'
+      id: dbUser.id,
+      email: dbUser.email,
+      name: dbUser.name,
+      role: dbUser.role
     }
-  } catch {
+  } catch (err) {
     return null
   }
 }
