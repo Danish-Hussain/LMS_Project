@@ -1,8 +1,7 @@
- 'use client'
+'use client'
 
 import { useAuth } from '@/contexts/AuthContext'
 import { useState, useRef, useEffect } from 'react'
-import { usePathname } from 'next/navigation'
 import Link from 'next/link'
 import { 
   User, 
@@ -20,8 +19,6 @@ type ContactDefaults = { name?: string; email?: string }
 
 export default function Navbar() {
   const { user, logout } = useAuth()
-  const pathname = usePathname()
-  const isHome = pathname === '/'
   const [isMenuOpen, setIsMenuOpen] = useState(false)
   const [isContactOpen, setIsContactOpen] = useState(false)
   const [contactDefaults, setContactDefaults] = useState<ContactDefaults>({})
@@ -75,15 +72,8 @@ export default function Navbar() {
     ] : []),
   ]
 
-  const navClass = isHome ? 'fixed top-0 left-0 right-0 z-50 bg-transparent' : 'bg-white shadow-sm border-b fixed top-0 left-0 right-0 z-50'
-
-  const linkBase = isHome ? 'text-white/90 hover:text-white' : 'text-gray-700 hover:text-blue-600'
-  const smallText = isHome ? 'text-sm text-white' : 'text-sm text-gray-700'
-  const smallSub = isHome ? 'text-xs text-white/80' : 'text-xs text-gray-500'
-  const registerClass = isHome ? 'bg-white text-blue-600 px-4 py-2 rounded-md text-sm font-medium' : 'bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-md text-sm font-medium'
-
   return (
-    <nav className={navClass} suppressHydrationWarning>
+    <nav className="bg-white shadow-sm border-b fixed top-0 left-0 right-0 z-50" suppressHydrationWarning>
       <div className="max-w-[1920px] w-full mx-auto px-2 sm:px-4 lg:px-6">
         <div className="flex justify-between h-14">
           <div className="flex items-center">
@@ -99,12 +89,12 @@ export default function Navbar() {
               <Link
                 key={item.name}
                 href={item.href}
-                className={`${linkBase} px-3 py-2 rounded-md text-sm font-medium transition-colors`}
+                className="text-gray-700 hover:text-blue-600 px-3 py-2 rounded-md text-sm font-medium transition-colors"
               >
                 {item.name}
               </Link>
             ))}
-            <button onClick={openContact} className={`${linkBase} px-3 py-2 rounded-md text-sm font-medium`}>
+            <button onClick={openContact} className="text-gray-700 hover:text-blue-600 px-3 py-2 rounded-md text-sm font-medium">
               Contact Us
             </button>
           </div>
@@ -114,13 +104,13 @@ export default function Navbar() {
             {user ? (
               <div className="flex items-center space-x-4">
                 <div className="flex items-center space-x-3">
-                  <div className={smallText}>
-                    <div>Welcome, {user.name}</div>
-                    <div className={smallSub}>{user.role}</div>
+                  <div className="text-sm text-gray-700">
+                    <div className="font-medium">{user.name}</div>
+                    <div className="text-xs text-gray-500">{user.role?.toLowerCase()?.replace(/(^|\s)\S/g, s => s.toUpperCase())}</div>
                   </div>
                   <div className="relative" ref={accountRef}>
-                    <button id="account-button" aria-haspopup="true" aria-expanded={isAccountOpen} onClick={() => setIsAccountOpen(!isAccountOpen)} className={`p-1 rounded-full hover:bg-gray-100 w-9 h-9 flex items-center justify-center ${isHome ? 'bg-white/10 text-white' : 'bg-gray-50'} focus:outline-none focus:ring-2 focus:ring-blue-200`} aria-label="Open account menu">
-                      <span className={`text-sm font-medium ${isHome ? 'text-white' : 'text-gray-700'}`}>{(user?.name || '').split(' ').map(n => n[0]).slice(0,2).join('').toUpperCase() || 'U'}</span>
+                    <button id="account-button" aria-haspopup="true" aria-expanded={isAccountOpen} onClick={() => setIsAccountOpen(!isAccountOpen)} className="p-1 rounded-full hover:bg-gray-100 w-9 h-9 flex items-center justify-center bg-gray-50 focus:outline-none focus:ring-2 focus:ring-blue-200" aria-label="Open account menu">
+                      <span className="text-sm font-medium text-gray-700">{(user?.name || '').split(' ').map(n => n[0]).slice(0,2).join('').toUpperCase() || 'U'}</span>
                     </button>
                     {isAccountOpen && (
                       <div ref={menuRef} role="menu" aria-orientation="vertical" aria-labelledby="account-button" className="absolute right-0 mt-2 w-56 bg-white border rounded-md shadow-md z-50 transition transform duration-150 ease-out">
@@ -183,9 +173,9 @@ export default function Navbar() {
               {user ? (
                 <div className="border-t pt-4">
                   <div className="px-3 py-2">
-                    <p className="text-sm text-gray-700">Welcome, {user.name}</p>
+                    <p className="text-sm text-gray-700 font-medium">{user.name}</p>
                     <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-blue-100 text-blue-800 mt-1">
-                      {user.role}
+                      {user.role?.toLowerCase()?.replace(/(^|\s)\S/g, s => s.toUpperCase())}
                     </span>
                   </div>
                   <Link href="/account" className="text-gray-700 block px-3 py-2 rounded-md text-base font-medium w-full text-left" onClick={() => setIsMenuOpen(false)}>Account details</Link>
