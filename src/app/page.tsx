@@ -9,7 +9,7 @@ export default function HomePage() {
   useEffect(() => setMounted(true), [])
 
   return (
-    <div className="min-h-screen bg-gray-50">
+    <div className="min-h-screen bg-gray-50 -mx-4 sm:-mx-6">
       {/* Hero Section (true full-bleed) */}
       <section className="w-full bg-gradient-to-r from-blue-600 to-purple-600 relative overflow-hidden">
         {/* subtle overlay to soften gradient */}
@@ -112,8 +112,8 @@ export default function HomePage() {
         </div>
       </div>
 
-      {/* CTA Section */}
-      <div className="bg-gray-900 text-white py-16">
+  {/* CTA Section */}
+  <div className="bg-gray-900 text-white py-16">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 text-center">
           <h2 className="text-3xl font-bold mb-4">
             Ready to start learning?
