@@ -24,6 +24,8 @@ export default function VideoPlayer({
 }: VideoPlayerProps) {
   const videoRef = useRef<HTMLVideoElement>(null)
   const playerRef = useRef<any>(null)
+  const lastSentRef = useRef<number>(0)
+  const completedSentRef = useRef<boolean>(false)
   // ReactPlayer has typings that may conflict with the project's TS config; cast when used
   const AnyReactPlayer = ReactPlayer as any
   // helper: detect external provider early so we can set initial loading state
@@ -118,7 +120,15 @@ export default function VideoPlayer({
 
   const updateProgress = async (watchedTime: number) => {
     try {
-      await fetch('/api/progress', {
+      const now = Date.now()
+      const isComplete = typeof duration === 'number' && watchedTime >= duration * 0.9
+
+      // Throttle non-completion updates to once every 3 seconds.
+      if (!isComplete && now - lastSentRef.current < 3000) {
+        return
+      }
+
+      const res = await fetch('/api/progress', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json'
@@ -127,13 +137,32 @@ export default function VideoPlayer({
           sessionId,
           userId,
           watchedTime: Math.floor(watchedTime),
-          completed: watchedTime >= duration * 0.9 // Mark as completed if watched 90%
+          completed: isComplete
         })
       })
+
+      if (!res.ok) {
+        // don't treat as fatal, but log
+        console.error('Progress update failed', await res.text())
+      } else {
+        lastSentRef.current = now
+      }
+
+      // If we've crossed the completion threshold, ensure we only notify once
+      if (isComplete && !completedSentRef.current) {
+        completedSentRef.current = true
+        if (onComplete) onComplete(sessionId)
+      }
     } catch (error) {
       console.error('Failed to update progress:', error)
     }
   }
+
+  useEffect(() => {
+    // reset throttle/completion when session changes
+    lastSentRef.current = 0
+    completedSentRef.current = false
+  }, [sessionId])
 
   const togglePlay = () => {
     // For react-player, control playing via state
