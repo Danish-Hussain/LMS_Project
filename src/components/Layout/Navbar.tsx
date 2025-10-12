@@ -137,9 +137,7 @@ export default function Navbar() {
                 >
                   Register
                 </Link>
-                <button onClick={openContact} className="text-gray-700 hover:text-blue-600 px-3 py-2 rounded-md text-sm font-medium">
-                  Contact Us
-                </button>
+                {/* top-right Contact Us removed to avoid duplicate; use main nav Contact Us */}
               </div>
             )}
           </div>

@@ -4,9 +4,10 @@ import { BookOpen, Users, PlayCircle, Award } from 'lucide-react'
 export default function HomePage() {
   return (
     <div className="min-h-screen bg-gray-50">
-      {/* Hero Section */}
-      <div className="bg-gradient-to-r from-blue-600 to-purple-600 text-white">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-24">
+      {/* Hero Section (full-bleed background) */}
+      <div className="relative">
+        <div className="absolute inset-x-0 top-0 -z-10 h-full bg-gradient-to-r from-blue-600 to-purple-600" />
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-24 text-white">
           <div className="text-center">
             <h1 className="text-4xl md:text-6xl font-bold mb-6">
               Learn Without Limits
