@@ -39,6 +39,7 @@ export default function VideoPlayer({
   // For external providers (Vimeo/YouTube) we should mount ReactPlayer immediately
   const [isLoading, setIsLoading] = useState(() => (externalProvider ? false : true))
   const [loadError, setLoadError] = useState<string | null>(null)
+  const playPromiseRef = useRef<Promise<void> | null>(null)
 
   const handleEnded = () => {
     setIsPlaying(false)
@@ -176,28 +177,45 @@ export default function VideoPlayer({
     if (!video) return
 
     if (isPlaying) {
-      // Pause immediately
+      // Try to pause. If a play() promise is pending, schedule pause after it resolves.
       try {
-        video.pause()
+        if (playPromiseRef.current) {
+          playPromiseRef.current.then(() => {
+            try { video.pause() } catch (err) { /* ignore */ }
+          }).catch(() => {})
+        } else {
+          video.pause()
+        }
       } catch (err) {
         console.error('Error pausing video:', err)
       }
       setIsPlaying(false)
     } else {
-      // play() returns a promise that may reject with an AbortError if
-      // playback is interrupted (e.g. pause called right after play).
-      // Catch and ignore AbortError to avoid noisy console logs.
-      const playPromise = video.play()
-      if (playPromise !== undefined) {
-        playPromise
-          .then(() => setIsPlaying(true))
-          .catch((err: any) => {
-            // AbortError is expected when a play() is interrupted by pause()
-            if (err && err.name === 'AbortError') return
-            console.error('Play failed:', err)
-          })
-      } else {
+      // Avoid calling play if it's already playing
+      if (!video.paused) {
         setIsPlaying(true)
+        return
+      }
+
+      try {
+        const playPromise = video.play()
+        if (playPromise !== undefined) {
+          playPromiseRef.current = playPromise as Promise<void>
+          playPromiseRef.current
+            .then(() => {
+              setIsPlaying(true)
+              playPromiseRef.current = null
+            })
+            .catch((err: any) => {
+              if (err && err.name === 'AbortError') return
+              console.error('Play failed:', err)
+              playPromiseRef.current = null
+            })
+        } else {
+          setIsPlaying(true)
+        }
+      } catch (err) {
+        console.error('Play failed:', err)
       }
     }
   }
