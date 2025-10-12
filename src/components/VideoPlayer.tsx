@@ -34,8 +34,7 @@ export default function VideoPlayer({
   const playerRef = useRef<any>(null)
   const lastSentRef = useRef<number>(0)
   const completedSentRef = useRef<boolean>(false)
-  // ReactPlayer has typings that may conflict with the project's TS config; cast when used
-  const AnyReactPlayer = ReactPlayer as any
+  // Use ReactPlayer directly
   // helper: detect external provider early so we can set initial loading state
   const externalProvider = /vimeo\.com|youtube\.com|youtu\.be|dailymotion\.com/.test(videoUrl)
   const [isPlaying, setIsPlaying] = useState(false)
@@ -352,49 +351,57 @@ export default function VideoPlayer({
       <div className="relative">
           {isExternalProvider(videoUrl) ? (
           <div className="w-full h-auto">
-            <AnyReactPlayer
-              url={getVimeoEmbedUrl(videoUrl)}
-              ref={playerRef}
-              playing={isPlaying}
-              width="100%"
-              height="100%"
-              config={{
-                vimeo: {
-                  playerOptions: {
-                    responsive: true,
-                    autopause: false,
-                    autoplay: false,
-                    byline: false,
-                    portrait: false,
-                    title: false,
-                    transparent: false,
-                    controls: true
+            {
+              // Build props then spread as any to avoid TF type mismatch in this project
+              (() => {
+                const rp: any = {
+                  url: getVimeoEmbedUrl(videoUrl),
+                  ref: playerRef,
+                  playing: isPlaying,
+                  width: '100%',
+                  height: '100%',
+                  config: {
+                    vimeo: {
+                      playerOptions: {
+                        responsive: true,
+                        autopause: false,
+                        autoplay: false,
+                        byline: false,
+                        portrait: false,
+                        title: false,
+                        transparent: false,
+                        controls: true
+                      },
+                      iframeParams: { allow: 'autoplay; fullscreen; picture-in-picture' }
+                    }
                   },
-                  iframeParams: {
-                    allow: 'autoplay; fullscreen; picture-in-picture'
+                  onProgress: (state: any) => {
+                    const playedSeconds = (state.playedSeconds ?? state.played) || 0
+                    setCurrentTime(playedSeconds)
+                    if (duration > 0) setProgress((playedSeconds / duration) * 100)
+                    updateProgress(playedSeconds)
+                    if (onProgressUpdate) onProgressUpdate(playedSeconds)
+                  },
+                  onReady: () => {
+                    try {
+                      const internal = playerRef.current?.getInternalPlayer?.()
+                      const d = playerRef.current?.getDuration?.() || (internal && internal.getDuration ? internal.getDuration() : undefined)
+                      if (typeof d === 'number' && !isNaN(d)) setDuration(d)
+                    } catch (err) { /* ignore */ }
+                    setIsLoading(false)
+                  },
+                  onEnded: () => {
+                    setIsPlaying(false)
+                    if (onComplete) onComplete(sessionId)
+                  },
+                  onError: (err: any) => {
+                    console.error('ReactPlayer load error:', err)
+                    setLoadError(typeof err === 'string' ? err : JSON.stringify(err))
                   }
                 }
-              }}
-              onProgress={(state: any) => {
-                const playedSeconds = (state.playedSeconds ?? state.played) || 0
-                setCurrentTime(playedSeconds)
-                if (duration > 0) setProgress((playedSeconds / duration) * 100)
-                updateProgress(playedSeconds)
-                if (onProgressUpdate) onProgressUpdate(playedSeconds)
-              }}
-              onDuration={(d: any) => {
-                setDuration(d)
-                setIsLoading(false)
-              }}
-              onEnded={() => {
-                setIsPlaying(false)
-                if (onComplete) onComplete(sessionId)
-              }}
-              onError={(err: any) => {
-                console.error('ReactPlayer load error:', err)
-                setLoadError(typeof err === 'string' ? err : JSON.stringify(err))
-              }}
-            />
+                return <ReactPlayer {...rp} />
+              })()
+            }
           </div>
         ) : (
           <video
