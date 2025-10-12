@@ -74,6 +74,7 @@ function CourseContent({
 }: CourseContentProps) {
   const [sections, setSections] = useState<{ id: string; title: string; order: number; description?: string | null }[]>([])
   const enrolledBatchId = enrolledBatchIds && enrolledBatchIds.length > 0 ? enrolledBatchIds[0] : null
+  const [liveProgressMap, setLiveProgressMap] = useState<Record<string, number>>({})
 
   // fetch sections for the enrolled batch when available
   useEffect(() => {
@@ -323,32 +324,33 @@ function CourseContent({
                   <h2 className="text-2xl font-semibold text-gray-900">
                     {selectedSession.title}
                   </h2>
-                  <div className="text-sm text-gray-600">
+                  <div className="text-sm text-gray-600 flex items-center space-x-3">
                     <div className="text-xs text-gray-400">Progress</div>
-                    <div className="font-medium">{typeof selectedSession.progress?.watchedTime === 'number' && selectedSession.duration ? Math.min(100, Math.round((selectedSession.progress.watchedTime / selectedSession.duration) * 100)) : 0}%</div>
+                    {(() => {
+                      const live = selectedSession && liveProgressMap[selectedSession.id]
+                      const fromServer = selectedSession?.progress && typeof selectedSession.progress.watchedTime === 'number' && selectedSession.duration
+                        ? Math.min(100, Math.round((selectedSession.progress.watchedTime / selectedSession.duration) * 100))
+                        : 0
+                      const percent = typeof live === 'number' ? live : fromServer
+                      const color = percent >= 80 ? 'bg-green-100 text-green-800' : percent >= 30 ? 'bg-yellow-100 text-yellow-800' : 'bg-gray-100 text-gray-800'
+                      return (
+                        <div className={`px-3 py-1 rounded-full text-sm font-medium ${color}`}>{percent}%</div>
+                      )
+                    })()}
                   </div>
                 </div>
                 <div className="p-6">
-                  {selectedSession.videoUrl?.includes('vimeo.com') ? (
-                    <VimeoPlayer
-                      videoUrl={selectedSession.videoUrl}
-                      sessionId={selectedSession.id}
-                      userId={user.id}
-                      onComplete={(sessionId) => handleSessionComplete(sessionId)}
-                      onProgress={(p) => { /* no-op here, progress persists from player */ }}
-                    />
-                  ) : (
-                    <VideoPlayer
-                      videoUrl={selectedSession.videoUrl}
-                      sessionId={selectedSession.id}
-                      userId={user.id}
-                      onProgressUpdate={(playedSeconds) => {
-                        // Optionally update local session progress UI
-                        // We rely on server-side fetch to refresh actual values
-                      }}
-                      onComplete={(sessionId) => handleSessionComplete(sessionId)}
-                    />
-                  )}
+                  <VideoPlayer
+                    videoUrl={selectedSession.videoUrl}
+                    sessionId={selectedSession.id}
+                    userId={user.id}
+                    onProgressUpdate={(playedSeconds) => {
+                      if (!selectedSession || !selectedSession.duration) return
+                      const pct = Math.min(100, Math.round((playedSeconds / selectedSession.duration) * 100))
+                      setLiveProgressMap((prev) => ({ ...prev, [selectedSession.id]: pct }))
+                    }}
+                    onComplete={(sessionId) => handleSessionComplete(sessionId)}
+                  />
                   {selectedSession.description && (
                     <div className="mt-6">
                       <p className="text-gray-600">{selectedSession.description}</p>
