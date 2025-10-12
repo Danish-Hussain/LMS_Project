@@ -12,10 +12,10 @@ export default function HomePage() {
     <div className="min-h-screen bg-gray-50">
       {/* Hero Section (full-bleed background) */}
       <div className="relative">
-        <div className="absolute inset-x-0 top-0 -z-20 h-full bg-gradient-to-r from-blue-600 to-purple-600" />
+    <div className="absolute inset-x-0 top-0 z-0 h-full bg-gradient-to-r from-blue-600 to-purple-600" />
   {/* subtle overlay to soften gradient */}
-  <div className="absolute inset-x-0 top-0 -z-10 h-full bg-black opacity-12 pointer-events-none" />
-  <div className={`max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-36 text-white transition-all duration-700 ${mounted ? 'opacity-100 translate-y-0' : 'opacity-0 -translate-y-4'}`}>
+  <div className="absolute inset-x-0 top-0 z-0 h-full bg-black opacity-12 pointer-events-none" />
+  <div className={`relative z-10 max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-36 text-white transition-all duration-700 ${mounted ? 'opacity-100 translate-y-0' : 'opacity-0 -translate-y-4'}`}>
           <div className="text-center">
             <h1 className="text-4xl md:text-6xl font-bold mb-6">
               Learn Without Limits
@@ -41,7 +41,7 @@ export default function HomePage() {
         </div>
 
         {/* Curved SVG separator */}
-        <div className={`pointer-events-none mt-0 drop-shadow-sm transition-all duration-700 ${mounted ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-2'}`}>
+  <div className={`relative z-10 pointer-events-none mt-0 drop-shadow-sm transition-all duration-700 ${mounted ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-2'}`}>
           <svg className="w-full h-20 md:h-28" viewBox="0 0 1440 140" preserveAspectRatio="none">
             <path d="M0,80 C360,180 1080,-40 1440,80 L1440,140 L0,140 Z" fill="#ffffff" opacity="0.95" />
           </svg>
