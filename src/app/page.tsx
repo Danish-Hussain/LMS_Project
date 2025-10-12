@@ -7,9 +7,9 @@ export default function HomePage() {
       {/* Hero Section (full-bleed background) */}
       <div className="relative">
         <div className="absolute inset-x-0 top-0 -z-20 h-full bg-gradient-to-r from-blue-600 to-purple-600" />
-        {/* subtle overlay to soften gradient */}
-        <div className="absolute inset-x-0 top-0 -z-10 h-full bg-black opacity-10 pointer-events-none" />
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-32 text-white">
+  {/* subtle overlay to soften gradient */}
+  <div className="absolute inset-x-0 top-0 -z-10 h-full bg-black opacity-12 pointer-events-none" />
+  <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-36 text-white">
           <div className="text-center">
             <h1 className="text-4xl md:text-6xl font-bold mb-6">
               Learn Without Limits
@@ -35,9 +35,9 @@ export default function HomePage() {
         </div>
 
         {/* Curved SVG separator */}
-        <div className="pointer-events-none mt-0">
-          <svg className="w-full h-12 md:h-20" viewBox="0 0 1440 80" preserveAspectRatio="none">
-            <path d="M0,32 C360,96 1080,-32 1440,32 L1440,80 L0,80 Z" fill="#ffffff" opacity="0.9" />
+        <div className="pointer-events-none mt-0 drop-shadow-sm">
+          <svg className="w-full h-20 md:h-28" viewBox="0 0 1440 140" preserveAspectRatio="none">
+            <path d="M0,80 C360,180 1080,-40 1440,80 L1440,140 L0,140 Z" fill="#ffffff" opacity="0.95" />
           </svg>
         </div>
       </div>
