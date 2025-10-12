@@ -12,6 +12,10 @@ interface VideoPlayerProps {
   isInstructor?: boolean
   onProgressUpdate?: (progress: number) => void
   onComplete?: (sessionId: string) => void
+  progressThrottleMs?: number
+  completionThreshold?: number // fraction e.g. 0.9 for 90%
+  schedulePauseOnPendingPlay?: boolean
+  playbackDebug?: boolean
 }
 
 export default function VideoPlayer({ 
@@ -20,7 +24,11 @@ export default function VideoPlayer({
   userId,
   isInstructor = false,
   onProgressUpdate,
-  onComplete 
+  onComplete,
+  progressThrottleMs = 3000,
+  completionThreshold = 0.9,
+  schedulePauseOnPendingPlay = true,
+  playbackDebug = false
 }: VideoPlayerProps) {
   const videoRef = useRef<HTMLVideoElement>(null)
   const playerRef = useRef<any>(null)
@@ -122,10 +130,10 @@ export default function VideoPlayer({
   const updateProgress = async (watchedTime: number) => {
     try {
       const now = Date.now()
-      const isComplete = typeof duration === 'number' && watchedTime >= duration * 0.9
+      const isComplete = typeof duration === 'number' && watchedTime >= duration * completionThreshold
 
-      // Throttle non-completion updates to once every 3 seconds.
-      if (!isComplete && now - lastSentRef.current < 3000) {
+      // Throttle non-completion updates to once every `progressThrottleMs`.
+      if (!isComplete && now - lastSentRef.current < progressThrottleMs) {
         return
       }
 
@@ -167,7 +175,7 @@ export default function VideoPlayer({
 
   const togglePlay = () => {
     // For react-player, control playing via state
-    if (isExternalProvider(videoUrl)) {
+      if (isExternalProvider(videoUrl)) {
       // prevent rapid toggles that may confuse the underlying provider
       setIsPlaying((p) => !p)
       return
@@ -179,7 +187,8 @@ export default function VideoPlayer({
     if (isPlaying) {
       // Try to pause. If a play() promise is pending, schedule pause after it resolves.
       try {
-        if (playPromiseRef.current) {
+        if (schedulePauseOnPendingPlay && playPromiseRef.current) {
+          if (playbackDebug) console.debug('Scheduling pause after pending play() resolves')
           playPromiseRef.current.then(() => {
             try { video.pause() } catch (err) { /* ignore */ }
           }).catch(() => {})
@@ -201,10 +210,12 @@ export default function VideoPlayer({
         const playPromise = video.play()
         if (playPromise !== undefined) {
           playPromiseRef.current = playPromise as Promise<void>
+          if (playbackDebug) console.debug('play() promise created')
           playPromiseRef.current
             .then(() => {
               setIsPlaying(true)
               playPromiseRef.current = null
+              if (playbackDebug) console.debug('play() promise resolved')
             })
             .catch((err: any) => {
               if (err && err.name === 'AbortError') return
