@@ -47,6 +47,7 @@ export default function VideoPlayer({
   const [isLoading, setIsLoading] = useState(() => (externalProvider ? false : true))
   const [loadError, setLoadError] = useState<string | null>(null)
   const playPromiseRef = useRef<Promise<void> | null>(null)
+  const lastExternalToggleRef = useRef<number>(0)
 
   const handleEnded = () => {
     setIsPlaying(false)
@@ -174,8 +175,11 @@ export default function VideoPlayer({
 
   const togglePlay = () => {
     // For react-player, control playing via state
-      if (isExternalProvider(videoUrl)) {
+    if (isExternalProvider(videoUrl)) {
       // prevent rapid toggles that may confuse the underlying provider
+      const now = Date.now()
+      if (now - lastExternalToggleRef.current < 300) return
+      lastExternalToggleRef.current = now
       setIsPlaying((p) => !p)
       return
     }
@@ -187,9 +191,12 @@ export default function VideoPlayer({
       // Try to pause. If a play() promise is pending, schedule pause after it resolves.
       try {
         if (schedulePauseOnPendingPlay && playPromiseRef.current) {
+          const v = video
           if (playbackDebug) console.debug('Scheduling pause after pending play() resolves')
           playPromiseRef.current.then(() => {
-            try { video.pause() } catch (err) { /* ignore */ }
+            try {
+              if (v === videoRef.current) v.pause()
+            } catch (err) { /* ignore */ }
           }).catch(() => {})
         } else {
           video.pause()
