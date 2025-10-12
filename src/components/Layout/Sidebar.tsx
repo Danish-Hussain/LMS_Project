@@ -37,10 +37,18 @@ export default function Sidebar() {
     : navigation
 
   return (
-    <div className="hidden md:flex md:w-64 md:flex-col md:fixed md:inset-y-0">
+    <div className="hidden md:flex md:w-72 md:flex-col md:fixed md:inset-y-0">
       <div className="flex-1 flex flex-col min-h-0 bg-gray-50 border-r">
+        <div className="flex items-center h-16 px-6 border-b bg-white">
+          <div className="flex items-center space-x-3">
+            <div className="bg-blue-50 text-blue-600 rounded-md p-2">
+              <BookOpen className="h-6 w-6" />
+            </div>
+            <div className="text-lg font-semibold text-gray-900">LMS</div>
+          </div>
+        </div>
         <div className="flex-1 flex flex-col pt-5 pb-4 overflow-y-auto">
-          <nav className="mt-5 flex-1 px-2 space-y-1">
+          <nav className="mt-5 flex-1 px-3 space-y-2">
             {navItems.map((item) => {
               const isActive = pathname === item.href
               return (
@@ -49,18 +57,15 @@ export default function Sidebar() {
                   href={item.href}
                   className={clsx(
                     isActive
-                      ? 'bg-blue-100 text-blue-900'
-                      : 'text-gray-600 hover:bg-gray-50 hover:text-gray-900',
-                    'group flex items-center px-2 py-2 text-sm font-medium rounded-md transition-colors'
+                      ? 'bg-white text-blue-900 border-l-4 border-blue-500 pl-3'
+                      : 'text-gray-700 hover:bg-gray-50 hover:text-gray-900',
+                    'group flex items-center px-3 py-3 text-sm font-medium rounded-md transition-colors space-x-3'
                   )}
                 >
-                  <item.icon
-                    className={clsx(
-                      isActive ? 'text-blue-500' : 'text-gray-400 group-hover:text-gray-500',
-                      'mr-3 flex-shrink-0 h-5 w-5'
-                    )}
-                  />
-                  {item.name}
+                  <div className={clsx(isActive ? 'bg-blue-50 text-blue-600' : 'bg-white text-gray-500', 'rounded-full p-2') }>
+                    <item.icon className="h-5 w-5" />
+                  </div>
+                  <span className={clsx(isActive ? 'text-blue-800 font-medium' : 'text-gray-800')}>{item.name}</span>
                 </Link>
               )
             })}

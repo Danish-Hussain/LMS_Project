@@ -319,10 +319,14 @@ function CourseContent({
           <div className="lg:col-span-9">
             {selectedSession && canAccess ? (
               <div className="bg-white rounded-xl shadow-sm border border-gray-100">
-                <div className="p-6 border-b border-gray-100">
+                <div className="p-6 border-b border-gray-100 flex items-center justify-between">
                   <h2 className="text-2xl font-semibold text-gray-900">
                     {selectedSession.title}
                   </h2>
+                  <div className="text-sm text-gray-600">
+                    <div className="text-xs text-gray-400">Progress</div>
+                    <div className="font-medium">{typeof selectedSession.progress?.watchedTime === 'number' && selectedSession.duration ? Math.min(100, Math.round((selectedSession.progress.watchedTime / selectedSession.duration) * 100)) : 0}%</div>
+                  </div>
                 </div>
                 <div className="p-6">
                   {selectedSession.videoUrl?.includes('vimeo.com') ? (
@@ -331,12 +335,17 @@ function CourseContent({
                       sessionId={selectedSession.id}
                       userId={user.id}
                       onComplete={(sessionId) => handleSessionComplete(sessionId)}
+                      onProgress={(p) => { /* no-op here, progress persists from player */ }}
                     />
                   ) : (
                     <VideoPlayer
                       videoUrl={selectedSession.videoUrl}
                       sessionId={selectedSession.id}
                       userId={user.id}
+                      onProgressUpdate={(playedSeconds) => {
+                        // Optionally update local session progress UI
+                        // We rely on server-side fetch to refresh actual values
+                      }}
                       onComplete={(sessionId) => handleSessionComplete(sessionId)}
                     />
                   )}
