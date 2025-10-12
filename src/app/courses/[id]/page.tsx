@@ -7,6 +7,7 @@ import Link from 'next/link'
 import { ArrowLeft, Play, CheckCircle, Clock, Users, BookOpen } from 'lucide-react'
 import VideoPlayer from '@/components/VideoPlayer'
 import VimeoPlayer from '@/components/VimeoPlayer'
+import useToast from '@/hooks/useToast'
 
 interface Session {
   id: string
@@ -466,7 +467,21 @@ export default function CourseDetailPage() {
   };
 
   const handleSessionComplete = async (sessionId: string) => {
+    const toast = useToast()
     try {
+      // Optimistic UI: mark session completed locally so list updates instantly
+      setCourse((prev) => {
+        if (!prev) return prev
+        const updated = { ...prev }
+        updated.sessions = updated.sessions.map((s) => {
+          if (s.id === sessionId) {
+            return { ...s, progress: { watchedTime: s.duration ?? 0, completed: true } }
+          }
+          return s
+        })
+        return updated
+      })
+
       const response = await fetch('/api/progress', {
         method: 'POST',
         headers: {
@@ -480,10 +495,17 @@ export default function CourseDetailPage() {
       });
 
       if (response.ok) {
+        toast?.success?.('Session marked complete')
+        await fetchCourseData();
+      } else {
+        toast?.error?.('Failed to mark session complete')
+        // revert by refetching
         await fetchCourseData();
       }
     } catch (error) {
       console.error('Failed to mark session as complete:', error);
+      useToast()?.error?.('Failed to mark session complete')
+      await fetchCourseData();
     }
   };
 
