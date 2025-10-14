@@ -3,16 +3,7 @@
 import { useAuth } from '@/contexts/AuthContext'
 import { useState, useRef, useEffect } from 'react'
 import Link from 'next/link'
-import { 
-  User, 
-  LogOut, 
-  Menu, 
-  X, 
-  BookOpen, 
-  Users, 
-  Settings,
-  Home
-} from 'lucide-react'
+import { Menu, X, BookOpen, Users, Home } from 'lucide-react'
 import ContactModal from '@/components/ContactModal'
 
 type ContactDefaults = { name?: string; email?: string }
@@ -63,13 +54,13 @@ export default function Navbar() {
     setIsMenuOpen(false)
   }
 
-  const navigation = [
+    const navigation = [
     { name: 'Dashboard', href: '/dashboard', icon: Home },
     { name: 'Courses', href: '/courses', icon: BookOpen },
     ...(user?.role === 'ADMIN' || user?.role === 'INSTRUCTOR' ? [
       { name: 'Students', href: '/students', icon: Users },
       { name: 'Batches', href: '/batches', icon: Users },
-    ] : []),
+    ] : [])
   ]
 
   return (

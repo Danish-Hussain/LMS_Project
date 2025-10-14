@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from 'react'
 import { useAuth } from '@/contexts/AuthContext'
-import { useRouter, useSearchParams } from 'next/navigation'
+import { useRouter } from 'next/navigation'
 import Link from 'next/link'
 import { ArrowLeft, CreditCard, CheckCircle, Lock } from 'lucide-react'
 import useToast from '@/hooks/useToast'
@@ -25,15 +25,25 @@ interface Batch {
 export default function PaymentPage() {
   const { user, loading } = useAuth()
   const router = useRouter()
-  const searchParams = useSearchParams()
-  const courseId = searchParams.get('courseId')
-  const batchId = searchParams.get('batchId')
+  // useSearchParams can cause prerender/suspense issues for SSR pages; use window.search instead
+  const [courseId, setCourseId] = useState<string | null>(null)
+  const [batchId, setBatchId] = useState<string | null>(null)
+
+  useEffect(() => {
+    try {
+      const sp = new URLSearchParams(typeof window !== 'undefined' ? window.location.search : '')
+      setCourseId(sp.get('courseId'))
+      setBatchId(sp.get('batchId'))
+    } catch {
+      // ignore
+    }
+  }, [])
   
   const [course, setCourse] = useState<Course | null>(null)
   const [batch, setBatch] = useState<Batch | null>(null)
   const [isLoading, setIsLoading] = useState(true)
   const [isProcessing, setIsProcessing] = useState(false)
-  const { info: toastInfo, error: toastError, success: toastSuccess } = useToast()
+  const { error: toastError } = useToast()
   const [paymentMethod, setPaymentMethod] = useState('card')
   const [cardDetails, setCardDetails] = useState({
     number: '',
@@ -42,12 +52,7 @@ export default function PaymentPage() {
     name: ''
   })
 
-  useEffect(() => {
-    if (user && courseId && batchId) {
-      fetchCourseAndBatch()
-    }
-  }, [user, courseId, batchId])
-
+  // fetch course & batch helper (stable reference)
   const fetchCourseAndBatch = async () => {
     try {
       const [courseResponse, batchResponse] = await Promise.all([
@@ -69,6 +74,12 @@ export default function PaymentPage() {
       setIsLoading(false)
     }
   }
+
+  useEffect(() => {
+    if (user && courseId && batchId) {
+      fetchCourseAndBatch()
+    }
+  }, [user, courseId, batchId])
 
   const handlePayment = async (e: React.FormEvent) => {
     e.preventDefault()
@@ -133,7 +144,7 @@ export default function PaymentPage() {
       <div className="min-h-screen bg-gray-50 flex items-center justify-center">
         <div className="text-center">
           <h1 className="text-2xl font-bold text-gray-900 mb-4">Course or Batch Not Found</h1>
-          <p className="text-gray-600 mb-8">The course or batch you're looking for doesn't exist.</p>
+          <p className="text-gray-600 mb-8">The course or batch you&apos;re looking for doesn&apos;t exist.</p>
           <Link
             href="/courses"
             className="bg-blue-600 hover:bg-blue-700 text-white px-6 py-2 rounded-lg font-semibold transition-colors"

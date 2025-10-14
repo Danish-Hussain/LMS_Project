@@ -3,10 +3,11 @@ import { prisma } from '@/lib/db'
 import { verifyToken } from '@/lib/auth'
 import { cookies } from 'next/headers'
 
-export async function GET(
-  request: NextRequest,
-  context: { params: any }
-) {
+type HandlerContext<T extends Record<string, string> = Record<string, string>> = {
+  params: Promise<T> | T
+}
+
+export async function GET(request: NextRequest, context: HandlerContext<{ id: string }>) {
   try {
     const cookieStore = await cookies()
     const token = cookieStore.get('auth-token')?.value
@@ -27,7 +28,8 @@ export async function GET(
       )
     }
 
-  const { id: batchId } = await context.params
+  const params = (await context.params) as { id: string }
+  const { id: batchId } = params
 
     const batch = await prisma.batch.findUnique({
       where: { id: batchId },
@@ -54,6 +56,20 @@ export async function GET(
         sessions: {
           orderBy: {
             order: 'asc'
+          },
+          select: {
+            id: true,
+            title: true,
+            videoUrl: true,
+            order: true,
+            startTime: true,
+            endTime: true,
+            courseId: true,
+            batchId: true,
+            sectionId: true,
+            isPublished: true,
+            createdAt: true,
+            updatedAt: true
           }
         },
         _count: {
@@ -82,10 +98,7 @@ export async function GET(
   }
 }
 
-export async function PUT(
-  request: NextRequest,
-  context: { params: any }
-) {
+export async function PUT(request: NextRequest, context: HandlerContext<{ id: string }>) {
   try {
     const cookieStore = await cookies()
     const token = cookieStore.get('auth-token')?.value
@@ -106,7 +119,8 @@ export async function PUT(
       )
     }
 
-  const { id: batchId } = await context.params
+  const params = (await context.params) as { id: string }
+  const { id: batchId } = params
     const { name, description, startDate, endDate, isActive } = await request.json()
 
     const batch = await prisma.batch.findUnique({
@@ -137,7 +151,22 @@ export async function PUT(
             price: true
           }
         },
-        sessions: true,
+        sessions: {
+          select: {
+            id: true,
+            title: true,
+            videoUrl: true,
+            order: true,
+            startTime: true,
+            endTime: true,
+            courseId: true,
+            batchId: true,
+            sectionId: true,
+            isPublished: true,
+            createdAt: true,
+            updatedAt: true
+          }
+        },
         _count: {
           select: {
             students: true,
@@ -157,10 +186,7 @@ export async function PUT(
   }
 }
 
-export async function DELETE(
-  request: NextRequest,
-  context: { params: any }
-) {
+export async function DELETE(request: NextRequest, context: HandlerContext<{ id: string }>) {
   try {
     const cookieStore = await cookies()
     const token = cookieStore.get('auth-token')?.value
@@ -181,7 +207,8 @@ export async function DELETE(
       )
     }
 
-  const { id: batchId } = await context.params
+  const params = (await context.params) as { id: string }
+  const { id: batchId } = params
 
     const batch = await prisma.batch.findUnique({
       where: { id: batchId }

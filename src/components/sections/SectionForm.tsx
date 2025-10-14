@@ -22,7 +22,8 @@ export function SectionForm({
   onCancel
 }: SectionFormProps) {
   const [title, setTitle] = useState(initialData?.title || '')
-  const [description, setDescription] = useState(initialData?.description || '')
+  // description may be unused in some flows; keep underscore to show intentional retention
+  const [description, _setDescription] = useState(initialData?.description || '')
   const [isSubmitting, setIsSubmitting] = useState(false)
   const [error, setError] = useState('')
 
@@ -73,7 +74,7 @@ export function SectionForm({
         })
         setError(data.error || 'Failed to save section')
       }
-    } catch (error) {
+    } catch {
       setError('An unexpected error occurred')
     } finally {
       setIsSubmitting(false)
@@ -82,8 +83,8 @@ export function SectionForm({
 
   return (
     <form onSubmit={handleSubmit} className="space-y-6">
-      <div>
-        <label htmlFor="title" className="block text-sm font-medium text-gray-700">
+      <div className="bg-white p-4 rounded-xl border border-gray-100 shadow-sm">
+        <label htmlFor="title" className="block text-sm font-medium text-gray-700 mb-1">
           Section Title
         </label>
         <input
@@ -91,7 +92,7 @@ export function SectionForm({
           id="title"
           value={title}
           onChange={(e) => setTitle(e.target.value)}
-          className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 sm:text-sm"
+          className="mt-1 block w-full rounded-lg border border-gray-200 bg-white px-4 py-3 text-sm placeholder-gray-400 transition-colors duration-150 focus:outline-none focus:ring-2 focus:ring-blue-200 focus:border-blue-500"
           placeholder="e.g., Introduction, Basic Concepts, etc."
           required
         />

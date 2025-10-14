@@ -3,7 +3,8 @@
 import React, { createContext, useContext, useReducer, useCallback } from 'react'
 
 type ToastType = 'info' | 'error' | 'success'
-type Toast = { id: string; message: string; type?: ToastType; meta?: any; duration?: number }
+type ToastMeta = { undo?: () => void } | Record<string, unknown>
+type Toast = { id: string; message: string; type?: ToastType; meta?: ToastMeta; duration?: number }
 
 type State = { toasts: Toast[] }
 type Action = { type: 'PUSH'; toast: Toast } | { type: 'REMOVE'; id: string }
@@ -21,7 +22,7 @@ function reducer(state: State, action: Action): State {
   }
 }
 
-interface ToastContextShape {
+export interface ToastContextShape {
   toasts: Toast[]
   push: (t: Omit<Toast, 'id'> & { id?: string }) => string
   remove: (id: string) => void
@@ -45,24 +46,27 @@ export const ToastProvider = ({ children }: { children: React.ReactNode }) => {
     return id
   }, [])
 
-  const info = useCallback((msg: string, opts?: any) => push({ message: msg, type: 'info', meta: { undo: opts?.undo }, duration: opts?.duration }), [push])
-  const success = useCallback((msg: string, opts?: any) => push({ message: msg, type: 'success', meta: { undo: opts?.undo }, duration: opts?.duration }), [push])
-  const error = useCallback((msg: string, opts?: any) => push({ message: msg, type: 'error', meta: { undo: opts?.undo }, duration: opts?.duration }), [push])
+  const info = useCallback((msg: string, opts?: { id?: string; undo?: () => void; duration?: number }) => push({ message: msg, type: 'info', meta: { undo: opts?.undo }, duration: opts?.duration }), [push])
+  const success = useCallback((msg: string, opts?: { id?: string; undo?: () => void; duration?: number }) => push({ message: msg, type: 'success', meta: { undo: opts?.undo }, duration: opts?.duration }), [push])
+  const error = useCallback((msg: string, opts?: { id?: string; undo?: () => void; duration?: number }) => push({ message: msg, type: 'error', meta: { undo: opts?.undo }, duration: opts?.duration }), [push])
 
   return (
     <ToastContext.Provider value={{ toasts: state.toasts, push, remove, info, success, error }}>
       {children}
   {/* aria-live region for accessibility + styled toasts */}
   <div aria-live="polite" suppressHydrationWarning={true} className="fixed bottom-6 right-6 z-50 space-y-2">
-        {state.toasts.map(t => (
-          <div key={t.id} role="status" className={`toast-item flex items-center gap-3 max-w-xs px-4 py-2 rounded shadow ${t.type === 'error' ? 'bg-red-50 border border-red-200 text-red-700' : t.type === 'success' ? 'bg-green-50 border border-green-200 text-green-700' : 'bg-white border'}`}>
-            <div className="flex-1 text-sm">{t.message}</div>
-            <div className="flex items-center gap-2">
-              {t.meta?.undo && <button onClick={() => { t.meta.undo(); remove(t.id) }} className="px-3 py-1 bg-gray-100 rounded text-sm">Undo</button>}
-              <button onClick={() => remove(t.id)} className="px-2 py-1 text-gray-500">✕</button>
+        {state.toasts.map(t => {
+          const hasUndo = typeof t.meta === 'object' && t.meta !== null && typeof (t.meta as { undo?: unknown }).undo === 'function'
+          return (
+            <div key={t.id} role="status" className={`toast-item flex items-center gap-3 max-w-xs px-4 py-2 rounded shadow ${t.type === 'error' ? 'bg-red-50 border border-red-200 text-red-700' : t.type === 'success' ? 'bg-green-50 border border-green-200 text-green-700' : 'bg-white border'}`}>
+              <div className="flex-1 text-sm">{t.message}</div>
+              <div className="flex items-center gap-2">
+                {hasUndo && <button onClick={() => { (t.meta as { undo?: () => void }).undo?.(); remove(t.id) }} className="px-3 py-1 bg-gray-100 rounded text-sm">Undo</button>}
+                <button onClick={() => remove(t.id)} className="px-2 py-1 text-gray-500">✕</button>
+              </div>
             </div>
-          </div>
-        ))}
+          )
+        })}
       </div>
     </ToastContext.Provider>
   )

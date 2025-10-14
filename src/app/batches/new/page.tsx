@@ -1,7 +1,6 @@
-'use client'
+ 'use client'
 
 import { useState, useEffect } from 'react'
-import { useSearchParams } from 'next/navigation'
 import { useAuth } from '@/contexts/AuthContext'
 import { useRouter } from 'next/navigation'
 import Link from 'next/link'
@@ -25,14 +24,18 @@ export default function CreateBatchPage() {
     fetchCourses()
   }, [])
 
-  // Read courseId from query params to prefill
-  const searchParams = useSearchParams()
+  // Read courseId from query params to prefill (use window.location to avoid SSR/suspense issues)
   useEffect(() => {
-    const qCourseId = searchParams.get('courseId')
-    if (qCourseId) {
-      setFormData((prev) => ({ ...prev, courseId: qCourseId }))
+    try {
+      const sp = new URLSearchParams(typeof window !== 'undefined' ? window.location.search : '')
+      const qCourseId = sp.get('courseId')
+      if (qCourseId) {
+        setFormData((prev) => ({ ...prev, courseId: qCourseId }))
+      }
+    } catch (e) {
+      // ignore
     }
-  }, [searchParams])
+  }, [])
 
   const fetchCourses = async () => {
     try {
@@ -105,7 +108,7 @@ export default function CreateBatchPage() {
       <div className="min-h-screen bg-gray-50 flex items-center justify-center">
         <div className="text-center">
           <h1 className="text-2xl font-bold text-gray-900 mb-4">Access Denied</h1>
-          <p className="text-gray-600 mb-8">You don't have permission to create batches.</p>
+          <p className="text-gray-600 mb-8">You don&apos;t have permission to create batches.</p>
           <Link
             href="/batches"
             className="bg-blue-600 hover:bg-blue-700 text-white px-6 py-2 rounded-lg font-semibold transition-colors"
@@ -168,10 +171,10 @@ export default function CreateBatchPage() {
                 {courses.length === 0 && (
                   <div className="mt-3 text-sm text-gray-600">
                     No courses available. You can{' '}
-                    <a href="/courses/new" className="text-blue-600 underline">
+                    <Link href="/courses/new" className="text-blue-600 underline">
                       create a new course
-                    </a>{' '}
-                    or go to the <a href="/courses" className="text-blue-600 underline">courses page</a> to pick one.
+                    </Link>{' '}
+                    or go to the <Link href="/courses" className="text-blue-600 underline">courses page</Link> to pick one.
                   </div>
                 )}
               </div>

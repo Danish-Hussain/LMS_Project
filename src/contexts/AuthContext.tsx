@@ -20,8 +20,12 @@ interface AuthContextType {
   register: (email: string, password: string, name: string, role?: Role) => Promise<boolean>
   logout: () => Promise<void>
 }
+// Add optional setter to update user from components
+interface MutableAuthContextType extends AuthContextType {
+  setUser?: (u: User | null) => void
+}
 
-const AuthContext = createContext<AuthContextType | undefined>(undefined)
+const AuthContext = createContext<MutableAuthContextType | undefined>(undefined)
 
 export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [user, setUser] = useState<User | null>(null)
@@ -34,7 +38,12 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
   const checkAuth = async () => {
     try {
-      const response = await fetch('/api/auth/me')
+      const response = await fetch('/api/auth/me', {
+        credentials: 'same-origin',
+        headers: {
+          'Content-Type': 'application/json'
+        }
+      })
       if (response.ok) {
         const data = await response.json()
         setUser(data.user)
@@ -50,7 +59,11 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     try {
       const response = await fetch('/api/auth/login', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: { 
+          'Content-Type': 'application/json',
+          'Accept': 'application/json'
+        },
+        credentials: 'same-origin',
         body: JSON.stringify({ email, password })
       })
 
@@ -102,7 +115,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   }
 
   return (
-    <AuthContext.Provider value={{ user, loading, login, register, logout }}>
+    <AuthContext.Provider value={{ user, loading, login, register, logout, setUser }}>
       {children}
     </AuthContext.Provider>
   )

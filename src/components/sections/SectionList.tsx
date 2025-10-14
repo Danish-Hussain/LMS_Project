@@ -3,7 +3,7 @@
 import { useEffect, useState, useRef } from 'react'
 import useToast from '@/hooks/useToast'
 import ConfirmDialog from '@/components/ui/ConfirmDialog'
-import { ChevronDown, ChevronRight, Plus, Play, Edit, Trash2, ArrowUp, ArrowDown, Eye, EyeOff } from 'lucide-react'
+import { ChevronDown, ChevronRight, Plus, Edit, Trash2, ArrowUp, ArrowDown, Eye, EyeOff } from 'lucide-react'
 import Link from 'next/link'
 
 interface Section {
@@ -22,6 +22,7 @@ interface Session {
   isPublished: boolean
   order?: number
   sectionId: string | null
+  thumbnailUrl?: string | null
 }
 
 interface SectionListProps {
@@ -35,15 +36,23 @@ export function SectionList({ batchId, isInstructor = false, onEditSection, onDe
   const [sections, setSections] = useState<Section[]>([])
   const [expandedSections, setExpandedSections] = useState<Set<string>>(new Set())
   const [isLoading, setIsLoading] = useState(true)
-  const [activeSessionId, setActiveSessionId] = useState<string | null>(null)
-  const [grabbedId, setGrabbedId] = useState<string | null>(null)
+  // activeSessionId is intentionally unused for now; keep state for future UX
+  const [_activeSessionId, _setActiveSessionId] = useState<string | null>(null)
+  // grabbedId is only written for a11y attributes; prefix with underscore to silence unused-var
+  const [_grabbedId, setGrabbedId] = useState<string | null>(null)
   const [inFlight, setInFlight] = useState<Set<string>>(new Set())
   const pendingDeletes = useRef<Map<string, { session: Session; timeoutId: ReturnType<typeof setTimeout> }>>(new Map())
-  // site-wide toast helpers
-  const { info: toastInfo, error: toastError, success: toastSuccess, remove } = useToast()
+  // site-wide toast helpers (success not used here)
+  const { info: toastInfo, error: toastError, remove } = useToast()
   const dragItem = useRef<{ sessionId: string; fromSectionId: string } | null>(null)
   const [confirmOpen, setConfirmOpen] = useState(false)
   const [confirmTarget, setConfirmTarget] = useState<string | null>(null)
+
+  // Render ConfirmDialog when requested so the state is actually used
+  const handleConfirmCancel = () => {
+    setConfirmOpen(false)
+    setConfirmTarget(null)
+  }
 
   useEffect(() => {
     fetchSections()
@@ -117,6 +126,13 @@ export function SectionList({ batchId, isInstructor = false, onEditSection, onDe
     }, 8000)
 
     pendingDeletes.current.set(sessionId, { session: found, timeoutId })
+  }
+
+  // Small helper used by ConfirmDialog
+  const onConfirmDialogConfirm = () => {
+    if (confirmTarget) {
+      handleDeleteSessionConfirmed(confirmTarget)
+    }
   }
 
   const undoDelete = (sessionId: string) => {
@@ -273,6 +289,14 @@ export function SectionList({ batchId, isInstructor = false, onEditSection, onDe
               ) : (
                 <ChevronRight className="h-5 w-5 text-gray-400 mr-2" />
               )}
+              {/* Confirm dialog for destructive actions */}
+              <ConfirmDialog
+                open={confirmOpen}
+                title="Delete session"
+                message="Are you sure you want to delete this session? This action can be undone from the toast when available."
+                onConfirm={onConfirmDialogConfirm}
+                onCancel={handleConfirmCancel}
+              />
               <div>
                 <h3 className="text-lg font-medium text-gray-900">{section.title}</h3>
                 {section.description && (
@@ -338,14 +362,11 @@ export function SectionList({ batchId, isInstructor = false, onEditSection, onDe
                         <div className="session-order">{idx + 1}</div>
 
                         {/* optional thumbnail if available (guarded via any to stay optional) */}
-                        {(() => {
-                          const thumb = (session as any).thumbnailUrl as string | undefined;
-                          return thumb ? (
-                            <div className="session-thumb">
-                              <img src={thumb} alt={`${session.title} thumbnail`} />
-                            </div>
-                          ) : null;
-                        })()}
+                        {session.thumbnailUrl ? (
+                          <div className="session-thumb">
+                            <img src={session.thumbnailUrl} alt={`${session.title} thumbnail`} />
+                          </div>
+                        ) : null}
 
                         <div className="session-meta">
                           <div id={`session-title-${session.id}`} className="session-title">{session.title}</div>

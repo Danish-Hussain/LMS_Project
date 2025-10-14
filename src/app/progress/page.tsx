@@ -6,7 +6,6 @@ import { TrendingUp, CheckCircle, Clock, BookOpen, PlayCircle } from 'lucide-rea
 
 interface ProgressItem {
   id: string
-  watchedTime: number
   completed: boolean
   completedAt: string | null
   session: {
@@ -46,9 +45,8 @@ export default function ProgressPage() {
     }
   }
 
-  const getProgressPercentage = (watchedTime: number, duration: number | null) => {
-    if (!duration) return 0
-    return Math.min((watchedTime / duration) * 100, 100)
+  const getProgressPercentage = (completed: boolean) => {
+    return completed ? 100 : 0
   }
 
   const getTotalProgress = () => {
@@ -57,9 +55,8 @@ export default function ProgressPage() {
     return totalSessions > 0 ? (completedSessions / totalSessions) * 100 : 0
   }
 
-  const getTotalWatchTime = () => {
-    return progress.reduce((total, item) => total + item.watchedTime, 0)
-  }
+  // Total watch time removed - progress is now based on completed sessions only
+  const getTotalWatchTime = () => 0
 
   if (loading || isLoading) {
     return (
@@ -139,7 +136,8 @@ export default function ProgressPage() {
               <div className="ml-4">
                 <p className="text-sm font-medium text-gray-600">Watch Time</p>
                 <p className="text-2xl font-bold text-gray-900">
-                  {Math.floor(getTotalWatchTime() / 60)} min
+                  {/* Watch time removed */}
+                  N/A
                 </p>
               </div>
             </div>
@@ -181,8 +179,7 @@ export default function ProgressPage() {
                         <div className="flex items-center">
                           <Clock className="h-4 w-4 mr-1" />
                           <span>
-                            {Math.floor(item.watchedTime / 60)} min watched
-                            {item.session.duration && ` / ${item.session.duration} min`}
+                            {item.session.duration ? `${item.session.duration} min` : 'Duration N/A'}
                           </span>
                         </div>
                         {item.completedAt && (
@@ -201,9 +198,7 @@ export default function ProgressPage() {
                         <div className="flex justify-between text-sm text-gray-600 mb-1">
                           <span>Progress</span>
                           <span>
-                            {Math.round(
-                              getProgressPercentage(item.watchedTime, item.session.duration)
-                            )}%
+                            {Math.round(getProgressPercentage(item.completed))}%
                           </span>
                         </div>
                         <div className="w-full bg-gray-200 rounded-full h-2">
@@ -212,10 +207,7 @@ export default function ProgressPage() {
                               item.completed ? 'bg-green-500' : 'bg-blue-500'
                             }`}
                             style={{
-                              width: `${getProgressPercentage(
-                                item.watchedTime,
-                                item.session.duration
-                              )}%`
+                              width: `${getProgressPercentage(item.completed)}%`
                             }}
                           ></div>
                         </div>

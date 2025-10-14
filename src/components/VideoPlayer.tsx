@@ -2,8 +2,7 @@
 
 import { useState, useEffect, useRef } from 'react'
 import { Play, Pause, Volume2, VolumeX, Maximize, RotateCcw } from 'lucide-react'
-import ReactPlayer from 'react-player'
-import { DocumentList } from './DocumentList'
+import VimeoPlayer from './VimeoPlayer'
 
 interface VideoPlayerProps {
   videoUrl: string
@@ -31,7 +30,7 @@ export default function VideoPlayer({
   playbackDebug = false
 }: VideoPlayerProps) {
   const videoRef = useRef<HTMLVideoElement>(null)
-  const playerRef = useRef<any>(null)
+  const containerRef = useRef<HTMLDivElement>(null)
   const lastSentRef = useRef<number>(0)
   const completedSentRef = useRef<boolean>(false)
   // Use ReactPlayer directly
@@ -49,17 +48,54 @@ export default function VideoPlayer({
   const playPromiseRef = useRef<Promise<void> | null>(null)
   const lastExternalToggleRef = useRef<number>(0)
 
+  // Vimeo SDK attach helpers
+  const vimeoPlayerRef = useRef<any | null>(null)
+  const attachAttemptsRef = useRef<number>(0)
+  const [externalUsesSdk, setExternalUsesSdk] = useState<boolean | null>(null)
+  // debug logging removed for production UI; keep a noop to avoid touching call sites
+  const pushDebug = (_msg?: string, _data?: unknown) => {}
+  const [attachFailed, setAttachFailed] = useState(false)
+  const [fitMode, setFitMode] = useState<'cover' | 'contain'>('cover')
+
+  // pushDebug defined above as noop
+
+  const attachVimeoSdk = async (): Promise<boolean> => {
+    try {
+      const iframe = containerRef.current?.querySelector('iframe') as HTMLIFrameElement | null
+      if (!iframe || !iframe.src) return false
+      // already attached?
+      if (vimeoPlayerRef.current && vimeoPlayerRef.current.element === iframe) return true
+      attachAttemptsRef.current += 1
+      const mod = await import('@vimeo/player')
+      const Player = (mod as any).default ?? mod
+      vimeoPlayerRef.current = new Player(iframe)
+      setExternalUsesSdk(true)
+      // Ensure parent controller doesn't try to control playback once SDK is attached
+      setIsPlaying(false)
+  // vimeo attached
+      setAttachFailed(false)
+      vimeoPlayerRef.current.on?.('play', () => setIsPlaying(true))
+      vimeoPlayerRef.current.on?.('pause', () => setIsPlaying(false))
+      return true
+    } catch (err) {
+  // attachVimeoSdk failed
+      attachAttemptsRef.current += 1
+      if (attachAttemptsRef.current >= 3) setAttachFailed(true)
+      return false
+    }
+  }
+  // ReactPlayer removed; no RP alias
+
   const handleEnded = () => {
     setIsPlaying(false)
     
-    // Mark the session as completed
+    // Mark the session as completed (no longer sending watchedTime)
     fetch('/api/progress', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
         sessionId,
-        completed: true,
-        watchedTime: currentTime
+        completed: true
       })
     }).catch(console.error)
 
@@ -117,6 +153,11 @@ export default function VideoPlayer({
     return /vimeo\.com|youtube\.com|youtu\.be|dailymotion\.com/.test(url)
   }
 
+  const isVimeo = (url: string) => {
+    if (!url) return false
+    return /vimeo\.com/.test(url)
+  }
+
   const getVimeoId = (url: string): string | null => {
     const match = url.match(/(?:vimeo\.com\/|player\.vimeo\.com\/video\/)?(\d+)/)
     return match ? match[1] : null
@@ -144,8 +185,6 @@ export default function VideoPlayer({
         },
         body: JSON.stringify({
           sessionId,
-          userId,
-          watchedTime: Math.floor(watchedTime),
           completed: isComplete
         })
       })
@@ -173,13 +212,74 @@ export default function VideoPlayer({
     completedSentRef.current = false
   }, [sessionId])
 
+  // Try to auto-attach Vimeo SDK when using a Vimeo embed and when internal player is available
+  useEffect(() => {
+    let mounted = true
+    const tryAttach = async () => {
+      if (!mounted) return
+      if (!isExternalProvider(videoUrl)) return
+      // only attempt attach for vimeo urls
+      if (!/vimeo\.com/.test(videoUrl)) return
+
+      // If the iframe already exposes an API (unlikely) we would skip SDK attach; otherwise continue
+
+      // attempt attach with a few retries
+      for (let i = 0; i < 3; i++) {
+        const ok = await attachVimeoSdk()
+        if (ok) return
+        await new Promise((r) => setTimeout(r, 500 * (i + 1)))
+      }
+    }
+
+    tryAttach()
+    return () => { mounted = false }
+  }, [videoUrl])
+
   const togglePlay = () => {
     // For react-player, control playing via state
-    if (isExternalProvider(videoUrl)) {
+  if (isExternalProvider(videoUrl)) {
       // prevent rapid toggles that may confuse the underlying provider
       const now = Date.now()
       if (now - lastExternalToggleRef.current < 300) return
       lastExternalToggleRef.current = now
+
+      // If we have a Vimeo SDK attached prefer to call its play/pause directly
+  if (vimeoPlayerRef.current) {
+        try {
+          if (isPlaying) {
+            // vimeo sdk: pause()
+            vimeoPlayerRef.current.pause?.()
+            setIsPlaying(false)
+          } else {
+            // vimeo sdk: play() (optimistic)
+            // optimistic update: set playing immediately so ReactPlayer won't force a pause
+            setIsPlaying(true)
+            try {
+              const p = vimeoPlayerRef.current.play?.()
+              if (p && typeof p.then === 'function') {
+                playPromiseRef.current = p
+                p.then(() => {
+                  playPromiseRef.current = null
+                  // vimeo sdk: play resolved
+                }).catch((err: any) => {
+                  playPromiseRef.current = null
+                  // vimeo sdk: play failed
+                  // revert optimistic state on failure
+                  setIsPlaying(false)
+                })
+              }
+            } catch (err) {
+              // vimeo sdk: play threw
+              setIsPlaying(false)
+            }
+          }
+        } catch (err) {
+          // vimeo sdk toggle error
+        }
+        return
+      }
+
+      // Otherwise we toggle isPlaying state heuristically (iframe without SDK)
       setIsPlaying((p) => !p)
       return
     }
@@ -237,15 +337,14 @@ export default function VideoPlayer({
     }
   }
 
-  const handleSeek = (e: React.ChangeEvent<HTMLInputElement>) => {
+  const handleSeek = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const seekTime = (parseFloat(e.target.value) / 100) * duration
     if (isExternalProvider(videoUrl)) {
-      // react-player's seekTo accepts seconds
       try {
-        playerRef.current?.seekTo?.(seekTime, 'seconds')
-      } catch (err) {
-        // fallback: nothing
-      }
+        if (vimeoPlayerRef.current && typeof vimeoPlayerRef.current.setCurrentTime === 'function') {
+          await vimeoPlayerRef.current.setCurrentTime(seekTime)
+        }
+      } catch (err) { /* ignore */ }
       setCurrentTime(seekTime)
       return
     }
@@ -300,21 +399,20 @@ export default function VideoPlayer({
 
   const toggleFullscreen = () => {
     if (isExternalProvider(videoUrl)) {
-      // Try to request fullscreen on the internal player element
-      const internal = playerRef.current?.getInternalPlayer?.()
+      // Try to request fullscreen on the iframe element
       try {
-        if (internal && internal.requestFullscreen) {
-          internal.requestFullscreen()
+        const iframe = containerRef.current?.querySelector('iframe') as HTMLElement | null
+        if (iframe && (iframe as any).requestFullscreen) {
+          ;(iframe as any).requestFullscreen()
           return
         }
-        // Some providers expose a DOM node (e.g., iframe)
-        const el = playerRef.current?.getInternalPlayer?.()?.iframe || playerRef.current?.getInternalPlayer?.()
-        if (el && el.requestFullscreen) {
-          el.requestFullscreen()
+        // fallback: try the container
+        if (containerRef.current && containerRef.current.requestFullscreen) {
+          containerRef.current.requestFullscreen()
           return
         }
       } catch (err) {
-        // fallback to nothing
+        // ignore
       }
 
       return
@@ -354,84 +452,81 @@ export default function VideoPlayer({
   }
 
   return (
-    <div className="w-full bg-black rounded-lg overflow-hidden">
+    <div className="w-full bg-white rounded-lg overflow-hidden">
       <div className="relative">
-          {isExternalProvider(videoUrl) ? (
-          <div className="w-full h-auto">
-            {
-              // Build props then spread as any to avoid TF type mismatch in this project
-              (() => {
-                const rp: any = {
-                  url: getVimeoEmbedUrl(videoUrl),
-                  ref: playerRef,
-                  playing: isPlaying,
-                  width: '100%',
-                  height: '100%',
-                  config: {
-                    vimeo: {
-                      playerOptions: {
-                        responsive: true,
-                        autopause: false,
-                        autoplay: false,
-                        byline: false,
-                        portrait: false,
-                        title: false,
-                        transparent: false,
-                        controls: true
-                      },
-                      iframeParams: { allow: 'autoplay; fullscreen; picture-in-picture' }
-                    }
-                  },
-                  onProgress: (state: any) => {
-                    const playedSeconds = (state.playedSeconds ?? state.played) || 0
-                    setCurrentTime(playedSeconds)
-                    if (duration > 0) setProgress((playedSeconds / duration) * 100)
-                    updateProgress(playedSeconds)
+        {/* Debug toolbar removed - streamlined Vimeo-only playback UI */}
+
+  {externalProvider ? (
+          // Use the simple VimeoPlayer iframe for Vimeo URLs to avoid ReactPlayer<->iframe race
+          // If it's a Vimeo URL, render VimeoPlayer, otherwise fall back to ReactPlayer for other providers
+          /vimeo\.com/.test(videoUrl) ? (
+      <div className="relative w-full bg-transparent">
+    <div className={`w-full aspect-video overflow-hidden rounded-t-lg bg-white`}>
+                <VimeoPlayer
+                  videoUrl={videoUrl}
+                  sessionId={sessionId}
+                  userId={userId}
+                  onProgress={(playedSeconds) => {
+                    // The simple VimeoPlayer currently doesn't report progress; keep stub in case it's added later
                     if (onProgressUpdate) onProgressUpdate(playedSeconds)
-                  },
-                  onReady: () => {
-                    try {
-                      const internal = playerRef.current?.getInternalPlayer?.()
-                      const d = playerRef.current?.getDuration?.() || (internal && internal.getDuration ? internal.getDuration() : undefined)
-                      if (typeof d === 'number' && !isNaN(d)) setDuration(d)
-                    } catch (err) { /* ignore */ }
-                    setIsLoading(false)
-                  },
-                  onEnded: () => {
-                    setIsPlaying(false)
-                    if (onComplete) onComplete(sessionId)
-                  },
-                  onError: (err: any) => {
-                    console.error('ReactPlayer load error:', err)
-                    setLoadError(typeof err === 'string' ? err : JSON.stringify(err))
-                  }
-                }
-                return <ReactPlayer {...rp} />
-              })()
-            }
+                  }}
+                  onComplete={(sid) => { if (onComplete) onComplete(sid) }}
+                />
+              </div>
+            </div>
+          ) : (
+              <div className="relative w-full bg-transparent">
+              <div className={`w-full aspect-video overflow-hidden rounded-t-lg bg-white`}>
+                <div className="w-full h-full">
+                  <iframe
+                    src={getVimeoEmbedUrl(videoUrl) + '?title=false&byline=false&portrait=false&controls=1'}
+                    width="100%"
+                    height="100%"
+                    frameBorder="0"
+                    allow="autoplay; fullscreen; picture-in-picture"
+                    allowFullScreen
+                    style={{ width: '100%', height: '100%', border: 0 }}
+                  />
+                </div>
+              </div>
+            </div>
+          )
+          ) : (
+          <div className={`w-full aspect-video overflow-hidden rounded-t-lg bg-white`}>
+            <video ref={videoRef} src={videoUrl} className={`w-full h-full ${fitMode === 'cover' ? 'object-cover' : 'object-contain'}`} preload="metadata" />
           </div>
-        ) : (
-          <video
-            ref={videoRef}
-            src={videoUrl}
-            className="w-full h-auto"
-            preload="metadata"
-          />
+        )}
+
+        {attachFailed && (
+          <div className="p-3 bg-yellow-50 text-yellow-900 rounded-md mt-3">
+            <div className="flex items-center justify-between">
+              <div>
+                <strong>Video playback is restricted.</strong>
+                <div className="text-xs mt-1">This Vimeo video may be private or block programmatic playback. You can open it directly on Vimeo.</div>
+              </div>
+              <div className="flex items-center gap-2">
+                <a href={getVimeoEmbedUrl(videoUrl)} target="_blank" rel="noreferrer" className="underline text-yellow-800">Open in Vimeo</a>
+                <button className="btn" onClick={async () => { attachAttemptsRef.current = 0; setAttachFailed(false); const ok = await attachVimeoSdk(); }}>Retry</button>
+              </div>
+            </div>
+          </div>
         )}
         
-        {/* Play/Pause Overlay */}
-        <div className="absolute inset-0 flex items-center justify-center">
-          <button
-            onClick={togglePlay}
-            className="bg-black bg-opacity-50 hover:bg-opacity-70 text-white p-4 rounded-full transition-all"
-          >
-            {isPlaying ? (
-              <Pause className="h-12 w-12" />
-            ) : (
-              <Play className="h-12 w-12" />
-            )}
-          </button>
-        </div>
+        {/* Play/Pause Overlay (hidden for Vimeo-only) */}
+        {!isVimeo(videoUrl) && (
+          <div className="absolute inset-0 flex items-center justify-center">
+            <button
+              onClick={togglePlay}
+              className="text-white p-4 rounded-full transition-all"
+            >
+              {isPlaying ? (
+                <Pause className="h-12 w-12" />
+              ) : (
+                <Play className="h-12 w-12" />
+              )}
+            </button>
+          </div>
+        )}
       </div>
 
       {loadError && (
@@ -450,8 +545,9 @@ export default function VideoPlayer({
         </div>
       )}
 
-      {/* Controls */}
-      <div className="bg-gray-900 text-white p-4">
+      {/* Controls (hide when Vimeo-only) */}
+      {!isVimeo(videoUrl) && (
+        <div className="bg-gray-900 text-white p-4">
         {/* Progress Bar */}
         <div className="mb-4">
           <input
@@ -515,6 +611,14 @@ export default function VideoPlayer({
             </span>
             
             <button
+              onClick={() => setFitMode((m) => (m === 'cover' ? 'contain' : 'cover'))}
+              className="hover:text-blue-400 transition-colors"
+              title={fitMode === 'cover' ? 'Show full video (contain)' : 'Crop video to fill (cover)'}
+            >
+              <span className="text-xs">{fitMode === 'cover' ? 'Crop' : 'Fit'}</span>
+            </button>
+
+            <button
               onClick={toggleFullscreen}
               className="hover:text-blue-400 transition-colors"
             >
@@ -522,9 +626,10 @@ export default function VideoPlayer({
             </button>
           </div>
         </div>
-      </div>
+        </div>
+      )}
 
-      <DocumentList sessionId={sessionId} isInstructor={isInstructor} />
+  {/* Session documents removed per request */}
 
       <style jsx>{`
         .slider::-webkit-slider-thumb {

@@ -25,12 +25,35 @@ export async function GET(request: NextRequest) {
     console.log('Is admin/instructor:', isAdmin)
     
     // Log query condition
-    console.log('Query condition:', isAdmin ? 'all courses' : 'only published courses')
+    console.log('Query condition:', isAdmin ? 'instructor courses' : 'published courses')
 
     console.log('Executing Prisma query...')
+    
+    // Build where clause based on user role
+    let whereClause: any = { isPublished: true }; // default for non-logged in users
+    
+    if (user) {
+      if (user.role === 'ADMIN') {
+        // Admin can see all courses
+        whereClause = {};
+      } else if (user.role === 'INSTRUCTOR') {
+        // Instructors see their own courses
+        whereClause = { creatorId: user.id };
+      }
+    }
+
+    console.log('Where clause:', whereClause)
+    
     const courses = await prisma.course.findMany({
-      where: isAdmin ? {} : { isPublished: true },
-      include: {
+      where: whereClause,
+      select: {
+        id: true,
+        title: true,
+        description: true,
+        thumbnail: true,
+        price: true,
+        isPublished: true,
+        creatorId: true,
         creator: {
           select: {
             name: true
@@ -40,7 +63,9 @@ export async function GET(request: NextRequest) {
           select: {
             id: true,
             title: true,
-            duration: true
+            startTime: true,
+            endTime: true,
+            isPublished: true
           }
         },
         _count: {
@@ -53,7 +78,8 @@ export async function GET(request: NextRequest) {
         createdAt: 'desc'
       }
     })
-    console.log('Query results:', { count: courses.length, courses: courses.map((c: { id: string; title: string }) => ({ id: c.id, title: c.title })) })
+
+    console.log('Query results:', { count: courses.length, courses: courses.map(c => ({ id: c.id, title: c.title })) })
 
     return NextResponse.json(courses)
   } catch (error) {
@@ -77,10 +103,9 @@ export async function POST(request: NextRequest) {
 
     if (!token) {
       console.log('No auth token found')
-      return NextResponse.json(
-        { error: 'Not authenticated' },
-        { status: 401 }
-      )
+      const resp = { error: 'Not authenticated' }
+      console.error('Sending response (early):', resp, 401)
+      return NextResponse.json(resp, { status: 401 })
     }
 
   const user = await verifyToken(token as string)
@@ -103,28 +128,25 @@ export async function POST(request: NextRequest) {
 
       if (!dbUser) {
         console.log('User not found in database:', { userId: user.id })
-        return NextResponse.json(
-          { error: 'User account not found' },
-          { status: 404 }
-        )
+        const resp = { error: 'User account not found' }
+        console.error('Sending response (user not found):', resp, 404)
+        return NextResponse.json(resp, { status: 404 })
       }
 
       if (dbUser.role !== 'ADMIN' && dbUser.role !== 'INSTRUCTOR') {
         console.log('Unauthorized role:', { userId: user.id, role: dbUser.role })
-        return NextResponse.json(
-          { error: 'Only admins and instructors can create courses' },
-          { status: 403 }
-        )
+        const resp = { error: 'Only admins and instructors can create courses' }
+        console.error('Sending response (unauthorized role):', resp, 403)
+        return NextResponse.json(resp, { status: 403 })
       }
     } catch (dbError) {
       console.error('Error verifying user in database:', {
         userId: user.id,
         error: dbError
       })
-      return NextResponse.json(
-        { error: 'Failed to verify user permissions' },
-        { status: 500 }
-      )
+      const resp = { error: 'Failed to verify user permissions' }
+      console.error('Sending response (verify user error):', resp, 500, { dbError })
+      return NextResponse.json(resp, { status: 500 })
     }
 
     let body
@@ -133,10 +155,9 @@ export async function POST(request: NextRequest) {
       console.log('Request body:', body)
     } catch (parseError) {
       console.error('Error parsing request body:', parseError)
-      return NextResponse.json(
-        { error: 'Invalid JSON format in request body' },
-        { status: 400 }
-      )
+      const resp = { error: 'Invalid JSON format in request body' }
+      console.error('Sending response (invalid json):', resp, 400)
+      return NextResponse.json(resp, { status: 400 })
     }
 
     // Validate request body structure
@@ -153,58 +174,51 @@ export async function POST(request: NextRequest) {
 
     // Validate required fields with specific constraints
     if (!title) {
-      return NextResponse.json(
-        { error: 'Title is required' },
-        { status: 400 }
-      )
+      const resp = { error: 'Title is required' }
+      console.error('Sending response (title missing):', resp, 400)
+      return NextResponse.json(resp, { status: 400 })
     }
 
     if (typeof title !== 'string') {
-      return NextResponse.json(
-        { error: 'Title must be a string' },
-        { status: 400 }
-      )
+      const resp = { error: 'Title must be a string' }
+      console.error('Sending response (title not string):', resp, 400)
+      return NextResponse.json(resp, { status: 400 })
     }
 
     const trimmedTitle = title.trim()
     if (trimmedTitle.length === 0) {
-      return NextResponse.json(
-        { error: 'Title cannot be empty' },
-        { status: 400 }
-      )
+      const resp = { error: 'Title cannot be empty' }
+      console.error('Sending response (title empty):', resp, 400)
+      return NextResponse.json(resp, { status: 400 })
     }
 
     if (trimmedTitle.length > 255) {
-      return NextResponse.json(
-        { error: 'Title cannot exceed 255 characters' },
-        { status: 400 }
-      )
+      const resp = { error: 'Title cannot exceed 255 characters' }
+      console.error('Sending response (title too long):', resp, 400)
+      return NextResponse.json(resp, { status: 400 })
     }
 
     // Validate optional fields
     if (description !== undefined && description !== null) {
       if (typeof description !== 'string') {
-        return NextResponse.json(
-          { error: 'Description must be a string' },
-          { status: 400 }
-        )
+        const resp = { error: 'Description must be a string' }
+        console.error('Sending response (description type):', resp, 400)
+        return NextResponse.json(resp, { status: 400 })
       }
     }
 
     if (thumbnail !== undefined && thumbnail !== null) {
       if (typeof thumbnail !== 'string') {
-        return NextResponse.json(
-          { error: 'Thumbnail must be a URL string' },
-          { status: 400 }
-        )
+        const resp = { error: 'Thumbnail must be a URL string' }
+        console.error('Sending response (thumbnail type):', resp, 400)
+        return NextResponse.json(resp, { status: 400 })
       }
       try {
         new URL(thumbnail)
       } catch (e) {
-        return NextResponse.json(
-          { error: 'Thumbnail must be a valid URL starting with http:// or https://' },
-          { status: 400 }
-        )
+        const resp = { error: 'Thumbnail must be a valid URL starting with http:// or https://' }
+        console.error('Sending response (thumbnail url):', resp, 400)
+        return NextResponse.json(resp, { status: 400 })
       }
     }
 
@@ -213,16 +227,14 @@ export async function POST(request: NextRequest) {
     if (price !== undefined && price !== null && price !== '') {
       const numPrice = Number(price)
       if (isNaN(numPrice)) {
-        return NextResponse.json(
-          { error: 'Price must be a valid number' },
-          { status: 400 }
-        )
+        const resp = { error: 'Price must be a valid number' }
+        console.error('Sending response (price NaN):', resp, 400)
+        return NextResponse.json(resp, { status: 400 })
       }
       if (numPrice < 0) {
-        return NextResponse.json(
-          { error: 'Price cannot be negative' },
-          { status: 400 }
-        )
+        const resp = { error: 'Price cannot be negative' }
+        console.error('Sending response (price negative):', resp, 400)
+        return NextResponse.json(resp, { status: 400 })
       }
       // Round to 2 decimal places to avoid floating point issues
       validatedPrice = Math.round(numPrice * 100) / 100
@@ -248,7 +260,7 @@ export async function POST(request: NextRequest) {
       })
 
       // Use a transaction to ensure data consistency
-  const course = await prisma.$transaction(async (tx: any) => {
+  const course = await prisma.$transaction(async (tx) => {
         // Double check user exists within transaction
         const userExists = await tx.user.findUnique({
           where: { id: user.id },
@@ -300,10 +312,9 @@ export async function POST(request: NextRequest) {
       })
 
       if (dbError instanceof Error && dbError.message.includes('Unique constraint failed')) {
-        return NextResponse.json(
-          { error: 'A course with this title already exists' },
-          { status: 409 }
-        )
+        const resp = { error: 'A course with this title already exists' }
+        console.error('Sending response (unique constraint):', resp, 409, { dbError })
+        return NextResponse.json(resp, { status: 409 })
       }
 
       throw dbError // Let the outer catch handle other database errors

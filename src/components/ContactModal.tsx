@@ -32,7 +32,7 @@ export default function ContactModal({ open, onClose, defaultName, defaultEmail 
       setEmail('')
       setMessage('')
       onClose()
-    } catch (err: any) {
+    } catch (err: unknown) {
       console.error(err)
       toast.error('Failed to send message. Try again later.')
     } finally {

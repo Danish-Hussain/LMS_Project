@@ -2,10 +2,11 @@ import { NextRequest, NextResponse } from 'next/server'
 import { prisma } from '@/lib/db'
 import { verifyToken } from '@/lib/auth'
 
-export async function GET(
-  request: NextRequest,
-  context: { params: any }
-) {
+type HandlerContext<T extends Record<string, string> = Record<string, string>> = {
+  params: Promise<T> | T
+}
+
+export async function GET(request: NextRequest, context: HandlerContext<{ id: string }>) {
   try {
     const { searchParams } = new URL(request.url)
     const batchId = searchParams.get('batchId')
@@ -17,7 +18,8 @@ export async function GET(
       )
     }
 
-    const { id } = await context.params
+  const params = (await context.params) as { id: string }
+  const { id } = params
     const sections = await prisma.courseSection.findMany({
       where: {
         courseId: id,
@@ -45,10 +47,7 @@ export async function GET(
   }
 }
 
-export async function POST(
-  request: NextRequest,
-  context: { params: any }
-) {
+export async function POST(request: NextRequest, context: HandlerContext<{ id: string }>) {
   try {
     const token = request.cookies.get('auth-token')?.value
 
@@ -68,7 +67,8 @@ export async function POST(
       )
     }
 
-    const { title, description, batchId } = await request.json()
+  const body = (await request.json()) as { title?: string; description?: string; batchId?: string }
+  const { title, description, batchId } = body
 
     // Validate required fields
     if (!title || !batchId) {
@@ -79,7 +79,8 @@ export async function POST(
     }
 
     // Get the highest order number
-    const { id } = await context.params
+  const params = (await context.params) as { id: string }
+  const { id } = params
     const lastSection = await prisma.courseSection.findFirst({
       where: {
         courseId: id,

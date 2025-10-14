@@ -13,7 +13,7 @@ interface Section {
   title: string
   description?: string | null
   order: number
-  sessions: any[]
+  sessions: unknown[]
 }
 
 export default function BatchSectionsPage({ params }: { params: Promise<{ id: string }> }) {

@@ -1,10 +1,10 @@
 'use client'
 
 import { useAuth } from '@/contexts/AuthContext'
-import { useEffect, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import { useParams } from 'next/navigation'
 import Link from 'next/link'
-import { ArrowLeft, Play, CheckCircle, Clock, Users, BookOpen } from 'lucide-react'
+import { ArrowLeft, Play, CheckCircle, Circle, Clock, Users, BookOpen } from 'lucide-react'
 import VideoPlayer from '@/components/VideoPlayer'
 import VimeoPlayer from '@/components/VimeoPlayer'
 import useToast from '@/hooks/useToast'
@@ -19,7 +19,6 @@ interface Session {
   isPublished: boolean
   sectionId?: string | null
   progress?: {
-    watchedTime: number
     completed: boolean
   }
 }
@@ -208,8 +207,6 @@ function CourseContent({
                                       ? 'bg-blue-50 border border-blue-200 shadow-sm'
                                       : session.progress?.completed
                                       ? 'bg-green-50 border border-transparent hover:border-green-200'
-                                      : session.progress?.watchedTime
-                                      ? 'bg-yellow-50 border border-transparent hover:border-yellow-200'
                                       : 'hover:bg-gray-50 border border-transparent hover:border-gray-200'
                                   }`}
                                 >
@@ -220,8 +217,6 @@ function CourseContent({
                                           ? 'bg-blue-100 text-blue-600'
                                           : session.progress?.completed
                                           ? 'bg-green-100 text-green-600'
-                                          : session.progress?.watchedTime
-                                          ? 'bg-yellow-100 text-yellow-600'
                                           : 'bg-gray-100 text-gray-500'
                                       }`}>
                                         <span className={`font-medium ${
@@ -229,15 +224,19 @@ function CourseContent({
                                             ? 'text-blue-900'
                                             : 'text-gray-900'
                                         }`}>{session.title}</span>
-                                        {session.progress?.watchedTime && !session.progress.completed && (
+                                        {liveProgressMap[session.id] && !session.progress?.completed && (
                                           <div className="h-1 bg-gray-200 rounded-full mt-2">
-                                            <div className="h-1 bg-yellow-500 rounded-full" style={{ width: `${(session.progress.watchedTime / (session.duration || 1)) * 100}%` }} />
+                                            <div className="h-1 bg-yellow-500 rounded-full" style={{ width: `${liveProgressMap[session.id]}%` }} />
                                           </div>
                                         )}
                                       </div>
                                     </div>
                                     <button onClick={(e) => { e.stopPropagation(); handleSessionComplete(session.id); }} className={`ml-2 p-1 rounded-full transition-colors ${ session.progress?.completed ? 'bg-green-100 text-green-600 hover:bg-green-200' : 'bg-gray-100 text-gray-400 hover:bg-gray-200' }` }>
-                                      <CheckCircle className="h-5 w-5" />
+                                        {session.progress?.completed ? (
+                                          <CheckCircle className="h-5 w-5 text-green-600" />
+                                        ) : (
+                                          <Circle className="h-5 w-5 text-gray-400" />
+                                        )}
                                     </button>
                                   </div>
                                   {session.duration && (
@@ -271,9 +270,7 @@ function CourseContent({
                               ? 'bg-blue-50 border border-blue-200 shadow-sm'
                               : session.progress?.completed
                               ? 'bg-green-50 border border-transparent hover:border-green-200'
-                              : session.progress?.watchedTime
-                              ? 'bg-yellow-50 border border-transparent hover:border-yellow-200'
-                              : 'hover:bg-gray-50 border border-transparent hover:border-gray-200'
+                                      : 'hover:bg-gray-50 border border-transparent hover:border-gray-200'
                           }`}
                         >
                           <div className="flex items-center justify-between">
@@ -283,24 +280,26 @@ function CourseContent({
                                   ? 'bg-blue-100 text-blue-600'
                                   : session.progress?.completed
                                   ? 'bg-green-100 text-green-600'
-                                  : session.progress?.watchedTime
-                                  ? 'bg-yellow-100 text-yellow-600'
-                                  : 'bg-gray-100 text-gray-500'
+                                          : 'bg-gray-100 text-gray-500'
                               }`}>
                                 <span className={`font-medium ${
                                   selectedSession?.id === session.id
                                     ? 'text-blue-900'
                                     : 'text-gray-900'
                                 }`}>{session.title}</span>
-                                {session.progress?.watchedTime && !session.progress.completed && (
-                                  <div className="h-1 bg-gray-200 rounded-full mt-2">
-                                    <div className="h-1 bg-yellow-500 rounded-full" style={{ width: `${(session.progress.watchedTime / (session.duration || 1)) * 100}%` }} />
-                                  </div>
-                                )}
+                                        {liveProgressMap[session.id] && !session.progress?.completed && (
+                                          <div className="h-1 bg-gray-200 rounded-full mt-2">
+                                            <div className="h-1 bg-yellow-500 rounded-full" style={{ width: `${liveProgressMap[session.id]}%` }} />
+                                          </div>
+                                        )}
                               </div>
                             </div>
                             <button onClick={(e) => { e.stopPropagation(); handleSessionComplete(session.id); }} className={`ml-2 p-1 rounded-full transition-colors ${ session.progress?.completed ? 'bg-green-100 text-green-600 hover:bg-green-200' : 'bg-gray-100 text-gray-400 hover:bg-gray-200' }` }>
-                              <CheckCircle className="h-5 w-5" />
+                                {session.progress?.completed ? (
+                                  <CheckCircle className="h-5 w-5 text-green-600" />
+                                ) : (
+                                  <Circle className="h-5 w-5 text-gray-400" />
+                                )}
                             </button>
                           </div>
                           {session.duration && (
@@ -328,11 +327,10 @@ function CourseContent({
                   <div className="text-sm text-gray-600 flex items-center space-x-3">
                     <div className="text-xs text-gray-400">Progress</div>
                     {(() => {
-                      const live = selectedSession && liveProgressMap[selectedSession.id]
-                      const fromServer = selectedSession?.progress && typeof selectedSession.progress.watchedTime === 'number' && selectedSession.duration
-                        ? Math.min(100, Math.round((selectedSession.progress.watchedTime / selectedSession.duration) * 100))
-                        : 0
-                      const percent = typeof live === 'number' ? live : fromServer
+                      // derive course-level progress from current `course` object (will reflect optimistic updates)
+                      const total = course?.sessions?.length || 0
+                      const completedCount = course?.sessions?.filter((s: any) => s.progress?.completed).length || 0
+                      const percent = total > 0 ? Math.round((completedCount / total) * 100) : 0
                       const color = percent >= 80 ? 'bg-green-100 text-green-800' : percent >= 30 ? 'bg-yellow-100 text-yellow-800' : 'bg-gray-100 text-gray-800'
                       return (
                         <div className={`px-3 py-1 rounded-full text-sm font-medium ${color}`}>{percent}%</div>
@@ -345,6 +343,7 @@ function CourseContent({
                     videoUrl={selectedSession.videoUrl}
                     sessionId={selectedSession.id}
                     userId={user.id}
+                    playbackDebug={true}
                     onProgressUpdate={(playedSeconds) => {
                       if (!selectedSession || !selectedSession.duration) return
                       const pct = Math.min(100, Math.round((playedSeconds / selectedSession.duration) * 100))
@@ -419,27 +418,91 @@ export default function CourseDetailPage() {
   }, [user, courseId]);
 
   const fetchCourseData = async () => {
-    if (!user || !courseId) return;
+    if (!user || !courseId) {
+      console.log('Skipping course fetch - no user or courseId');
+      return;
+    }
     
     try {
+      setIsLoading(true);
+      console.log('Initiating course fetch:', { courseId, userId: user.id });
+      
       const response = await fetch(`/api/courses/${courseId}`, {
+        credentials: 'same-origin',
         headers: {
-          'Authorization': `Bearer ${localStorage.getItem('token')}`,
-          'Content-Type': 'application/json'
+          'Content-Type': 'application/json',
+          'Accept': 'application/json'
         }
       });
       
+      let responseData;
+      const contentType = response.headers.get('content-type');
+      
+      try {
+        // Always try to parse JSON first
+        responseData = await response.json();
+      } catch (parseError) {
+        console.error('JSON Parse Error:', parseError);
+        const text = await response.text();
+        console.error('Raw Response:', text);
+        throw new Error('Invalid JSON response from server');
+      }
+      
       if (response.ok) {
-        const data = await response.json();
-        setCourse(data.course);
-        setIsEnrolled(data.isEnrolled);
-        setEnrolledBatchIds(data.enrolledBatchIds || []);
-        if (data.course?.sessions?.length > 0 && !selectedSession) {
-          setSelectedSession(data.course.sessions[0]);
+        console.log('Response successful:', {
+          status: response.status,
+          contentType,
+          hasData: !!responseData
+        });
+
+        if (!responseData.course) {
+          throw new Error('No course data in response');
         }
+
+        // Success path
+        setCourse(responseData.course);
+        setIsEnrolled(responseData.isEnrolled ?? false);
+        setEnrolledBatchIds(responseData.enrolledBatchIds || []);
+        
+        if (responseData.course?.sessions?.length > 0 && !selectedSession) {
+          setSelectedSession(responseData.course.sessions[0]);
+        }
+        
+      } else {
+        // Error path
+        console.error('API Error Response:', {
+          status: response.status,
+          data: responseData
+        });
+
+        const errorMessage = responseData.error || 
+                           responseData.message || 
+                           'Failed to fetch course';
+                           
+        if (process.env.NODE_ENV === 'development') {
+          console.error('Detailed Error:', {
+            ...responseData,
+            status: response.status
+          });
+        }
+
+        toast.error(errorMessage);
+        throw new Error(errorMessage);
       }
     } catch (error) {
-      console.error('Failed to fetch course:', error);
+      const message = error instanceof Error ? 
+        error.message : 
+        'An unexpected error occurred';
+      
+      console.error('Course Fetch Error:', {
+        error,
+        message,
+        courseId
+      });
+      
+      toast.error(message);
+    } finally {
+      setIsLoading(false);
     }
   };
 
@@ -469,13 +532,17 @@ export default function CourseDetailPage() {
 
   const handleSessionComplete = async (sessionId: string) => {
     try {
-      // Optimistic UI: mark session completed locally so list updates instantly
+      // compute current status from the latest `course` object to avoid closure/stale-state issues
+      const sessionObj = course?.sessions?.find((s) => s.id === sessionId)
+      const currentCompleted = !!sessionObj?.progress?.completed
+
+      // Optimistic UI update (only completed flag)
       setCourse((prev) => {
         if (!prev) return prev
         const updated = { ...prev }
         updated.sessions = updated.sessions.map((s) => {
           if (s.id === sessionId) {
-            return { ...s, progress: { watchedTime: s.duration ?? 0, completed: true } }
+            return { ...s, progress: { ...(s.progress || {}), completed: !currentCompleted } }
           }
           return s
         })
@@ -490,21 +557,22 @@ export default function CourseDetailPage() {
         },
         body: JSON.stringify({
           sessionId,
-          completed: true
+          completed: !currentCompleted
         })
       });
 
       if (response.ok) {
-        toast.success('Session marked complete')
+        toast.success(!currentCompleted ? 'Session marked complete' : 'Session marked incomplete')
         await fetchCourseData();
       } else {
-        toast.error('Failed to mark session complete')
+        const errText = await response.text().catch(() => 'Failed to update session status')
+        toast.error(errText)
         // revert by refetching
         await fetchCourseData();
       }
     } catch (error) {
       console.error('Failed to mark session as complete:', error);
-      toast.error('Failed to mark session complete')
+      toast.error(String(error))
       await fetchCourseData();
     }
   };

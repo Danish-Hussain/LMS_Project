@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { prisma } from '@/lib/db'
 import { verifyToken } from '@/lib/auth'
+import { Prisma } from '@prisma/client'
 
 export async function POST(request: NextRequest) {
   try {
@@ -28,7 +29,8 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'User not found' }, { status: 401 })
     }
 
-    const { courseId, batchId } = await request.json()
+  const body = (await request.json()) as { courseId?: string; batchId?: string }
+  const { courseId, batchId } = body
 
     if (!courseId) {
       return NextResponse.json(
@@ -104,8 +106,8 @@ export async function POST(request: NextRequest) {
           }
         })
 
-        const hasConflict = userEnrollments.some((en: any) => {
-          const otherSessions = (en.batch?.sessions || []) as { startTime?: string | null; endTime?: string | null }[]
+        const hasConflict = userEnrollments.some((enrollment) => {
+          const otherSessions = (enrollment.batch?.sessions || []) as { startTime?: string | null; endTime?: string | null }[]
           return otherSessions.some((os) => {
             if (!os.startTime || !os.endTime) return false
             return targetSessions.some((ts) => {
@@ -129,13 +131,12 @@ export async function POST(request: NextRequest) {
       }
     }
 
-    // Create enrollment
+    // Create enrollment (build data and cast to Prisma type)
+    const createDataRecord: Record<string, string> = { userId: user.id, courseId: courseId as string }
+    if (batchId) createDataRecord.batchId = batchId
+
     const enrollment = await prisma.enrollment.create({
-      data: {
-        userId: user.id,
-        courseId: courseId,
-        batchId: batchId || null
-      },
+      data: createDataRecord as unknown as Prisma.EnrollmentCreateInput,
       include: {
         course: {
           select: {

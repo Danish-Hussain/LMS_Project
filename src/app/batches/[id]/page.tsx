@@ -11,9 +11,9 @@ import { SessionListItem } from '@/components/SessionListItem'
 interface Session {
   id: string
   title: string
-  description: string | null
   videoUrl: string
-  duration: number | null
+  
+  duration?: number | null
   order: number
   isPublished: boolean
 }
@@ -76,8 +76,11 @@ export default function BatchDetailPage() {
       const results = await Promise.all(promises)
       const progressMap = Object.fromEntries(
         results
-          .filter((result): result is [string, any] => result !== null)
-          .map(([id, data]) => [id, { completed: data?.completed || false }])
+          .filter((result): result is [string, unknown] => result !== null)
+          .map(([id, data]) => {
+            const d = data as { completed?: boolean } | null
+            return [id, { completed: !!(d && d.completed) }]
+          })
       )
       setProgress(progressMap)
     } catch (error) {
@@ -271,8 +274,6 @@ export default function BatchDetailPage() {
                         key={session.id}
                         id={session.id}
                         title={session.title}
-                        description={session.description}
-                        duration={session.duration}
                         isPublished={session.isPublished}
                         isInstructor={isAdmin}
                         isCompleted={progress[session.id]?.completed}

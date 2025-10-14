@@ -2,10 +2,11 @@ import { NextRequest, NextResponse } from 'next/server'
 import { prisma } from '@/lib/db'
 import { verifyToken } from '@/lib/auth'
 
-export async function GET(
-  request: NextRequest,
-  context: { params: any }
-) {
+type HandlerContext<T extends Record<string, string> = Record<string, string>> = {
+  params: Promise<T> | T
+}
+
+export async function GET(request: NextRequest, context: HandlerContext<{ id: string; sectionId?: string }>) {
   try {
     const token = request.cookies.get('auth-token')?.value
     if (!token) {
@@ -23,7 +24,8 @@ export async function GET(
       )
     }
 
-    const { id } = context.params
+  const params = (await context.params) as { id: string; sectionId?: string }
+  const { id } = params
     const sections = await prisma.courseSection.findMany({
       where: {
         batchId: id
@@ -50,10 +52,7 @@ export async function GET(
   }
 }
 
-export async function POST(
-  request: NextRequest,
-  context: { params: any }
-) {
+export async function POST(request: NextRequest, context: HandlerContext<{ id: string; sectionId?: string }>) {
   try {
     const token = request.cookies.get('auth-token')?.value
     if (!token) {
@@ -81,8 +80,9 @@ export async function POST(
       )
     }
 
-  // Get the batch to verify it exists and get courseId
-  const { id } = context.params
+    // Get the batch to verify it exists and get courseId
+  const params = (await context.params) as { id: string; sectionId?: string }
+  const { id } = params
     const batch = await prisma.batch.findUnique({
       where: { id },
       select: { courseId: true }
@@ -127,10 +127,7 @@ export async function POST(
   }
 }
 
-export async function PUT(
-  request: NextRequest,
-  context: { params: any }
-) {
+export async function PUT(request: NextRequest, context: HandlerContext<{ id: string; sectionId?: string }>) {
   try {
     const token = request.cookies.get('auth-token')?.value
     if (!token) {
@@ -158,7 +155,7 @@ export async function PUT(
       )
     }
 
-    // Update section orders in a transaction
+  // Update section orders in a transaction
     await prisma.$transaction(
       sections.map((section) =>
         prisma.courseSection.update({
@@ -178,10 +175,7 @@ export async function PUT(
   }
 }
 
-export async function DELETE(
-  request: NextRequest,
-  context: { params: any }
-) {
+export async function DELETE(request: NextRequest, context: HandlerContext<{ id: string; sectionId?: string }>) {
   try {
     const token = request.cookies.get('auth-token')?.value
     if (!token) {
@@ -199,7 +193,8 @@ export async function DELETE(
       )
     }
 
-    const { id } = context.params
+  const params = (await context.params) as { id: string; sectionId?: string }
+  const { id } = params
     await prisma.courseSection.delete({
       where: { id }
     })

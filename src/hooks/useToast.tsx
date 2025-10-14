@@ -1,22 +1,22 @@
 "use client"
 
-import { useCallback } from 'react'
-import { useToastContext } from '@/components/ui/ToastProvider'
+import { useToastContext, ToastContextShape } from '@/components/ui/ToastProvider'
 
-type ToastHelper = (message: string, opts?: any) => string | void
+type ToastOpts = { id?: string; undo?: () => void; duration?: number }
+type ToastHelper = (message: string, opts?: ToastOpts) => string | void
 
 export const useToast = (): { info: ToastHelper; success: ToastHelper; error: ToastHelper; remove: (id: string) => void } => {
-  const ctx = useToastContext()
+  const ctx = useToastContext() as ToastContextShape | null
 
   if (!ctx) {
-    // noop fallback when provider is missing
-    const info: ToastHelper = (_message: string, _opts?: any) => { console.warn('ToastProvider not found') }
-    const success: ToastHelper = (_message: string, _opts?: any) => { console.warn('ToastProvider not found') }
-    const error: ToastHelper = (_message: string, _opts?: any) => { console.warn('ToastProvider not found') }
-    const remove = (_id: string) => {}
+    // noop fallback when provider is missing; reference args to avoid unused var warnings
+    const info: ToastHelper = (message: string, opts?: ToastOpts) => { void message; void opts; console.warn('ToastProvider not found') }
+    const success: ToastHelper = (message: string, opts?: ToastOpts) => { void message; void opts; console.warn('ToastProvider not found') }
+    const error: ToastHelper = (message: string, opts?: ToastOpts) => { void message; void opts; console.warn('ToastProvider not found') }
+    const remove = (id: string) => { void id }
     return { info, success, error, remove }
   }
-  const { push, remove, info, success, error } = ctx as any
+  const { info, success, error, remove } = ctx
   return { info, success, error, remove }
 }
 

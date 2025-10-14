@@ -1,11 +1,10 @@
-import { CheckCircle, Circle, Pencil, Trash2 } from 'lucide-react'
+import { CheckCircle, Circle } from 'lucide-react'
 import { useState } from 'react'
 
 interface SessionListItemProps {
   id: string
   title: string
-  description?: string | null
-  duration?: number | null
+  // description and duration removed from UI
   isPublished?: boolean
   isCompleted?: boolean
   onStatusChange?: (id: string, completed: boolean) => void
@@ -17,8 +16,6 @@ interface SessionListItemProps {
 export function SessionListItem({
   id,
   title,
-  description,
-  duration,
   isPublished,
   isCompleted: initialCompleted = false,
   onStatusChange,
@@ -36,8 +33,7 @@ export function SessionListItem({
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           sessionId: id,
-          completed: newStatus,
-          watchedTime: 0
+          completed: newStatus
         })
       })
 
@@ -72,14 +68,7 @@ export function SessionListItem({
               </button>
             )}
           </div>
-          {description && (
-            <p className="text-sm text-gray-600">{description}</p>
-          )}
-          {duration && (
-            <p className="text-xs text-gray-500">
-              {Math.floor(duration)} minutes
-            </p>
-          )}
+          {/* description/duration removed from session list UI */}
         </div>
       </div>
 

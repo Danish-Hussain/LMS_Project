@@ -11,13 +11,11 @@ export default function EditSessionPage() {
   const params = useParams()
   const router = useRouter()
   const batchId = params.id as string
-  const sessionId = (params as any).sessionId as string
+  const sessionId = params.sessionId as string
 
   type FormShape = {
     title: string
-    description: string
     videoUrl: string
-    duration: string
     order: string
     startTime: string
     endTime: string
@@ -26,9 +24,7 @@ export default function EditSessionPage() {
 
   const [formData, setFormData] = useState<FormShape>({
     title: '',
-    description: '',
     videoUrl: '',
-    duration: '',
     order: '',
     startTime: '',
     endTime: '',
@@ -51,9 +47,7 @@ export default function EditSessionPage() {
           const data = await sessionRes.json()
           setFormData({
             title: data.title || '',
-            description: data.description || '',
             videoUrl: data.videoUrl || '',
-            duration: data.duration ? String(data.duration) : '',
             order: data.order ? String(data.order) : '1',
             startTime: data.startTime || '',
             endTime: data.endTime || '',
@@ -82,13 +76,11 @@ export default function EditSessionPage() {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           title: formData.title,
-          description: formData.description,
           videoUrl: formData.videoUrl,
-          duration: formData.duration ? parseInt(formData.duration) : null,
           order: parseInt(formData.order) || 1,
           startTime: formData.startTime || null,
           endTime: formData.endTime || null,
-          sectionId: (formData as any).sectionId || null
+          sectionId: formData.sectionId || null
         })
       })
 
@@ -112,7 +104,7 @@ export default function EditSessionPage() {
       <div className="min-h-screen flex items-center justify-center">
         <div className="text-center">
           <h1 className="text-2xl font-bold">Access Denied</h1>
-          <p className="text-gray-600">You don't have permission to edit sessions.</p>
+          <p className="text-gray-600">You don&apos;t have permission to edit sessions.</p>
         </div>
       </div>
     )
@@ -147,10 +139,7 @@ export default function EditSessionPage() {
                 <input id="title" name="title" required value={formData.title} onChange={handleChange} className="w-full px-3 py-2 border border-gray-300 rounded-md" />
               </div>
 
-              <div>
-                <label htmlFor="description" className="block text-sm font-medium text-gray-700 mb-2">Description</label>
-                <textarea id="description" name="description" rows={4} value={formData.description} onChange={handleChange} className="w-full px-3 py-2 border border-gray-300 rounded-md" />
-              </div>
+              {/* Description removed per UI request */}
 
               <div>
                 <label htmlFor="videoUrl" className="block text-sm font-medium text-gray-700 mb-2">Video URL *</label>
@@ -158,10 +147,6 @@ export default function EditSessionPage() {
               </div>
 
               <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                <div>
-                  <label htmlFor="duration" className="block text-sm font-medium text-gray-700 mb-2">Duration (minutes)</label>
-                  <input id="duration" name="duration" type="number" value={formData.duration} onChange={handleChange} className="w-full px-3 py-2 border border-gray-300 rounded-md" />
-                </div>
                 <div>
                   <label htmlFor="order" className="block text-sm font-medium text-gray-700 mb-2">Order</label>
                   <input id="order" name="order" type="number" value={formData.order} onChange={handleChange} className="w-full px-3 py-2 border border-gray-300 rounded-md" />

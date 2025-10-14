@@ -57,14 +57,14 @@ export default function RegisterPage() {
         formData.email,
         formData.password,
         formData.name,
-        formData.role as any
+        formData.role
       )
       if (success) {
         router.push('/dashboard')
       } else {
         setError('Registration failed. Email might already exist.')
       }
-    } catch (err) {
+    } catch {
       setError('An error occurred. Please try again.')
     } finally {
       setLoading(false)

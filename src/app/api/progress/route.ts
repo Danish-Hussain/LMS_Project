@@ -4,7 +4,11 @@ import { verifyToken } from '@/lib/auth'
 
 export async function POST(request: NextRequest) {
   try {
-    const token = request.cookies.get('auth-token')?.value
+    // Accept auth either from a cookie (auth-token) or an Authorization header
+    const cookieToken = request.cookies.get('auth-token')?.value
+    const authHeader = request.headers.get('authorization')
+    const bearer = authHeader?.startsWith('Bearer ') ? authHeader.split(' ')[1] : undefined
+    const token = cookieToken ?? bearer
 
     if (!token) {
       return NextResponse.json(
@@ -13,7 +17,7 @@ export async function POST(request: NextRequest) {
       )
     }
 
-  const user = await verifyToken(token)
+    const user = await verifyToken(token)
 
     if (!user) {
       return NextResponse.json(
@@ -22,16 +26,17 @@ export async function POST(request: NextRequest) {
       )
     }
 
-  const { sessionId, watchedTime, completed } = await request.json()
+  const body = await request.json()
+    const { sessionId, completed } = body
 
-    if (!sessionId || watchedTime === undefined) {
+    if (!sessionId) {
       return NextResponse.json(
-        { error: 'Session ID and watched time are required' },
+        { error: 'Session ID is required' },
         { status: 400 }
       )
     }
 
-    // Upsert progress record
+    // Upsert progress record (only completed flag is stored now)
     // Use findFirst + update/create to match schema where unique composite name isn't present
     const existing = await prisma.progress.findFirst({
       where: { userId: user.id, sessionId }
@@ -42,7 +47,6 @@ export async function POST(request: NextRequest) {
       progress = await prisma.progress.update({
         where: { id: existing.id },
         data: {
-          watchedTime: Math.floor(watchedTime),
           completed: completed || false,
           updatedAt: new Date()
         }
@@ -52,7 +56,6 @@ export async function POST(request: NextRequest) {
         data: {
           userId: user.id,
           sessionId,
-          watchedTime: Math.floor(watchedTime),
           completed: completed || false
         }
       })

@@ -3,15 +3,7 @@
 import { useAuth } from '@/contexts/AuthContext'
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
-import { 
-  Home, 
-  BookOpen, 
-  Users, 
-  Settings, 
-  PlayCircle,
-  GraduationCap,
-  BarChart3
-} from 'lucide-react'
+import { Home, BookOpen, Users, GraduationCap, BarChart3 } from 'lucide-react'
 import { clsx } from 'clsx'
 
 const navigation = [

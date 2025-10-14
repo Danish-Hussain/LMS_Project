@@ -5,7 +5,7 @@ import useToast from '@/hooks/useToast'
 import { useAuth } from '@/contexts/AuthContext'
 
 export default function AccountEditPage() {
-  const { user, setUser } = useAuth() as any
+  const { user, setUser } = useAuth()
   const [name, setName] = useState(user?.name ?? '')
   const [email, setEmail] = useState(user?.email ?? '')
   const [loading, setLoading] = useState(false)

@@ -1,6 +1,6 @@
 import Link from 'next/link'
 
-export default function EditBatchPage({ params }: any) {
+export default function EditBatchPage({ params }: { params: { id: string } }) {
   const { id } = params
   return (
     <div className="min-h-screen p-8">

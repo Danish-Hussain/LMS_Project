@@ -3,10 +3,11 @@ import { prisma } from '@/lib/db'
 import { cookies } from 'next/headers'
 import { verifyToken } from '@/lib/auth'
 
-export async function GET(
-  request: Request,
-  context: { params: any }
-) {
+type HandlerContext<T extends Record<string, string> = Record<string, string>> = {
+  params: Promise<T> | T
+}
+
+export async function GET(request: Request, context: HandlerContext<{ id: string }>) {
   try {
     const cookieStore = await cookies()
     const token = cookieStore.get('auth-token')?.value
@@ -21,7 +22,8 @@ export async function GET(
       return new NextResponse("Unauthorized", { status: 401 })
     }
 
-  const { id } = await context.params
+  const params = (await context.params) as { id: string }
+  const { id } = params
 
     const sessions = await prisma.session.findMany({
       where: {
@@ -33,9 +35,9 @@ export async function GET(
       select: {
         id: true,
         title: true,
-        description: true,
         videoUrl: true,
-        duration: true,
+        startTime: true,
+        endTime: true,
         order: true,
         isPublished: true,
         sectionId: true,
@@ -52,14 +54,14 @@ export async function GET(
     return NextResponse.json(sessions)
   } catch (error) {
     console.error('[SESSIONS_GET]', error)
-    return new NextResponse("Internal Error", { status: 500 })
+    return NextResponse.json(
+      { error: 'Failed to fetch sessions', details: error instanceof Error ? error.message : 'Internal server error' },
+      { status: 500 }
+    )
   }
 }
 
-export async function POST(
-  request: Request,
-  context: { params: any }
-) {
+export async function POST(request: Request, context: HandlerContext<{ id: string }>) {
   try {
     const cookieStore = await cookies()
     const token = cookieStore.get('auth-token')?.value
@@ -74,8 +76,9 @@ export async function POST(
       return new NextResponse("Unauthorized", { status: 401 })
     }
 
-    const { title, description, videoUrl, duration, sectionId } = await request.json()
-  const { id } = await context.params
+      const { title, videoUrl, startTime, endTime, sectionId } = await request.json()
+  const params = (await context.params) as { id: string }
+  const { id } = params
 
     // Ensure batch exists and get courseId for required relation
     const batch = await prisma.batch.findUnique({ where: { id } })
@@ -101,9 +104,9 @@ export async function POST(
     const newSession = await prisma.session.create({
       data: {
         title,
-        description,
         videoUrl,
-        duration,
+        startTime: startTime ? new Date(startTime) : null,
+        endTime: endTime ? new Date(endTime) : null,
         order: newOrder,
         isPublished: false,
         batchId: id,

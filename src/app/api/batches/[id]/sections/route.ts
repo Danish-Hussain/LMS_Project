@@ -2,10 +2,11 @@ import { NextRequest, NextResponse } from 'next/server'
 import { prisma } from '@/lib/db'
 import { verifyToken } from '@/lib/auth'
 
-export async function GET(
-  request: NextRequest,
-  context: { params: any }
-) {
+type HandlerContext<T extends Record<string, string> = Record<string, string>> = {
+  params: Promise<T> | T
+}
+
+export async function GET(request: NextRequest, context: HandlerContext<{ id: string }>) {
   try {
     const token = request.cookies.get('auth-token')?.value
     if (!token) {
@@ -23,7 +24,8 @@ export async function GET(
       )
     }
 
-    const { id } = await context.params
+  const params = (await context.params) as { id: string }
+  const { id } = params
 
     const sections = await prisma.courseSection.findMany({
       where: {
@@ -50,10 +52,7 @@ export async function GET(
   }
 }
 
-export async function POST(
-  request: NextRequest,
-  context: { params: any }
-) {
+export async function POST(request: NextRequest, context: HandlerContext<{ id: string }>) {
   try {
     const token = request.cookies.get('auth-token')?.value
     if (!token) {
@@ -80,9 +79,10 @@ export async function POST(
       )
     }
 
-  const { id } = await context.params
+    const params = (await context.params) as { id: string }
+    const { id } = params
 
-  const body = await request.json()
+  const body = (await request.json()) as { title?: string; description?: string; courseId?: string }
   const { title, description, courseId } = body
 
     console.log('Received body:', body)
@@ -149,10 +149,7 @@ export async function POST(
   }
 }
 
-export async function PUT(
-  request: NextRequest,
-  context: { params: any }
-) {
+export async function PUT(request: NextRequest, context: HandlerContext<{ id: string }>) {
   try {
     const token = request.cookies.get('auth-token')?.value
     if (!token) {
@@ -170,9 +167,10 @@ export async function PUT(
       )
     }
 
-  const { id } = await context.params
+    const params = (await context.params) as { id: string }
+    const { id } = params
 
-  const body = await request.json()
+  const body = (await request.json()) as { sections?: Array<{ id: string; order: number }>; }
   const { sections } = body
 
     if (!Array.isArray(sections)) {

@@ -82,9 +82,7 @@ async function main() {
     create: {
       id: 'sample-session-1',
       title: 'Getting Started',
-      description: 'First session of the course',
       videoUrl: 'https://example.com/video1.mp4',
-      duration: 60,
       order: 1,
       isPublished: true,
       courseId: course.id,
@@ -100,9 +98,7 @@ async function main() {
     create: {
       id: 'sample-session-2',
       title: 'Basic Concepts',
-      description: 'Understanding the basics',
       videoUrl: 'https://example.com/video2.mp4',
-      duration: 45,
       order: 2,
       isPublished: true,
       courseId: course.id,

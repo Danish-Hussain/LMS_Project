@@ -24,7 +24,8 @@ export async function POST(request: NextRequest) {
       )
     }
 
-    const { title, description, videoUrl, duration, order, batchId, startTime, endTime } = await request.json()
+  const body = (await request.json()) as { title?: string; videoUrl?: string; order?: string | number | null; batchId?: string; startTime?: string | null; endTime?: string | null }
+  const { title, videoUrl, order, batchId, startTime, endTime } = body
 
     if (!title || !videoUrl || !batchId) {
       return NextResponse.json(
@@ -46,13 +47,13 @@ export async function POST(request: NextRequest) {
       )
     }
 
+    const parsedOrder = typeof order === 'number' ? order : order ? parseInt(String(order)) : 1
+
     const session = await prisma.session.create({
       data: {
         title,
-        description,
         videoUrl,
-        duration: duration ? parseInt(duration) : null,
-        order: order ? parseInt(order) : 1,
+        order: Number.isNaN(parsedOrder) ? 1 : parsedOrder,
         startTime: startTime ? new Date(startTime) : null,
         endTime: endTime ? new Date(endTime) : null,
         courseId: batch.courseId,
@@ -98,7 +99,21 @@ export async function GET(request: NextRequest) {
       // Get sessions for a specific batch
       const sessions = await prisma.session.findMany({
         where: { batchId },
-        orderBy: { order: 'asc' }
+        orderBy: { order: 'asc' },
+        select: {
+          id: true,
+          title: true,
+          videoUrl: true,
+          order: true,
+          startTime: true,
+          endTime: true,
+          courseId: true,
+          batchId: true,
+          sectionId: true,
+          isPublished: true,
+          createdAt: true,
+          updatedAt: true
+        }
       })
 
       return NextResponse.json(sessions)
@@ -111,21 +126,35 @@ export async function GET(request: NextRequest) {
         batch: {
           include: {
             sessions: {
-              orderBy: { order: 'asc' }
+              orderBy: { order: 'asc' },
+              select: {
+                id: true,
+                title: true,
+                videoUrl: true,
+                order: true,
+                startTime: true,
+                endTime: true,
+                courseId: true,
+                batchId: true,
+                sectionId: true,
+                isPublished: true,
+                createdAt: true,
+                updatedAt: true
+              }
             }
           }
         }
       }
     })
 
-    const sessions = enrollments.flatMap(
-      (enrollment: { courseId: string; batch: { name: string; sessions: any[] } | null }) =>
-        (enrollment.batch?.sessions ?? []).map((session: any) => ({
-          ...session,
-          batchName: enrollment.batch?.name ?? null,
-          courseId: enrollment.courseId,
-        }))
-    )
+    const sessions = enrollments.flatMap((enrollment) => {
+      const batchSessions = (enrollment.batch?.sessions ?? []) as unknown as Array<Record<string, unknown>>
+      return batchSessions.map((s) => ({
+        ...(s as Record<string, unknown>),
+        batchName: enrollment.batch?.name ?? null,
+        courseId: enrollment.courseId,
+      }))
+    })
 
     return NextResponse.json(sessions)
   } catch (error) {

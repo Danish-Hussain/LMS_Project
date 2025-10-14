@@ -1,4 +1,5 @@
 import { NextResponse } from 'next/server'
+import { cookies } from 'next/headers'
 import { verifyToken } from '@/lib/auth'
 import { prisma } from '@/lib/db'
 import { verifyPassword, hashPassword } from '@/lib/auth'
@@ -16,7 +17,8 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: 'New password and confirm password do not match' }, { status: 400 })
     }
 
-    const token = (request as any).cookies?.get?.('auth-token')?.value
+    const cookieStore = await cookies()
+    const token = cookieStore.get('auth-token')?.value
     if (!token) {
       return NextResponse.json({ error: 'Not authenticated' }, { status: 401 })
     }

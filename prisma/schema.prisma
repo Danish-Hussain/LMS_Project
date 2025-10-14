@@ -73,9 +73,7 @@ model CourseSection {
 model Session {
   id          String    @id @default(cuid())
   title       String
-  description String?
   videoUrl    String
-  duration    Int?      // in minutes
   startTime   DateTime?
   endTime     DateTime?
   order       Int
@@ -91,26 +89,12 @@ model Session {
   batch       Batch             @relation(fields: [batchId], references: [id], onDelete: Cascade)
   section     CourseSection?    @relation(fields: [sectionId], references: [id])
   progress    Progress[]
-  documents   SessionDocument[]
+  // documents relation removed
 
   @@map("sessions")
 }
 
-model SessionDocument {
-  id        String   @id @default(cuid())
-  fileName  String
-  fileUrl   String
-  fileType  String
-  fileSize  Int
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
-  sessionId String
-
-  // Relations
-  session   Session  @relation(fields: [sessionId], references: [id], onDelete: Cascade)
-
-  @@map("session_documents")
-}
+// SessionDocument model removed
 
 model Batch {
   id          String    @id @default(cuid())
@@ -134,28 +118,29 @@ model Batch {
 }
 
 model Enrollment {
-  id        String          @id @default(cuid())
+  id        String           @id @default(cuid())
   userId    String
   courseId  String
-  batchId   String
+  batchId   String?
   status    EnrollmentStatus @default(PENDING)
-  createdAt DateTime       @default(now())
-  updatedAt DateTime       @updatedAt
+  createdAt DateTime         @default(now())
+  updatedAt DateTime         @updatedAt
 
   // Relations
   user      User      @relation(fields: [userId], references: [id], onDelete: Cascade)
   course    Course    @relation(fields: [courseId], references: [id], onDelete: Cascade)
-  batch     Batch     @relation(fields: [batchId], references: [id], onDelete: Cascade)
+  batch     Batch?    @relation(fields: [batchId], references: [id], onDelete: Cascade)
   payments  Payment[]
 
-  @@map("enrollments")
+  @@index([userId])
+  @@index([courseId])
+  @@index([batchId])
 }
 
 model Progress {
   id          String   @id @default(cuid())
   userId      String
   sessionId   String
-  watchedTime Int      @default(0)  // in seconds
   completed   Boolean  @default(false)
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt

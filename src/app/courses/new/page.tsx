@@ -97,9 +97,10 @@ export default function CreateCoursePage() {
       const response = await fetch('/api/courses', {
         method: 'POST',
         headers: {
-          'Content-Type': 'application/json'
+          'Content-Type': 'application/json',
+          'Accept': 'application/json'
         },
-        credentials: 'include',
+        credentials: 'same-origin',
         body: JSON.stringify({
           ...formData,
           price: formData.price ? parseFloat(formData.price) : null

@@ -3,10 +3,11 @@ import { prisma } from '@/lib/db'
 import { verifyToken } from '@/lib/auth'
 import { cookies } from 'next/headers'
 
-export async function GET(
-  request: NextRequest,
-  context: { params: any }
-) {
+type HandlerContext<T extends Record<string, string> = Record<string, string>> = {
+  params: Promise<T> | T
+}
+
+export async function GET(request: NextRequest, context: HandlerContext<{ id: string }>) {
   try {
     const cookieStore = await cookies()
     const token = cookieStore.get('auth-token')?.value
@@ -27,17 +28,30 @@ export async function GET(
       )
     }
 
-  const { id: sessionId } = await context.params
+  const params = (await context.params) as { id: string }
+  const { id: sessionId } = params
 
     const session = await prisma.session.findUnique({
       where: { id: sessionId },
-      include: {
+      select: {
+        id: true,
+        title: true,
+        videoUrl: true,
+        order: true,
+        startTime: true,
+        endTime: true,
+        courseId: true,
+        batchId: true,
+        sectionId: true,
+        isPublished: true,
+        createdAt: true,
+        updatedAt: true,
         batch: {
-          include: {
+          select: {
+            id: true,
+            name: true,
             course: {
-              select: {
-                title: true
-              }
+              select: { title: true }
             }
           }
         }
@@ -61,10 +75,7 @@ export async function GET(
   }
 }
 
-export async function PUT(
-  request: NextRequest,
-  context: { params: any }
-) {
+export async function PUT(request: NextRequest, context: HandlerContext<{ id: string }>) {
   try {
     const cookieStore = await cookies()
     const token = cookieStore.get('auth-token')?.value
@@ -85,7 +96,8 @@ export async function PUT(
       )
     }
 
-  const { id: sessionId } = await context.params
+  const params = (await context.params) as { id: string }
+  const { id: sessionId } = params
     const body = await request.json()
 
     const session = await prisma.session.findUnique({
@@ -100,11 +112,9 @@ export async function PUT(
     }
 
     // Build update data only with provided fields to avoid accidentally clearing values
-    const updateData: any = {}
+  const updateData: Record<string, unknown> = {}
     if (typeof body.title !== 'undefined') updateData.title = body.title
-    if (typeof body.description !== 'undefined') updateData.description = body.description
     if (typeof body.videoUrl !== 'undefined') updateData.videoUrl = body.videoUrl
-    if (typeof body.duration !== 'undefined') updateData.duration = body.duration === null ? null : parseInt(body.duration)
     if (typeof body.order !== 'undefined') updateData.order = parseInt(body.order)
     if (typeof body.isPublished !== 'undefined') updateData.isPublished = body.isPublished
 
@@ -123,10 +133,7 @@ export async function PUT(
   }
 }
 
-export async function DELETE(
-  request: NextRequest,
-  context: { params: any }
-) {
+export async function DELETE(request: NextRequest, context: HandlerContext<{ id: string }>) {
   try {
     const cookieStore = await cookies()
     const token = cookieStore.get('auth-token')?.value
@@ -147,7 +154,8 @@ export async function DELETE(
       )
     }
 
-  const { id: sessionId } = await context.params
+    const params = (await context.params) as { id: string }
+    const { id: sessionId } = params
 
     const session = await prisma.session.findUnique({
       where: { id: sessionId }

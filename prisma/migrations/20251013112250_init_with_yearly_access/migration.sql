@@ -4,6 +4,7 @@ CREATE TABLE "users" (
     "email" TEXT NOT NULL,
     "name" TEXT NOT NULL,
     "password" TEXT NOT NULL,
+    "tokenVersion" INTEGER NOT NULL DEFAULT 0,
     "role" TEXT NOT NULL DEFAULT 'STUDENT',
     "createdAt" DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
     "updatedAt" DATETIME NOT NULL
@@ -17,6 +18,7 @@ CREATE TABLE "courses" (
     "thumbnail" TEXT,
     "price" REAL,
     "isPublished" BOOLEAN NOT NULL DEFAULT false,
+    "is_yearly" BOOLEAN NOT NULL DEFAULT false,
     "createdAt" DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
     "updatedAt" DATETIME NOT NULL,
     "creatorId" TEXT NOT NULL,
@@ -41,9 +43,7 @@ CREATE TABLE "course_sections" (
 CREATE TABLE "sessions" (
     "id" TEXT NOT NULL PRIMARY KEY,
     "title" TEXT NOT NULL,
-    "description" TEXT,
     "videoUrl" TEXT NOT NULL,
-    "duration" INTEGER,
     "startTime" DATETIME,
     "endTime" DATETIME,
     "order" INTEGER NOT NULL,
@@ -86,17 +86,17 @@ CREATE TABLE "batches" (
 );
 
 -- CreateTable
-CREATE TABLE "enrollments" (
+CREATE TABLE "Enrollment" (
     "id" TEXT NOT NULL PRIMARY KEY,
     "userId" TEXT NOT NULL,
     "courseId" TEXT NOT NULL,
-    "batchId" TEXT NOT NULL,
+    "batchId" TEXT,
     "status" TEXT NOT NULL DEFAULT 'PENDING',
     "createdAt" DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
     "updatedAt" DATETIME NOT NULL,
-    CONSTRAINT "enrollments_userId_fkey" FOREIGN KEY ("userId") REFERENCES "users" ("id") ON DELETE CASCADE ON UPDATE CASCADE,
-    CONSTRAINT "enrollments_courseId_fkey" FOREIGN KEY ("courseId") REFERENCES "courses" ("id") ON DELETE CASCADE ON UPDATE CASCADE,
-    CONSTRAINT "enrollments_batchId_fkey" FOREIGN KEY ("batchId") REFERENCES "batches" ("id") ON DELETE CASCADE ON UPDATE CASCADE
+    CONSTRAINT "Enrollment_userId_fkey" FOREIGN KEY ("userId") REFERENCES "users" ("id") ON DELETE CASCADE ON UPDATE CASCADE,
+    CONSTRAINT "Enrollment_courseId_fkey" FOREIGN KEY ("courseId") REFERENCES "courses" ("id") ON DELETE CASCADE ON UPDATE CASCADE,
+    CONSTRAINT "Enrollment_batchId_fkey" FOREIGN KEY ("batchId") REFERENCES "batches" ("id") ON DELETE CASCADE ON UPDATE CASCADE
 );
 
 -- CreateTable
@@ -126,7 +126,7 @@ CREATE TABLE "payments" (
     "updatedAt" DATETIME NOT NULL,
     CONSTRAINT "payments_userId_fkey" FOREIGN KEY ("userId") REFERENCES "users" ("id") ON DELETE CASCADE ON UPDATE CASCADE,
     CONSTRAINT "payments_courseId_fkey" FOREIGN KEY ("courseId") REFERENCES "courses" ("id") ON DELETE CASCADE ON UPDATE CASCADE,
-    CONSTRAINT "payments_enrollmentId_fkey" FOREIGN KEY ("enrollmentId") REFERENCES "enrollments" ("id") ON DELETE CASCADE ON UPDATE CASCADE
+    CONSTRAINT "payments_enrollmentId_fkey" FOREIGN KEY ("enrollmentId") REFERENCES "Enrollment" ("id") ON DELETE CASCADE ON UPDATE CASCADE
 );
 
 -- CreateTable
@@ -139,6 +139,15 @@ CREATE TABLE "_BatchStudents" (
 
 -- CreateIndex
 CREATE UNIQUE INDEX "users_email_key" ON "users"("email");
+
+-- CreateIndex
+CREATE INDEX "Enrollment_userId_idx" ON "Enrollment"("userId");
+
+-- CreateIndex
+CREATE INDEX "Enrollment_courseId_idx" ON "Enrollment"("courseId");
+
+-- CreateIndex
+CREATE INDEX "Enrollment_batchId_idx" ON "Enrollment"("batchId");
 
 -- CreateIndex
 CREATE UNIQUE INDEX "_BatchStudents_AB_unique" ON "_BatchStudents"("A", "B");
