@@ -23,25 +23,12 @@ export function SessionListItem({
   onEdit,
   onDelete
 }: SessionListItemProps) {
-  const [isCompleted, setIsCompleted] = useState(initialCompleted)
-
-  const handleStatusClick = async () => {
+  const handleStatusClick = async (e: React.MouseEvent) => {
+    // Prevent event propagation to avoid triggering session selection
+    e.stopPropagation()
+    
     try {
-      const newStatus = !isCompleted
-      const response = await fetch('/api/progress', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          sessionId: id,
-          completed: newStatus
-        })
-      })
-
-      if (!response.ok) {
-        throw new Error('Failed to update progress')
-      }
-
-      setIsCompleted(newStatus)
+      const newStatus = !initialCompleted
       onStatusChange?.(id, newStatus)
     } catch (error) {
       console.error('Failed to update session status:', error)
@@ -49,50 +36,58 @@ export function SessionListItem({
   }
 
   return (
-    <div className="flex items-center justify-between p-4 border border-gray-200 rounded-lg hover:border-gray-300 transition-colors">
+    <div className="group relative flex items-center justify-between p-3 bg-white hover:bg-blue-50/40 border border-transparent hover:border-blue-100 rounded-md transition-all duration-200">
       <div className="flex items-center flex-grow mr-4">
         <div className="flex-grow">
-          <div className="flex items-center">
-            <h4 className="font-medium text-gray-900">{title}</h4>
+          <div className="flex items-center space-x-3">
             {!isInstructor && (
               <button
+                type="button"
                 onClick={handleStatusClick}
-                className="ml-3 text-gray-400 hover:text-blue-500 transition-colors focus:outline-none"
-                aria-label={isCompleted ? "Mark as incomplete" : "Mark as complete"}
+                className={`flex-shrink-0 transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 rounded-full p-1 ${
+                  initialCompleted 
+                    ? 'bg-green-100 hover:bg-green-200' 
+                    : 'bg-gray-100 hover:bg-gray-200'
+                }`}
+                aria-label={initialCompleted ? "Mark as incomplete" : "Mark as complete"}
               >
-                {isCompleted ? (
-                  <CheckCircle className="h-5 w-5 text-green-500" />
+                {initialCompleted ? (
+                  <CheckCircle className="h-4 w-4 text-green-600" />
                 ) : (
-                  <Circle className="h-5 w-5" />
+                  <Circle className="h-4 w-4 text-gray-400 group-hover:text-gray-600" />
                 )}
               </button>
             )}
+            <h4 className="font-medium text-gray-900 group-hover:text-blue-700 transition-colors">{title}</h4>
           </div>
-          {/* description/duration removed from session list UI */}
         </div>
       </div>
 
-      <div className="flex items-center space-x-2">
+      <div className="flex items-center space-x-3">
         {!isPublished && (
-          <span className="bg-yellow-100 text-yellow-800 text-xs font-medium px-2.5 py-0.5 rounded-full">
+          <span className="inline-flex items-center px-2 py-1 rounded-md text-xs font-medium bg-yellow-50 text-yellow-700 border border-yellow-200">
             Draft
           </span>
         )}
-        {isInstructor && onEdit && (
-          <button
-            onClick={() => onEdit(id)}
-            className="text-blue-600 hover:text-blue-700 text-sm font-medium"
-          >
-            Edit
-          </button>
-        )}
-        {isInstructor && onDelete && (
-          <button
-            onClick={() => onDelete(id)}
-            className="text-red-600 hover:text-red-700 text-sm font-medium"
-          >
-            Delete
-          </button>
+        {isInstructor && (
+          <div className="flex items-center space-x-2 opacity-0 group-hover:opacity-100 transition-all duration-200 transform translate-x-2 group-hover:translate-x-0">
+            {onEdit && (
+              <button
+                onClick={() => onEdit(id)}
+                className="inline-flex items-center px-2 py-1 text-xs font-medium rounded-md text-blue-700 bg-blue-50 hover:bg-blue-100 border border-blue-200 hover:border-blue-300 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 transition-all duration-200"
+              >
+                Edit
+              </button>
+            )}
+            {onDelete && (
+              <button
+                onClick={() => onDelete(id)}
+                className="inline-flex items-center px-2 py-1 text-xs font-medium rounded-md text-red-700 bg-red-50 hover:bg-red-100 border border-red-200 hover:border-red-300 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-red-500 transition-all duration-200"
+              >
+                Delete
+              </button>
+            )}
+          </div>
         )}
       </div>
     </div>
