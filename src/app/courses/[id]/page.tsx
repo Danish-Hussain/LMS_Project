@@ -4,7 +4,7 @@ import { useAuth } from '@/contexts/AuthContext'
 import { useEffect, useMemo, useState } from 'react'
 import { useParams } from 'next/navigation'
 import Link from 'next/link'
-import { ArrowLeft, Play, CheckCircle, Circle, Clock, Users, BookOpen } from 'lucide-react'
+import { ArrowLeft, Play, CheckCircle, Circle, Clock, Users, BookOpen, Layers } from 'lucide-react'
 import VideoPlayer from '@/components/VideoPlayer'
 import VimeoPlayer from '@/components/VimeoPlayer'
 import useToast from '@/hooks/useToast'
@@ -176,20 +176,48 @@ function CourseContent({
         <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 max-w-[1920px] mx-auto">
           {/* Sessions List */}
           <div className="lg:col-span-3 lg:min-h-[calc(100vh-6rem)]">
-            <div className="bg-white rounded-xl shadow-sm h-full sticky top-4 border border-gray-100">
+            <div className="bg-white rounded-xl shadow-sm h-full sticky top-4 border border-gray-200">
               <div className="p-4">
-                <div className="mb-6">
+                <div className="mb-6 border-b border-gray-100 pb-4">
                   <h3 className="text-xl font-semibold text-gray-900">{course.title}</h3>
+                  <div className="mt-2 flex items-center text-sm text-gray-600">
+                    <div className="flex items-center">
+                      <div className="mr-4 flex items-center">
+                        <BookOpen className="h-4 w-4 mr-1" />
+                        {course.sessions.length} {course.sessions.length === 1 ? 'Session' : 'Sessions'}
+                      </div>
+                      {sections.length > 0 && (
+                        <div className="flex items-center">
+                          <Layers className="h-4 w-4 mr-1" />
+                          {sections.length} {sections.length === 1 ? 'Section' : 'Sections'}
+                        </div>
+                      )}
+                    </div>
+                  </div>
                 </div>
-                <div className="space-y-2">
+                <div className="space-y-6">
                   {sections && sections.length > 0 ? (
                     // Render grouped by section for enrolled batch
                     sections
                       .sort((a, b) => a.order - b.order)
-                      .map((section) => (
-                        <div key={section.id} className="mb-2">
-                          <div className="px-3 py-2 text-sm font-semibold text-gray-800">{section.title}</div>
-                          <div className="pl-3">
+                      .map((section, idx) => (
+                        <div key={section.id} className="bg-white rounded-lg border border-gray-200 overflow-hidden hover:border-gray-300 transition-colors duration-200">
+                          <div className="px-4 py-3 bg-gradient-to-r from-gray-50 to-white border-b border-gray-200">
+                            <div className="flex items-center">
+                              <div className="flex-shrink-0 w-6 h-6 flex items-center justify-center rounded-full bg-blue-100 text-blue-600 mr-3 font-semibold text-sm">
+                                {idx + 1}
+                              </div>
+                              <div>
+                                <h3 className="text-base font-semibold text-gray-800">
+                                  {section.title}
+                                </h3>
+                                {section.description && (
+                                  <p className="mt-1 text-sm text-gray-600">{section.description}</p>
+                                )}
+                              </div>
+                            </div>
+                          </div>
+                          <div className="p-3 space-y-2">
                             {course.sessions
                               .filter((s) => s.sectionId === section.id)
                               .sort((a, b) => a.order - b.order)
@@ -231,7 +259,7 @@ function CourseContent({
                                         )}
                                       </div>
                                     </div>
-                                    <button onClick={(e) => { e.stopPropagation(); handleSessionComplete(session.id); }} className={`ml-2 p-1 rounded-full transition-colors ${ session.progress?.completed ? 'bg-green-100 text-green-600 hover:bg-green-200' : 'bg-gray-100 text-gray-400 hover:bg-gray-200' }` }>
+                                    <button type="button" onClick={(e) => { e.stopPropagation(); handleSessionComplete(session.id); }} className={`ml-2 p-1 rounded-full transition-colors ${ session.progress?.completed ? 'bg-green-100 text-green-600 hover:bg-green-200' : 'bg-gray-100 text-gray-400 hover:bg-gray-200' }` }>
                                         {session.progress?.completed ? (
                                           <CheckCircle className="h-5 w-5 text-green-600" />
                                         ) : (
@@ -294,7 +322,7 @@ function CourseContent({
                                         )}
                               </div>
                             </div>
-                            <button onClick={(e) => { e.stopPropagation(); handleSessionComplete(session.id); }} className={`ml-2 p-1 rounded-full transition-colors ${ session.progress?.completed ? 'bg-green-100 text-green-600 hover:bg-green-200' : 'bg-gray-100 text-gray-400 hover:bg-gray-200' }` }>
+                            <button type="button" onClick={(e) => { e.stopPropagation(); handleSessionComplete(session.id); }} className={`ml-2 p-1 rounded-full transition-colors ${ session.progress?.completed ? 'bg-green-100 text-green-600 hover:bg-green-200' : 'bg-gray-100 text-gray-400 hover:bg-gray-200' }` }>
                                 {session.progress?.completed ? (
                                   <CheckCircle className="h-5 w-5 text-green-600" />
                                 ) : (
@@ -531,24 +559,27 @@ export default function CourseDetailPage() {
   };
 
   const handleSessionComplete = async (sessionId: string) => {
-    try {
-      // compute current status from the latest `course` object to avoid closure/stale-state issues
-      const sessionObj = course?.sessions?.find((s) => s.id === sessionId)
-      const currentCompleted = !!sessionObj?.progress?.completed
+    // Find the current session status
+    const sessionObj = course?.sessions?.find((s) => s.id === sessionId)
+    const currentCompleted = !!sessionObj?.progress?.completed
+    const newStatus = !currentCompleted
 
-      // Optimistic UI update (only completed flag)
+    try {
+
+      // Optimistic UI update
       setCourse((prev) => {
         if (!prev) return prev
-        const updated = { ...prev }
-        updated.sessions = updated.sessions.map((s) => {
-          if (s.id === sessionId) {
-            return { ...s, progress: { ...(s.progress || {}), completed: !currentCompleted } }
-          }
-          return s
-        })
-        return updated
+        return {
+          ...prev,
+          sessions: prev.sessions.map((s) => 
+            s.id === sessionId 
+              ? { ...s, progress: { ...(s.progress || {}), completed: newStatus } }
+              : s
+          )
+        }
       })
 
+      // Send API request
       const response = await fetch('/api/progress', {
         method: 'POST',
         headers: {
@@ -557,23 +588,41 @@ export default function CourseDetailPage() {
         },
         body: JSON.stringify({
           sessionId,
-          completed: !currentCompleted
+          completed: newStatus
         })
       });
 
       if (response.ok) {
-        toast.success(!currentCompleted ? 'Session marked complete' : 'Session marked incomplete')
-        await fetchCourseData();
+        toast.success(newStatus ? 'Session marked complete' : 'Session marked incomplete')
       } else {
+        // If request fails, revert the optimistic update
+        setCourse((prev) => {
+          if (!prev) return prev
+          return {
+            ...prev,
+            sessions: prev.sessions.map((s) => 
+              s.id === sessionId 
+                ? { ...s, progress: { ...(s.progress || {}), completed: currentCompleted } }
+                : s
+            )
+          }
+        })
         const errText = await response.text().catch(() => 'Failed to update session status')
         toast.error(errText)
-        // revert by refetching
-        await fetchCourseData();
       }
     } catch (error) {
       console.error('Failed to mark session as complete:', error);
       toast.error(String(error))
-      await fetchCourseData();
+      // Revert optimistic update on error
+      setCourse((prev) => {
+        if (!prev) return prev
+        const sessions = prev.sessions.map(s => 
+          s.id === sessionId 
+            ? { ...s, progress: { ...(s.progress || {}), completed: currentCompleted } }
+            : s
+        )
+        return { ...prev, sessions }
+      })
     }
   };
 
