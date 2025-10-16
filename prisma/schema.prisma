@@ -13,7 +13,7 @@ model User {
   name           String
   password       String
   tokenVersion   Int          @default(0)
-  role           Role         @default("STUDENT")
+  role           Role         @default(STUDENT)
   createdAt      DateTime     @default(now())
   updatedAt      DateTime     @updatedAt
   enrollments    Enrollment[]
@@ -62,24 +62,39 @@ model CourseSection {
 }
 
 model Session {
-  id          String         @id @default(cuid())
+  id          String            @id @default(cuid())
   title       String
   videoUrl    String
   startTime   DateTime?
   endTime     DateTime?
   order       Int
-  isPublished Boolean        @default(false)
-  createdAt   DateTime       @default(now())
-  updatedAt   DateTime       @updatedAt
+  isPublished Boolean           @default(false)
+  createdAt   DateTime          @default(now())
+  updatedAt   DateTime          @updatedAt
   courseId    String
   batchId     String
   sectionId   String?
   progress    Progress[]
-  section     CourseSection? @relation(fields: [sectionId], references: [id])
-  batch       Batch          @relation(fields: [batchId], references: [id], onDelete: Cascade)
-  course      Course         @relation(fields: [courseId], references: [id], onDelete: Cascade)
+  documents   SessionDocument[]
+  section     CourseSection?    @relation(fields: [sectionId], references: [id])
+  batch       Batch             @relation(fields: [batchId], references: [id], onDelete: Cascade)
+  course      Course            @relation(fields: [courseId], references: [id], onDelete: Cascade)
 
   @@map("sessions")
+}
+
+model SessionDocument {
+  id        String   @id @default(cuid())
+  sessionId String
+  name      String
+  url       String
+  size      Int?
+  mimeType  String?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  session   Session  @relation(fields: [sessionId], references: [id], onDelete: Cascade)
+
+  @@map("session_documents")
 }
 
 model Batch {
@@ -106,7 +121,7 @@ model Enrollment {
   userId    String
   courseId  String
   batchId   String?
-  status    EnrollmentStatus @default("PENDING")
+  status    EnrollmentStatus @default(PENDING)
   createdAt DateTime         @default(now())
   updatedAt DateTime         @updatedAt
   batch     Batch?           @relation(fields: [batchId], references: [id], onDelete: Cascade)
@@ -136,7 +151,7 @@ model Payment {
   id           String        @id @default(cuid())
   amount       Float
   currency     String        @default("USD")
-  status       PaymentStatus @default("PENDING")
+  status       PaymentStatus @default(PENDING)
   method       String?
   userId       String
   courseId     String
