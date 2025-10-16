@@ -454,7 +454,7 @@ export default function CourseDetailPage() {
     try {
       setIsLoading(true);
       console.log('Initiating course fetch:', { courseId, userId: user.id });
-      
+
       const response = await fetch(`/api/courses/${courseId}`, {
         credentials: 'same-origin',
         headers: {
@@ -462,10 +462,10 @@ export default function CourseDetailPage() {
           'Accept': 'application/json'
         }
       });
-      
-      let responseData;
+
+      let responseData = null;
       const contentType = response.headers.get('content-type');
-      
+
       try {
         // Always try to parse JSON first
         responseData = await response.json();
@@ -473,9 +473,9 @@ export default function CourseDetailPage() {
         console.error('JSON Parse Error:', parseError);
         const text = await response.text();
         console.error('Raw Response:', text);
-        throw new Error('Invalid JSON response from server');
+        responseData = null;
       }
-      
+
       if (response.ok) {
         console.log('Response successful:', {
           status: response.status,
@@ -483,7 +483,7 @@ export default function CourseDetailPage() {
           hasData: !!responseData
         });
 
-        if (!responseData.course) {
+        if (!responseData || !responseData.course) {
           throw new Error('No course data in response');
         }
 
@@ -491,25 +491,22 @@ export default function CourseDetailPage() {
         setCourse(responseData.course);
         setIsEnrolled(responseData.isEnrolled ?? false);
         setEnrolledBatchIds(responseData.enrolledBatchIds || []);
-        
+
         if (responseData.course?.sessions?.length > 0 && !selectedSession) {
           setSelectedSession(responseData.course.sessions[0]);
         }
-        
+
       } else {
         // Error path
+        const errorMessage = (responseData && (responseData.error || responseData.message)) || 'Failed to fetch course';
         console.error('API Error Response:', {
           status: response.status,
-          data: responseData
+          data: responseData || 'No response data'
         });
 
-        const errorMessage = responseData.error || 
-                           responseData.message || 
-                           'Failed to fetch course';
-                           
         if (process.env.NODE_ENV === 'development') {
           console.error('Detailed Error:', {
-            ...responseData,
+            ...(responseData || {}),
             status: response.status
           });
         }
@@ -518,16 +515,16 @@ export default function CourseDetailPage() {
         throw new Error(errorMessage);
       }
     } catch (error) {
-      const message = error instanceof Error ? 
-        error.message : 
+      const message = error instanceof Error ?
+        error.message :
         'An unexpected error occurred';
-      
+
       console.error('Course Fetch Error:', {
         error,
         message,
         courseId
       });
-      
+
       toast.error(message);
     } finally {
       setIsLoading(false);

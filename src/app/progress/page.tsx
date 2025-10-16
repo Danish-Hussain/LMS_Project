@@ -156,7 +156,6 @@ export default function ProgressPage() {
                           </div>
                         )}
                       </div>
-                      
                       <div className="flex items-center space-x-4 text-sm text-gray-500">
                         <div className="flex items-center">
                           <PlayCircle className="h-4 w-4 mr-1" />
@@ -170,9 +169,8 @@ export default function ProgressPage() {
                         )}
                       </div>
                     </div>
-                    
-                    <div className="ml-6 flex-shrink-0">
-                      <div className="w-32">
+                    <div className="ml-6 flex-shrink-0 flex flex-col items-end gap-2">
+                      <div className="w-32 mb-2">
                         <div className="flex justify-between text-sm text-gray-600 mb-1" role="presentation">
                           <div>Progress</div>
                           <div>
@@ -196,6 +194,16 @@ export default function ProgressPage() {
                           ></div>
                         </div>
                       </div>
+                      {course.courseId ? (
+                        <a
+                          href={`/courses/${course.courseId}`}
+                          className="inline-flex items-center px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg font-semibold transition-colors text-sm"
+                        >
+                          {course.completedSessions === course.totalSessions && course.totalSessions > 0 ? 'Review Course' : 'Continue Course'}
+                        </a>
+                      ) : (
+                        <span className="text-xs text-red-500">Course ID missing</span>
+                      )}
                     </div>
                   </div>
                 </div>

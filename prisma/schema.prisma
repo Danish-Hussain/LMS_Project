@@ -1,6 +1,3 @@
-// This is your Prisma schema file,
-// learn more about it in the docs: https://pris.ly/d/prisma-schema
-
 generator client {
   provider = "prisma-client-js"
 }
@@ -11,43 +8,39 @@ datasource db {
 }
 
 model User {
-  id            String   @id @default(cuid())
-  email         String   @unique
-  name          String
-  password      String
-  tokenVersion  Int      @default(0)
-  role          Role     @default(STUDENT)
-  createdAt     DateTime @default(now())
-  updatedAt     DateTime @updatedAt
-
-  // Relations
+  id             String       @id @default(cuid())
+  email          String       @unique
+  name           String
+  password       String
+  tokenVersion   Int          @default(0)
+  role           Role         @default("STUDENT")
+  createdAt      DateTime     @default(now())
+  updatedAt      DateTime     @updatedAt
   enrollments    Enrollment[]
-  batches        Batch[]      @relation("BatchStudents")
   createdCourses Course[]     @relation("CourseCreator")
-  progress       Progress[]
   payments       Payment[]
+  progress       Progress[]
+  batches        Batch[]      @relation("BatchStudents")
 
   @@map("users")
 }
 
 model Course {
-  id          String   @id @default(cuid())
+  id          String          @id @default(cuid())
   title       String
   description String?
   thumbnail   String?
   price       Float?
-  isPublished Boolean  @default(false)
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
+  isPublished Boolean         @default(false)
+  createdAt   DateTime        @default(now())
+  updatedAt   DateTime        @updatedAt
   creatorId   String
-
-  // Relations
-  creator     User          @relation("CourseCreator", fields: [creatorId], references: [id])
-  sessions    Session[]
-  sections    CourseSection[]
   enrollments Enrollment[]
   batches     Batch[]
+  sections    CourseSection[]
+  creator     User            @relation("CourseCreator", fields: [creatorId], references: [id])
   payments    Payment[]
+  sessions    Session[]
 
   @@map("courses")
 }
@@ -61,58 +54,49 @@ model CourseSection {
   batchId     String
   createdAt   DateTime  @default(now())
   updatedAt   DateTime  @updatedAt
-
-  // Relations
-  course      Course    @relation(fields: [courseId], references: [id], onDelete: Cascade)
   batch       Batch     @relation(fields: [batchId], references: [id], onDelete: Cascade)
+  course      Course    @relation(fields: [courseId], references: [id], onDelete: Cascade)
   sessions    Session[]
 
   @@map("course_sections")
 }
 
 model Session {
-  id          String    @id @default(cuid())
+  id          String         @id @default(cuid())
   title       String
   videoUrl    String
   startTime   DateTime?
   endTime     DateTime?
   order       Int
-  isPublished Boolean   @default(false)
-  createdAt   DateTime  @default(now())
-  updatedAt   DateTime  @updatedAt
+  isPublished Boolean        @default(false)
+  createdAt   DateTime       @default(now())
+  updatedAt   DateTime       @updatedAt
   courseId    String
   batchId     String
   sectionId   String?
-
-  // Relations
-  course      Course            @relation(fields: [courseId], references: [id], onDelete: Cascade)
-  batch       Batch             @relation(fields: [batchId], references: [id], onDelete: Cascade)
-  section     CourseSection?    @relation(fields: [sectionId], references: [id])
   progress    Progress[]
-  // documents relation removed
+  section     CourseSection? @relation(fields: [sectionId], references: [id])
+  batch       Batch          @relation(fields: [batchId], references: [id], onDelete: Cascade)
+  course      Course         @relation(fields: [courseId], references: [id], onDelete: Cascade)
 
   @@map("sessions")
 }
 
-// SessionDocument model removed
-
 model Batch {
-  id          String    @id @default(cuid())
+  id          String          @id @default(cuid())
   name        String
   description String?
   startDate   DateTime
   endDate     DateTime?
-  isActive    Boolean   @default(true)
-  createdAt   DateTime  @default(now())
-  updatedAt   DateTime  @updatedAt
+  isActive    Boolean         @default(true)
+  createdAt   DateTime        @default(now())
+  updatedAt   DateTime        @updatedAt
   courseId    String
-
-  // Relations
-  course      Course      @relation(fields: [courseId], references: [id], onDelete: Cascade)
-  students    User[]      @relation("BatchStudents")
-  sessions    Session[]
-  sections    CourseSection[]
   enrollments Enrollment[]
+  course      Course          @relation(fields: [courseId], references: [id], onDelete: Cascade)
+  sections    CourseSection[]
+  sessions    Session[]
+  students    User[]          @relation("BatchStudents")
 
   @@map("batches")
 }
@@ -122,14 +106,12 @@ model Enrollment {
   userId    String
   courseId  String
   batchId   String?
-  status    EnrollmentStatus @default(PENDING)
+  status    EnrollmentStatus @default("PENDING")
   createdAt DateTime         @default(now())
   updatedAt DateTime         @updatedAt
-
-  // Relations
-  user      User      @relation(fields: [userId], references: [id], onDelete: Cascade)
-  course    Course    @relation(fields: [courseId], references: [id], onDelete: Cascade)
-  batch     Batch?    @relation(fields: [batchId], references: [id], onDelete: Cascade)
+  batch     Batch?           @relation(fields: [batchId], references: [id], onDelete: Cascade)
+  course    Course           @relation(fields: [courseId], references: [id], onDelete: Cascade)
+  user      User             @relation(fields: [userId], references: [id], onDelete: Cascade)
   payments  Payment[]
 
   @@index([userId])
@@ -138,36 +120,32 @@ model Enrollment {
 }
 
 model Progress {
-  id          String   @id @default(cuid())
-  userId      String
-  sessionId   String
-  completed   Boolean  @default(false)
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
-
-  // Relations
-  user      User    @relation(fields: [userId], references: [id], onDelete: Cascade)
-  session   Session @relation(fields: [sessionId], references: [id], onDelete: Cascade)
+  id        String   @id @default(cuid())
+  userId    String
+  sessionId String
+  completed Boolean  @default(false)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  session   Session  @relation(fields: [sessionId], references: [id], onDelete: Cascade)
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@map("progress")
 }
 
 model Payment {
-  id           String       @id @default(cuid())
+  id           String        @id @default(cuid())
   amount       Float
-  currency     String       @default("USD")
-  status       PaymentStatus @default(PENDING)
+  currency     String        @default("USD")
+  status       PaymentStatus @default("PENDING")
   method       String?
   userId       String
   courseId     String
   enrollmentId String
-  createdAt    DateTime    @default(now())
-  updatedAt    DateTime    @updatedAt
-
-  // Relations
-  user       User       @relation(fields: [userId], references: [id], onDelete: Cascade)
-  course     Course     @relation(fields: [courseId], references: [id], onDelete: Cascade)
-  enrollment Enrollment @relation(fields: [enrollmentId], references: [id], onDelete: Cascade)
+  createdAt    DateTime      @default(now())
+  updatedAt    DateTime      @updatedAt
+  enrollment   Enrollment    @relation(fields: [enrollmentId], references: [id], onDelete: Cascade)
+  course       Course        @relation(fields: [courseId], references: [id], onDelete: Cascade)
+  user         User          @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@map("payments")
 }
