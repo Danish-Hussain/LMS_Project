@@ -19,5 +19,5 @@ A modern Learning Management System built with Next.js, featuring video content 
 - **Database:** Prisma with SQLite
 - **Authentication:** JWT with bcrypt
 - **UI Components:** Tailwind CSS
-- **Video Player:** React Player
+- **Video Player:** Vimeo Player
 - **State Management:** React Context
