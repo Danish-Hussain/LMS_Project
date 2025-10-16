@@ -3,6 +3,7 @@
 import { useState, useEffect, useRef } from 'react'
 import { Play, Pause, Volume2, VolumeX, Maximize, RotateCcw } from 'lucide-react'
 import VimeoPlayer from './VimeoPlayer'
+import DocumentList from './DocumentList'
 
 interface VideoPlayerProps {
   videoUrl: string
@@ -56,8 +57,25 @@ export default function VideoPlayer({
   const pushDebug = (_msg?: string, _data?: unknown) => {}
   const [attachFailed, setAttachFailed] = useState(false)
   const [fitMode, setFitMode] = useState<'cover' | 'contain'>('cover')
+  const [documents, setDocuments] = useState<Array<{ id: string; name: string; url: string; size?: number | null }>>([])
 
   // pushDebug defined above as noop
+
+  // Fetch documents for this session
+  useEffect(() => {
+    const fetchDocuments = async () => {
+      try {
+        const response = await fetch(`/api/sessions/${sessionId}/documents`)
+        if (response.ok) {
+          const docs = await response.json()
+          setDocuments(docs)
+        }
+      } catch (error) {
+        console.error('Failed to fetch session documents:', error)
+      }
+    }
+    fetchDocuments()
+  }, [sessionId])
 
   const attachVimeoSdk = async (): Promise<boolean> => {
     try {
@@ -629,7 +647,8 @@ export default function VideoPlayer({
         </div>
       )}
 
-  {/* Session documents removed per request */}
+      {/* Session documents */}
+      <DocumentList documents={documents} />
 
       <style jsx>{`
         .slider::-webkit-slider-thumb {
