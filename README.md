@@ -21,3 +21,6 @@ A modern Learning Management System built with Next.js, featuring video content 
 - **UI Components:** Tailwind CSS
 - **Video Player:** Vimeo Player
 - **State Management:** React Context
+
+
+## Functionality
