@@ -26,7 +26,7 @@ export default function CourseThumbnail({
             if (parent) {
               target.onerror = null; // Prevent infinite loop
               target.style.display = 'none';
-              parent.classList.add('bg-gray-200');
+              parent.style.background = 'var(--section-bg)';
               
               // Create fallback content
               const fallback = document.createElement('div');
@@ -41,9 +41,10 @@ export default function CourseThumbnail({
           }}
         />
       ) : (
-        <div className={`w-full ${height} bg-gray-200 flex items-center justify-center`}>
+        <div className={`w-full ${height} flex items-center justify-center`} style={{ background: 'var(--section-bg)' }}>
           <svg 
-            className="h-12 w-12 text-gray-400" 
+            className="h-12 w-12" 
+            style={{ color: 'var(--session-subtext)' }}
             viewBox="0 0 24 24" 
             fill="none" 
             stroke="currentColor"

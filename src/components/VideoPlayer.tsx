@@ -463,14 +463,14 @@ export default function VideoPlayer({
 
   if (isLoading) {
     return (
-      <div className="w-full h-96 bg-gray-900 flex items-center justify-center">
-        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-white"></div>
+      <div className="w-full h-96 flex items-center justify-center" style={{ background: 'var(--section-bg)' }}>
+        <div className="animate-spin rounded-full h-12 w-12 border-b-2" style={{ borderColor: 'var(--accent)' }}></div>
       </div>
     )
   }
 
   return (
-    <div className="w-full bg-white rounded-lg overflow-hidden">
+    <div className="w-full rounded-lg overflow-hidden" style={{ background: 'var(--section-bg)' }}>
       <div className="relative">
         {/* Debug toolbar removed - streamlined Vimeo-only playback UI */}
 
@@ -479,7 +479,7 @@ export default function VideoPlayer({
           // If it's a Vimeo URL, render VimeoPlayer, otherwise fall back to ReactPlayer for other providers
           /vimeo\.com/.test(videoUrl) ? (
       <div className="relative w-full bg-transparent">
-    <div className={`w-full aspect-video overflow-hidden rounded-t-lg bg-white`}>
+    <div className={`w-full aspect-video overflow-hidden rounded-t-lg`} style={{ background: 'var(--background)' }}>
                 <VimeoPlayer
                   videoUrl={videoUrl}
                   sessionId={sessionId}
@@ -494,7 +494,7 @@ export default function VideoPlayer({
             </div>
           ) : (
               <div className="relative w-full bg-transparent">
-              <div className={`w-full aspect-video overflow-hidden rounded-t-lg bg-white`}>
+              <div className={`w-full aspect-video overflow-hidden rounded-t-lg`} style={{ background: 'var(--background)' }}>
                 <div className="w-full h-full">
                   <iframe
                     src={getVimeoEmbedUrl(videoUrl) + '?title=false&byline=false&portrait=false&controls=1'}
@@ -510,7 +510,7 @@ export default function VideoPlayer({
             </div>
           )
           ) : (
-          <div className={`w-full aspect-video overflow-hidden rounded-t-lg bg-white`}>
+          <div className={`w-full aspect-video overflow-hidden rounded-t-lg`} style={{ background: 'var(--background)' }}>
             <video ref={videoRef} src={videoUrl} className={`w-full h-full ${fitMode === 'cover' ? 'object-cover' : 'object-contain'}`} preload="metadata" />
           </div>
         )}
@@ -565,7 +565,7 @@ export default function VideoPlayer({
 
       {/* Controls (hide when Vimeo-only) */}
       {!isVimeo(videoUrl) && (
-        <div className="bg-gray-900 text-white p-4">
+        <div className="p-4" style={{ background: 'rgba(0, 0, 0, 0.9)', color: 'white' }}>
         {/* Progress Bar */}
         <div className="mb-4">
           <input
@@ -574,7 +574,8 @@ export default function VideoPlayer({
             max="100"
             value={progress}
             onChange={handleSeek}
-            className="w-full h-2 bg-gray-700 rounded-lg appearance-none cursor-pointer slider"
+            className="w-full h-2 rounded-lg appearance-none cursor-pointer slider"
+            style={{ background: 'rgba(107, 114, 128, 0.5)' }}
           />
         </div>
 
@@ -618,7 +619,8 @@ export default function VideoPlayer({
                 step="0.1"
                 value={isMuted ? 0 : volume}
                 onChange={handleVolumeChange}
-                className="w-20 h-1 bg-gray-700 rounded-lg appearance-none cursor-pointer slider"
+                className="w-20 h-1 rounded-lg appearance-none cursor-pointer slider"
+                style={{ background: 'rgba(107, 114, 128, 0.5)' }}
               />
             </div>
           </div>

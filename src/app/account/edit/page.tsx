@@ -34,14 +34,14 @@ export default function AccountEditPage() {
 
   return (
     <div className="max-w-3xl mx-auto p-6">
-      <h1 className="text-2xl font-semibold mb-4">Edit account</h1>
-      <form onSubmit={handleSubmit} className="bg-white shadow rounded-md p-4 space-y-3">
+      <h1 className="text-2xl font-semibold mb-4" style={{ color: 'var(--foreground)' }}>Edit account</h1>
+      <form onSubmit={handleSubmit} className="shadow rounded-md p-4 space-y-3" style={{ background: 'var(--section-bg)', border: '1px solid var(--section-border)' }}>
         <div>
-          <label className="block text-sm font-medium text-gray-700">Full name</label>
+          <label className="block text-sm font-medium" style={{ color: 'var(--session-text)' }}>Full name</label>
           <input value={name} onChange={(e) => setName(e.target.value)} className="mt-1 block w-full border rounded-md px-3 py-2" required />
         </div>
         <div>
-          <label className="block text-sm font-medium text-gray-700">Email</label>
+          <label className="block text-sm font-medium" style={{ color: 'var(--session-text)' }}>Email</label>
           <input type="email" value={email} onChange={(e) => setEmail(e.target.value)} className="mt-1 block w-full border rounded-md px-3 py-2" required />
         </div>
         <div className="flex justify-end">

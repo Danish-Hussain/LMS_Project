@@ -189,7 +189,7 @@ export default function CreateCoursePage() {
   }
 
   return (
-    <div className="min-h-screen bg-gray-50">
+    <div className="min-h-screen" style={{ background: 'var(--background)' }}>
       <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
         {/* Header */}
         <div className="mb-8">
@@ -206,7 +206,7 @@ export default function CreateCoursePage() {
           </p>
         </div>
 
-        <div className="bg-white rounded-lg shadow-md">
+        <div className="rounded-lg shadow-md" style={{ background: 'var(--section-bg)', border: '1px solid var(--section-border)' }}>
           <form onSubmit={handleSubmit} className="p-6">
             {error && (
               <div className="bg-red-50 border border-red-200 text-red-600 px-4 py-3 rounded-md mb-6">
