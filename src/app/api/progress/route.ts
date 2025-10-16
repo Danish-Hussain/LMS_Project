@@ -97,9 +97,22 @@ export async function GET(request: NextRequest) {
     if (sessionId) {
       // Get progress for specific session
       const progress = await prisma.progress.findFirst({
-        where: { userId: user.id, sessionId }
+        where: { userId: user.id, sessionId },
+        include: {
+          session: {
+            select: {
+              title: true,
+              course: {
+                select: {
+                  id: true,
+                  title: true,
+                  thumbnail: true
+                }
+              }
+            }
+          }
+        }
       })
-
       return NextResponse.json(progress)
     } else {
       // Get all progress for user
@@ -113,14 +126,15 @@ export async function GET(request: NextRequest) {
               title: true,
               course: {
                 select: {
-                  title: true
+                  id: true,
+                  title: true,
+                  thumbnail: true
                 }
               }
             }
           }
         }
       })
-
       return NextResponse.json(progress)
     }
   } catch (error) {

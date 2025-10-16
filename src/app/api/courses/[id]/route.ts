@@ -167,7 +167,8 @@ export async function GET(req: NextRequest, context: HandlerContext<{ id: string
       
       let statusCode = 500;
       let errorResponse: Record<string, unknown> = {
-        error: 'Failed to fetch course'
+        error: 'Failed to fetch course',
+        message: 'Failed to fetch course'
       };
 
       if (error instanceof Prisma.PrismaClientKnownRequestError) {
@@ -176,38 +177,32 @@ export async function GET(req: NextRequest, context: HandlerContext<{ id: string
           message: error.message,
           meta: error.meta
         });
-        
         errorResponse = {
           error: `Database error: ${error.code}`,
-          code: error.code,
-          message: error.message
+          message: error.message,
+          code: error.code
         };
-
       } else if (error instanceof Prisma.PrismaClientValidationError) {
         console.error('Prisma Validation Error:', error.message);
-        
         errorResponse = {
           error: 'Invalid database query',
           message: error.message
         };
-        
       } else if (error instanceof Prisma.PrismaClientInitializationError) {
         console.error('Prisma Init Error:', error.message);
-        
         errorResponse = {
           error: 'Database connection error',
           message: error.message
         };
-        
       } else if (error instanceof Error) {
         console.error('Generic Error:', {
           name: error.name,
           message: error.message,
           stack: error.stack
         });
-        
         errorResponse = {
           error: error.message || 'An unexpected error occurred',
+          message: error.message || 'An unexpected error occurred',
           type: error.name
         };
       }
@@ -218,7 +213,7 @@ export async function GET(req: NextRequest, context: HandlerContext<{ id: string
 
       // Ensure we don't send an empty object; serialize safely and log
       try {
-        const payload = Object.keys(errorResponse).length ? errorResponse : { error: 'Failed to fetch course' };
+        const payload = Object.keys(errorResponse).length ? errorResponse : { error: 'Failed to fetch course', message: 'Failed to fetch course' };
         const text = JSON.stringify(payload);
         console.error('Returning error response JSON:', text);
         return new NextResponse(text, {
@@ -227,7 +222,7 @@ export async function GET(req: NextRequest, context: HandlerContext<{ id: string
         });
       } catch (serr) {
         console.error('Error serializing error response:', serr);
-        return NextResponse.json({ error: 'Failed to fetch course' }, { status: 500 });
+        return NextResponse.json({ error: 'Failed to fetch course', message: 'Failed to fetch course' }, { status: 500 });
       }
     }
 
@@ -278,12 +273,6 @@ export async function GET(req: NextRequest, context: HandlerContext<{ id: string
     const isEnrolled = enrollments.length > 0
     const enrolledBatchIds = enrollments.map(e => e.batchId).filter((id): id is string => id !== null)
 
-    // Return structured response
-    return NextResponse.json({
-      course: course as CourseDB,
-      isEnrolled,
-      enrolledBatchIds
-    })
 
     // Get progress for each session if user is enrolled
     const finalSessions = isEnrolled
@@ -310,6 +299,7 @@ export async function GET(req: NextRequest, context: HandlerContext<{ id: string
       sessions: finalSessions
     }
 
+    // Return structured response with progress
     return NextResponse.json({
       course: courseWithProgress,
       isEnrolled,
