@@ -47,7 +47,7 @@ export default function StudentsPage() {
 
   if (loading || isLoading) {
     return (
-      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
+  <div className="min-h-screen flex items-center justify-center" style={{ background: 'var(--background)' }}>
         <div className="animate-spin rounded-full h-32 w-32 border-b-2 border-blue-600"></div>
       </div>
     )
@@ -55,7 +55,7 @@ export default function StudentsPage() {
 
   if (!user) {
     return (
-      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
+  <div className="min-h-screen flex items-center justify-center" style={{ background: 'var(--background)' }}>
         <div className="text-center">
           <h1 className="text-2xl font-bold text-gray-900 mb-4">Access Denied</h1>
           <p className="text-gray-600 mb-8">Please log in to view students.</p>
@@ -68,7 +68,7 @@ export default function StudentsPage() {
 
   if (!isAdmin) {
     return (
-      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
+  <div className="min-h-screen flex items-center justify-center" style={{ background: 'var(--background)' }}>
         <div className="text-center">
           <h1 className="text-2xl font-bold text-gray-900 mb-4">Access Denied</h1>
           <p className="text-gray-600 mb-8">You don&apos;t have permission to view students.</p>
@@ -78,7 +78,7 @@ export default function StudentsPage() {
   }
 
   return (
-    <div className="min-h-screen bg-gray-50">
+  <div className="min-h-screen" style={{ background: 'var(--background)' }}>
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
         {/* Header */}
         <div className="mb-8">
@@ -88,7 +88,7 @@ export default function StudentsPage() {
 
         {/* Stats Cards */}
         <div className="grid grid-cols-1 md:grid-cols-4 gap-6 mb-8">
-          <div className="bg-white rounded-lg shadow p-6">
+          <div className="rounded-lg shadow p-6" style={{ background: 'var(--section-bg)', border: '1px solid var(--section-border)' }}>
             <div className="flex items-center">
               <div className="bg-blue-100 p-3 rounded-lg">
                 <Users className="h-6 w-6 text-blue-600" />
@@ -100,7 +100,7 @@ export default function StudentsPage() {
             </div>
           </div>
 
-          <div className="bg-white rounded-lg shadow p-6">
+          <div className="rounded-lg shadow p-6" style={{ background: 'var(--section-bg)', border: '1px solid var(--section-border)' }}>
             <div className="flex items-center">
               <div className="bg-green-100 p-3 rounded-lg">
                 <BookOpen className="h-6 w-6 text-green-600" />
@@ -114,7 +114,7 @@ export default function StudentsPage() {
             </div>
           </div>
 
-          <div className="bg-white rounded-lg shadow p-6">
+          <div className="rounded-lg shadow p-6" style={{ background: 'var(--section-bg)', border: '1px solid var(--section-border)' }}>
             <div className="flex items-center">
               <div className="bg-purple-100 p-3 rounded-lg">
                 <TrendingUp className="h-6 w-6 text-purple-600" />
@@ -128,7 +128,7 @@ export default function StudentsPage() {
             </div>
           </div>
 
-          <div className="bg-white rounded-lg shadow p-6">
+          <div className="rounded-lg shadow p-6" style={{ background: 'var(--section-bg)', border: '1px solid var(--section-border)' }}>
             <div className="flex items-center">
               <div className="bg-yellow-100 p-3 rounded-lg">
                 <Calendar className="h-6 w-6 text-yellow-600" />
@@ -148,8 +148,8 @@ export default function StudentsPage() {
         </div>
 
         {/* Students Table */}
-        <div className="bg-white rounded-lg shadow-md overflow-hidden">
-          <div className="px-6 py-4 border-b border-gray-200">
+  <div className="rounded-lg shadow-md overflow-hidden" style={{ background: 'var(--section-bg)', border: '1px solid var(--section-border)' }}>
+          <div className="px-6 py-4 border-b" style={{ borderColor: 'var(--section-border)' }}>
             <h3 className="text-lg font-semibold text-gray-900">All Students</h3>
           </div>
           
@@ -162,7 +162,7 @@ export default function StudentsPage() {
           ) : (
             <div className="overflow-x-auto">
               <table className="min-w-full divide-y divide-gray-200">
-                <thead className="bg-gray-50">
+                <thead style={{ background: 'var(--background)' }}>
                   <tr>
                     <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                       Student
@@ -181,9 +181,9 @@ export default function StudentsPage() {
                     </th>
                   </tr>
                 </thead>
-                <tbody className="bg-white divide-y divide-gray-200">
+                <tbody style={{ background: 'var(--section-bg)' }}>
                   {students.map((student) => (
-                    <tr key={student.id} className="hover:bg-gray-50">
+                    <tr key={student.id} style={{ cursor: 'pointer' }}>
                       <td className="px-6 py-4 whitespace-nowrap">
                         <div className="flex items-center">
                           <div className="h-10 w-10 rounded-full bg-blue-100 flex items-center justify-center">

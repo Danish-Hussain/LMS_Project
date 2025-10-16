@@ -53,7 +53,7 @@ export default function CoursesPage() {
 
   if (loading || isLoading) {
     return (
-      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
+  <div className="min-h-screen flex items-center justify-center" style={{ background: 'var(--background)' }}>
         <div className="animate-spin rounded-full h-32 w-32 border-b-2 border-blue-600"></div>
       </div>
     )
@@ -61,10 +61,10 @@ export default function CoursesPage() {
 
   if (!user) {
     return (
-      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
+  <div className="min-h-screen bg-gray-50 dark:bg-[#18181b] flex items-center justify-center">
         <div className="text-center">
-          <h1 className="text-2xl font-bold text-gray-900 mb-4">Access Denied</h1>
-          <p className="text-gray-600 mb-8">Please log in to view courses.</p>
+          <h1 className="text-2xl font-bold mb-4" style={{ color: 'var(--foreground)' }}>Access Denied</h1>
+          <p className="mb-8" style={{ color: 'var(--session-subtext)' }}>Please log in to view courses.</p>
           <Link
             href="/login"
             className="bg-blue-600 hover:bg-blue-700 text-white px-6 py-2 rounded-lg font-semibold transition-colors"
@@ -79,13 +79,13 @@ export default function CoursesPage() {
   const isAdmin = user.role === 'ADMIN' || user.role === 'INSTRUCTOR'
 
   return (
-    <div className="min-h-screen bg-gray-50">
+  <div className="min-h-screen" style={{ background: 'var(--background)' }}>
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
         {/* Header */}
         <div className="flex justify-between items-center mb-8">
           <div>
-            <h1 className="text-3xl font-bold text-gray-900">Courses</h1>
-            <p className="text-gray-600 mt-2">
+            <h1 className="text-3xl font-bold" style={{ color: 'var(--foreground)' }}>Courses</h1>
+            <p className="mt-2" style={{ color: 'var(--session-subtext)' }}>
               {isAdmin ? 'Manage your courses' : 'Browse available courses'}
             </p>
           </div>
@@ -104,15 +104,15 @@ export default function CoursesPage() {
         {courses.length === 0 ? (
           <div className="text-center py-12">
             <BookOpen className="h-12 w-12 text-gray-400 mx-auto mb-4" />
-            <h3 className="text-lg font-medium text-gray-900 mb-2">No courses found</h3>
-            <p className="text-gray-600">
+            <h3 className="text-lg font-medium mb-2" style={{ color: 'var(--foreground)' }}>No courses found</h3>
+            <p style={{ color: 'var(--session-subtext)' }}>
               {isAdmin ? 'Create your first course to get started.' : 'No courses are available yet.'}
             </p>
           </div>
         ) : (
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
             {courses.map((course) => (
-              <div key={course.id} className="bg-white rounded-lg shadow-md overflow-hidden hover:shadow-lg transition-shadow">
+              <div key={course.id} className="rounded-lg shadow-md overflow-hidden hover:shadow-lg transition-shadow" style={{ background: 'var(--background)', border: '1px solid var(--section-border)' }}>
                 <CourseThumbnail
                   thumbnail={course.thumbnail}
                   title={course.title}
@@ -120,7 +120,7 @@ export default function CoursesPage() {
                 
                 <div className="p-6">
                   <div className="flex items-center justify-between mb-2">
-                    <h3 className="text-lg font-semibold text-gray-900 line-clamp-2">
+                    <h3 className="text-lg font-semibold line-clamp-2" style={{ color: 'var(--foreground)' }}>
                       {course.title}
                     </h3>
                     {!course.isPublished && (
@@ -130,11 +130,11 @@ export default function CoursesPage() {
                     )}
                   </div>
                   
-                  <p className="text-gray-600 text-sm mb-4 line-clamp-2">
+                  <p className="text-sm mb-4 line-clamp-2" style={{ color: 'var(--session-subtext)' }}>
                     {course.description || 'No description available'}
                   </p>
                   
-                  <div className="flex items-center text-sm text-gray-500 mb-4">
+                  <div className="flex items-center text-sm mb-4" style={{ color: 'var(--session-subtext)' }}>
                     <Users className="h-4 w-4 mr-1" />
                     <span>{course._count.enrollments} enrolled</span>
                     <Clock className="h-4 w-4 ml-4 mr-1" />
@@ -142,7 +142,7 @@ export default function CoursesPage() {
                   </div>
                   
                   <div className="flex justify-between items-center">
-                    <span className="text-sm text-gray-500">
+                    <span className="text-sm" style={{ color: 'var(--session-subtext)' }}>
                       by {course.creator.name}
                     </span>
                     <Link

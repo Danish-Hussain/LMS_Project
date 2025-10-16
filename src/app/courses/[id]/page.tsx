@@ -96,12 +96,12 @@ function CourseContent({
   const canAccess = isAdmin || isEnrolled
 
   return (
-    <div className="min-h-screen bg-[#f8fafc]">
+    <div className="min-h-screen" style={{ background: 'var(--background)' }}>
       {/* Main Content */}
       <div className="max-w-[1920px] mx-auto px-4 sm:px-6 py-6">
         {/* Batch Management for Instructors*/}
         {isAdmin && (
-          <div className="bg-white rounded-lg shadow-md p-6 mb-8">
+          <div className="rounded-lg shadow-md p-6 mb-8" style={{ background: 'var(--section-bg)', border: '1px solid var(--section-border)' }}>
             <div className="flex items-center justify-between mb-4">
               <div>
                 <h2 className="text-xl font-semibold text-gray-900">Batches</h2>
@@ -136,9 +136,9 @@ function CourseContent({
 
         {/* Batch Selection for Students */}
         {!isAdmin && !isEnrolled && course.batches.length > 0 && (
-          <div className="bg-white rounded-lg shadow-md p-6 mb-8">
-            <h2 className="text-xl font-semibold text-gray-900 mb-4">Choose Your Batch</h2>
-            <p className="text-gray-600 mb-6">Select a batch to enroll in this course.</p>
+          <div className="rounded-lg shadow-md p-6 mb-8" style={{ background: 'var(--section-bg)', border: '1px solid var(--section-border)' }}>
+            <h2 className="text-xl font-semibold mb-4" style={{ color: 'var(--foreground)' }}>Choose Your Batch</h2>
+            <p className="mb-6" style={{ color: 'var(--session-subtext)' }}>Select a batch to enroll in this course.</p>
             
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
               {course.batches.map((batch) => (
@@ -176,11 +176,11 @@ function CourseContent({
         <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 max-w-[1920px] mx-auto">
           {/* Sessions List */}
           <div className="lg:col-span-3 lg:min-h-[calc(100vh-6rem)]">
-            <div className="bg-white rounded-xl shadow-sm h-full sticky top-4 border border-gray-200">
+            <div className="rounded-xl shadow-sm h-full sticky top-4 border" style={{ background: 'var(--section-bg)', borderColor: 'var(--section-border)' }}>
               <div className="p-4">
-                <div className="mb-6 border-b border-gray-100 pb-4">
-                  <h3 className="text-xl font-semibold text-gray-900">{course.title}</h3>
-                  <div className="mt-2 flex items-center text-sm text-gray-600">
+                <div className="mb-6 border-b pb-4" style={{ borderColor: 'var(--section-border)' }}>
+                  <h3 className="text-xl font-semibold" style={{ color: 'var(--foreground)' }}>{course.title}</h3>
+                  <div className="mt-2 flex items-center text-sm" style={{ color: 'var(--session-subtext)' }}>
                     <div className="flex items-center">
                       <div className="mr-4 flex items-center">
                         <BookOpen className="h-4 w-4 mr-1" />
@@ -201,18 +201,18 @@ function CourseContent({
                     sections
                       .sort((a, b) => a.order - b.order)
                       .map((section, idx) => (
-                        <div key={section.id} className="bg-white rounded-lg border border-gray-200 overflow-hidden hover:border-gray-300 transition-colors duration-200">
-                          <div className="px-4 py-3 bg-gradient-to-r from-gray-50 to-white border-b border-gray-200">
+                        <div key={section.id} className="rounded-lg border overflow-hidden transition-colors duration-200" style={{ background: 'var(--section-bg)', borderColor: 'var(--section-border)' }}>
+                          <div className="px-4 py-3 border-b" style={{ background: 'var(--background)', borderColor: 'var(--section-border)' }}>
                             <div className="flex items-center">
-                              <div className="flex-shrink-0 w-6 h-6 flex items-center justify-center rounded-full bg-blue-100 text-blue-600 mr-3 font-semibold text-sm">
+                              <div className="flex-shrink-0 w-6 h-6 flex items-center justify-center rounded-full mr-3 font-semibold text-sm" style={{ background: 'rgba(37, 99, 235, 0.1)', color: 'var(--accent)' }}>
                                 {idx + 1}
                               </div>
                               <div>
-                                <h3 className="text-base font-semibold text-gray-800">
+                                <h3 className="text-base font-semibold" style={{ color: 'var(--foreground)' }}>
                                   {section.title}
                                 </h3>
                                 {section.description && (
-                                  <p className="mt-1 text-sm text-gray-600">{section.description}</p>
+                                  <p className="mt-1 text-sm" style={{ color: 'var(--session-subtext)' }}>{section.description}</p>
                                 )}
                               </div>
                             </div>
@@ -230,45 +230,41 @@ function CourseContent({
                                   onKeyDown={(e) => {
                                     if (e.key === 'Enter' || e.key === ' ') setSelectedSession(session)
                                   }}
-                                  className={`w-full text-left p-4 rounded-lg transition-all cursor-pointer ${
-                                    selectedSession?.id === session.id
-                                      ? 'bg-blue-50 border border-blue-200 shadow-sm'
-                                      : session.progress?.completed
-                                      ? 'bg-green-50 border border-transparent hover:border-green-200'
-                                      : 'hover:bg-gray-50 border border-transparent hover:border-gray-200'
-                                  }`}
+                                  className="w-full text-left p-4 rounded-lg transition-all cursor-pointer border"
+                                  style={{
+                                    background: selectedSession?.id === session.id 
+                                      ? 'rgba(37, 99, 235, 0.1)' 
+                                      : session.progress?.completed 
+                                      ? 'rgba(16, 185, 129, 0.1)' 
+                                      : 'var(--section-bg)',
+                                    borderColor: selectedSession?.id === session.id 
+                                      ? 'var(--accent)' 
+                                      : session.progress?.completed 
+                                      ? 'rgba(16, 185, 129, 0.3)' 
+                                      : 'var(--section-border)'
+                                  }}
                                 >
                                   <div className="flex items-center justify-between">
                                     <div className="flex items-center flex-grow">
-                                      <div className={`rounded-full p-1.5 mr-3 ${
-                                        selectedSession?.id === session.id
-                                          ? 'bg-blue-100 text-blue-600'
-                                          : session.progress?.completed
-                                          ? 'bg-green-100 text-green-600'
-                                          : 'bg-gray-100 text-gray-500'
-                                      }`}>
-                                        <span className={`font-medium ${
-                                          selectedSession?.id === session.id
-                                            ? 'text-blue-900'
-                                            : 'text-gray-900'
-                                        }`}>{session.title}</span>
+                                      <div className="mr-3">
+                                        <span className="font-medium" style={{ color: 'var(--foreground)' }}>{session.title}</span>
                                         {liveProgressMap[session.id] && !session.progress?.completed && (
-                                          <div className="h-1 bg-gray-200 rounded-full mt-2">
+                                          <div className="h-1 rounded-full mt-2" style={{ background: 'var(--section-border)' }}>
                                             <div className="h-1 bg-yellow-500 rounded-full" style={{ width: `${liveProgressMap[session.id]}%` }} />
                                           </div>
                                         )}
                                       </div>
                                     </div>
-                                    <button type="button" onClick={(e) => { e.stopPropagation(); handleSessionComplete(session.id); }} className={`ml-2 p-1 rounded-full transition-colors ${ session.progress?.completed ? 'bg-green-100 text-green-600 hover:bg-green-200' : 'bg-gray-100 text-gray-400 hover:bg-gray-200' }` }>
+                                    <button type="button" onClick={(e) => { e.stopPropagation(); handleSessionComplete(session.id); }} className="ml-2 p-1 rounded-full transition-colors" style={{ background: session.progress?.completed ? 'rgba(16, 185, 129, 0.2)' : 'var(--section-border)' }}>
                                         {session.progress?.completed ? (
                                           <CheckCircle className="h-5 w-5 text-green-600" />
                                         ) : (
-                                          <Circle className="h-5 w-5 text-gray-400" />
+                                          <Circle className="h-5 w-5" style={{ color: 'var(--session-subtext)' }} />
                                         )}
                                     </button>
                                   </div>
                                   {session.duration && (
-                                    <div className="flex items-center mt-2 text-sm text-gray-500 ml-8">
+                                    <div className="flex items-center mt-2 text-sm ml-0" style={{ color: 'var(--session-subtext)' }}>
                                       <Clock className="h-4 w-4 mr-1.5" />
                                       <span>{Math.floor(session.duration)} min</span>
                                     </div>
@@ -293,45 +289,41 @@ function CourseContent({
                               setSelectedSession(session);
                             }
                           }}
-                          className={`w-full text-left p-4 rounded-lg transition-all cursor-pointer ${
-                            selectedSession?.id === session.id
-                              ? 'bg-blue-50 border border-blue-200 shadow-sm'
-                              : session.progress?.completed
-                              ? 'bg-green-50 border border-transparent hover:border-green-200'
-                                      : 'hover:bg-gray-50 border border-transparent hover:border-gray-200'
-                          }`}
+                          className="w-full text-left p-4 rounded-lg transition-all cursor-pointer border"
+                          style={{
+                            background: selectedSession?.id === session.id 
+                              ? 'rgba(37, 99, 235, 0.1)' 
+                              : session.progress?.completed 
+                              ? 'rgba(16, 185, 129, 0.1)' 
+                              : 'var(--section-bg)',
+                            borderColor: selectedSession?.id === session.id 
+                              ? 'var(--accent)' 
+                              : session.progress?.completed 
+                              ? 'rgba(16, 185, 129, 0.3)' 
+                              : 'var(--section-border)'
+                          }}
                         >
                           <div className="flex items-center justify-between">
                             <div className="flex items-center flex-grow">
-                              <div className={`rounded-full p-1.5 mr-3 ${
-                                selectedSession?.id === session.id
-                                  ? 'bg-blue-100 text-blue-600'
-                                  : session.progress?.completed
-                                  ? 'bg-green-100 text-green-600'
-                                          : 'bg-gray-100 text-gray-500'
-                              }`}>
-                                <span className={`font-medium ${
-                                  selectedSession?.id === session.id
-                                    ? 'text-blue-900'
-                                    : 'text-gray-900'
-                                }`}>{session.title}</span>
+                              <div className="mr-3">
+                                <span className="font-medium" style={{ color: 'var(--foreground)' }}>{session.title}</span>
                                         {liveProgressMap[session.id] && !session.progress?.completed && (
-                                          <div className="h-1 bg-gray-200 rounded-full mt-2">
+                                          <div className="h-1 rounded-full mt-2" style={{ background: 'var(--section-border)' }}>
                                             <div className="h-1 bg-yellow-500 rounded-full" style={{ width: `${liveProgressMap[session.id]}%` }} />
                                           </div>
                                         )}
                               </div>
                             </div>
-                            <button type="button" onClick={(e) => { e.stopPropagation(); handleSessionComplete(session.id); }} className={`ml-2 p-1 rounded-full transition-colors ${ session.progress?.completed ? 'bg-green-100 text-green-600 hover:bg-green-200' : 'bg-gray-100 text-gray-400 hover:bg-gray-200' }` }>
+                            <button type="button" onClick={(e) => { e.stopPropagation(); handleSessionComplete(session.id); }} className="ml-2 p-1 rounded-full transition-colors" style={{ background: session.progress?.completed ? 'rgba(16, 185, 129, 0.2)' : 'var(--section-border)' }}>
                                 {session.progress?.completed ? (
                                   <CheckCircle className="h-5 w-5 text-green-600" />
                                 ) : (
-                                  <Circle className="h-5 w-5 text-gray-400" />
+                                  <Circle className="h-5 w-5" style={{ color: 'var(--session-subtext)' }} />
                                 )}
                             </button>
                           </div>
                           {session.duration && (
-                            <div className="flex items-center mt-2 text-sm text-gray-500 ml-8">
+                            <div className="flex items-center mt-2 text-sm ml-0" style={{ color: 'var(--session-subtext)' }}>
                               <Clock className="h-4 w-4 mr-1.5" />
                               <span>{Math.floor(session.duration)} min</span>
                             </div>
@@ -347,21 +339,22 @@ function CourseContent({
           {/* Video Player */}
           <div className="lg:col-span-9">
             {selectedSession && canAccess ? (
-              <div className="bg-white rounded-xl shadow-sm border border-gray-100">
-                <div className="p-6 border-b border-gray-100 flex items-center justify-between">
-                  <h2 className="text-2xl font-semibold text-gray-900">
+              <div className="rounded-xl shadow-sm border" style={{ background: 'var(--section-bg)', borderColor: 'var(--section-border)' }}>
+                <div className="p-6 border-b flex items-center justify-between" style={{ borderColor: 'var(--section-border)' }}>
+                  <h2 className="text-2xl font-semibold" style={{ color: 'var(--foreground)' }}>
                     {selectedSession.title}
                   </h2>
-                  <div className="text-sm text-gray-600 flex items-center space-x-3">
-                    <div className="text-xs text-gray-400">Progress</div>
+                  <div className="text-sm flex items-center space-x-3" style={{ color: 'var(--session-subtext)' }}>
+                    <div className="text-xs" style={{ color: 'var(--session-subtext)' }}>Progress</div>
                     {(() => {
                       // derive course-level progress from current `course` object (will reflect optimistic updates)
                       const total = course?.sessions?.length || 0
                       const completedCount = course?.sessions?.filter((s: any) => s.progress?.completed).length || 0
                       const percent = total > 0 ? Math.round((completedCount / total) * 100) : 0
-                      const color = percent >= 80 ? 'bg-green-100 text-green-800' : percent >= 30 ? 'bg-yellow-100 text-yellow-800' : 'bg-gray-100 text-gray-800'
+                      const bgColor = percent >= 80 ? 'rgba(16, 185, 129, 0.15)' : percent >= 30 ? 'rgba(234, 179, 8, 0.15)' : 'rgba(107, 114, 128, 0.15)'
+                      const textColor = percent >= 80 ? 'rgb(16, 185, 129)' : percent >= 30 ? 'rgb(234, 179, 8)' : 'var(--session-subtext)'
                       return (
-                        <div className={`px-3 py-1 rounded-full text-sm font-medium ${color}`}>{percent}%</div>
+                        <div className="px-3 py-1 rounded-full text-sm font-medium" style={{ background: bgColor, color: textColor }}>{percent}%</div>
                       )
                     })()}
                   </div>
@@ -381,20 +374,20 @@ function CourseContent({
                   />
                   {selectedSession.description && (
                     <div className="mt-6">
-                      <p className="text-gray-600">{selectedSession.description}</p>
+                      <p style={{ color: 'var(--session-subtext)' }}>{selectedSession.description}</p>
                     </div>
                   )}
                 </div>
               </div>
             ) : (
-              <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-12 text-center">
-                <div className="bg-gray-50 rounded-full w-16 h-16 mx-auto mb-4 flex items-center justify-center">
-                  <BookOpen className="h-8 w-8 text-gray-400" />
+              <div className="rounded-xl shadow-sm border p-12 text-center" style={{ background: 'var(--section-bg)', borderColor: 'var(--section-border)' }}>
+                <div className="rounded-full w-16 h-16 mx-auto mb-4 flex items-center justify-center" style={{ background: 'var(--background)' }}>
+                  <BookOpen className="h-8 w-8" style={{ color: 'var(--session-subtext)' }} />
                 </div>
-                <h3 className="text-xl font-semibold text-gray-900 mb-3">
+                <h3 className="text-xl font-semibold mb-3" style={{ color: 'var(--foreground)' }}>
                   {!canAccess ? 'Enroll to Start Learning' : 'Choose a Lesson'}
                 </h3>
-                <p className="text-gray-600 max-w-md mx-auto">
+                <p className="max-w-md mx-auto" style={{ color: 'var(--session-subtext)' }}>
                   {!canAccess 
                     ? 'Please enroll in this course to access the video lessons and start your learning journey.'
                     : 'Select a lesson from the list to begin watching the video content.'

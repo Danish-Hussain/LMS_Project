@@ -183,7 +183,7 @@ export default function BatchDetailPage() {
   }
 
   return (
-    <div className="min-h-screen bg-gray-50">
+    <div className="min-h-screen" style={{ background: 'var(--background)' }}>
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
         {/* Header */}
         <div className="mb-8">
@@ -239,7 +239,7 @@ export default function BatchDetailPage() {
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
           {/* Sessions List */}
           <div className="lg:col-span-2">
-            <div className="bg-white rounded-lg shadow-md">
+            <div className="rounded-lg shadow-md" style={{ background: 'var(--section-bg)', border: '1px solid var(--section-border)' }}>
               <div className="p-6">
                 <div className="flex items-center justify-between mb-4">
                   <h3 className="text-lg font-semibold text-gray-900">
@@ -296,7 +296,7 @@ export default function BatchDetailPage() {
 
           {/* Batch Info */}
           <div className="lg:col-span-1">
-            <div className="bg-white rounded-lg shadow-md p-6">
+            <div className="rounded-lg shadow-md p-6" style={{ background: 'var(--section-bg)', border: '1px solid var(--section-border)' }}>
               <h3 className="text-lg font-semibold text-gray-900 mb-4">
                 Batch Information
               </h3>

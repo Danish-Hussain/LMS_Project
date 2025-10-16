@@ -22,14 +22,14 @@ const DocumentList: React.FC<DocumentListProps> = ({ documents }) => {
   }
 
   return (
-    <div className="mt-6 p-4 bg-gray-50 rounded-lg border border-gray-200">
-      <h4 className="font-semibold text-gray-900 mb-3 flex items-center">
+    <div className="mt-6 p-4 rounded-lg border" style={{ background: 'var(--section-bg)', borderColor: 'var(--section-border)' }}>
+      <h4 className="font-semibold mb-3 flex items-center" style={{ color: 'var(--foreground)' }}>
         <FileText className="h-5 w-5 mr-2" />
         Session Documents
       </h4>
       <ul className="space-y-2">
         {documents.map((doc) => (
-          <li key={doc.id} className="bg-white rounded-md p-3 hover:bg-gray-50 transition-colors">
+          <li key={doc.id} className="rounded-md p-3 transition-colors hover-bg-accent" style={{ background: 'var(--background)' }}>
             <a 
               href={doc.url} 
               target="_blank" 
@@ -37,15 +37,15 @@ const DocumentList: React.FC<DocumentListProps> = ({ documents }) => {
               className="flex items-center justify-between group"
             >
               <div className="flex items-center space-x-2 flex-1">
-                <FileText className="h-4 w-4 text-blue-600" />
-                <span className="text-sm font-medium text-gray-900 group-hover:text-blue-600 transition-colors">
+                <FileText className="h-4 w-4" style={{ color: 'var(--accent)' }} />
+                <span className="text-sm font-medium group-hover:text-blue-600 transition-colors" style={{ color: 'var(--foreground)' }}>
                   {doc.name}
                 </span>
                 {doc.size && (
-                  <span className="text-xs text-gray-500">({formatFileSize(doc.size)})</span>
+                  <span className="text-xs" style={{ color: 'var(--session-subtext)' }}>({formatFileSize(doc.size)})</span>
                 )}
               </div>
-              <Download className="h-4 w-4 text-gray-400 group-hover:text-blue-600 transition-colors" />
+              <Download className="h-4 w-4 group-hover:text-blue-600 transition-colors" style={{ color: 'var(--session-subtext)' }} />
             </a>
           </li>
         ))}

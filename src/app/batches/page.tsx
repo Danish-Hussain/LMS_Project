@@ -63,7 +63,7 @@ export default function BatchesPage() {
 
   if (loading || isLoading) {
     return (
-      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
+  <div className="min-h-screen flex items-center justify-center" style={{ background: 'var(--background)' }}>
         <div className="animate-spin rounded-full h-32 w-32 border-b-2 border-blue-600"></div>
       </div>
     )
@@ -71,7 +71,7 @@ export default function BatchesPage() {
 
   if (!user) {
     return (
-      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
+  <div className="min-h-screen flex items-center justify-center" style={{ background: 'var(--background)' }}>
         <div className="text-center">
           <h1 className="text-2xl font-bold text-gray-900 mb-4">Access Denied</h1>
           <p className="text-gray-600 mb-8">Please log in to view batches.</p>
@@ -90,7 +90,7 @@ export default function BatchesPage() {
 
   if (!isAdmin) {
     return (
-      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
+  <div className="min-h-screen flex items-center justify-center" style={{ background: 'var(--background)' }}>
         <div className="text-center">
           <h1 className="text-2xl font-bold text-gray-900 mb-4">Access Denied</h1>
           <p className="text-gray-600 mb-8">You don't have permission to view batches.</p>
@@ -106,7 +106,7 @@ export default function BatchesPage() {
   }
 
   return (
-    <div className="min-h-screen bg-gray-50">
+  <div className="min-h-screen" style={{ background: 'var(--background)' }}>
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
         {/* Header */}
         <div className="flex justify-between items-center mb-8">
@@ -139,7 +139,7 @@ export default function BatchesPage() {
         ) : (
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
             {batches.map((batch) => (
-              <div key={batch.id} className="bg-white rounded-lg shadow-md overflow-hidden">
+              <div key={batch.id} className="rounded-lg shadow-md overflow-hidden" style={{ background: 'var(--section-bg)', border: '1px solid var(--section-border)' }}>
                 <div className="p-6">
                   <div className="flex items-start justify-between mb-4">
                     <div>
