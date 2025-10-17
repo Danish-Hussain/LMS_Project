@@ -34,7 +34,7 @@ export default function VimeoPlayer(props: Props) {
   return (
     <div className="relative w-full">
       {error && (
-        <div className="p-4 bg-red-50 text-red-800 rounded-md mb-4">
+        <div className="p-4 rounded-md mb-4 border" style={{ background: 'rgba(239, 68, 68, 0.1)', color: '#ef4444', borderColor: 'rgba(239, 68, 68, 0.3)' }}>
           <p className="font-semibold">{error}</p>
         </div>
       )}

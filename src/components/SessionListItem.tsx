@@ -36,7 +36,7 @@ export function SessionListItem({
   }
 
   return (
-    <div className="group relative flex items-center justify-between p-3 bg-white hover:bg-blue-50/40 border border-transparent hover:border-blue-100 rounded-md transition-all duration-200">
+    <div className="group relative flex items-center justify-between p-3 border rounded-md transition-all duration-200" style={{ background: 'var(--section-bg)', borderColor: 'var(--section-border)' }}>
       <div className="flex items-center flex-grow mr-4">
         <div className="flex-grow">
           <div className="flex items-center space-x-3">
@@ -44,28 +44,27 @@ export function SessionListItem({
               <button
                 type="button"
                 onClick={handleStatusClick}
-                className={`flex-shrink-0 transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 rounded-full p-1 ${
-                  initialCompleted 
-                    ? 'bg-green-100 hover:bg-green-200' 
-                    : 'bg-gray-100 hover:bg-gray-200'
-                }`}
+                className={`flex-shrink-0 transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 rounded-full p-1`}
+                style={{ 
+                  background: initialCompleted ? 'rgba(16, 185, 129, 0.15)' : 'rgba(107, 114, 128, 0.15)' 
+                }}
                 aria-label={initialCompleted ? "Mark as incomplete" : "Mark as complete"}
               >
                 {initialCompleted ? (
                   <CheckCircle className="h-4 w-4 text-green-600" />
                 ) : (
-                  <Circle className="h-4 w-4 text-gray-400 group-hover:text-gray-600" />
+                  <Circle className="h-4 w-4" style={{ color: 'var(--session-subtext)' }} />
                 )}
               </button>
             )}
-            <h4 className="font-medium text-gray-900 group-hover:text-blue-700 transition-colors">{title}</h4>
+            <h4 className="font-medium transition-colors" style={{ color: 'var(--foreground)' }}>{title}</h4>
           </div>
         </div>
       </div>
 
       <div className="flex items-center space-x-3">
         {!isPublished && (
-          <span className="inline-flex items-center px-2 py-1 rounded-md text-xs font-medium bg-yellow-50 text-yellow-700 border border-yellow-200">
+          <span className="inline-flex items-center px-2 py-1 rounded-md text-xs font-medium border" style={{ background: 'rgba(234, 179, 8, 0.1)', color: '#eab308', borderColor: 'rgba(234, 179, 8, 0.3)' }}>
             Draft
           </span>
         )}
@@ -74,7 +73,8 @@ export function SessionListItem({
             {onEdit && (
               <button
                 onClick={() => onEdit(id)}
-                className="inline-flex items-center px-2 py-1 text-xs font-medium rounded-md text-blue-700 bg-blue-50 hover:bg-blue-100 border border-blue-200 hover:border-blue-300 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 transition-all duration-200"
+                className="inline-flex items-center px-2 py-1 text-xs font-medium rounded-md border focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 transition-all duration-200"
+                style={{ background: 'rgba(37, 99, 235, 0.1)', color: 'var(--accent)', borderColor: 'rgba(37, 99, 235, 0.3)' }}
               >
                 Edit
               </button>
@@ -82,7 +82,8 @@ export function SessionListItem({
             {onDelete && (
               <button
                 onClick={() => onDelete(id)}
-                className="inline-flex items-center px-2 py-1 text-xs font-medium rounded-md text-red-700 bg-red-50 hover:bg-red-100 border border-red-200 hover:border-red-300 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-red-500 transition-all duration-200"
+                className="inline-flex items-center px-2 py-1 text-xs font-medium rounded-md border focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-red-500 transition-all duration-200"
+                style={{ background: 'rgba(239, 68, 68, 0.1)', color: '#ef4444', borderColor: 'rgba(239, 68, 68, 0.3)' }}
               >
                 Delete
               </button>

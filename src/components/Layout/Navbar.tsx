@@ -68,14 +68,23 @@ export default function Navbar() {
 
   return (
   <nav className="shadow-sm border-b fixed top-0 left-0 right-0 z-50" style={{ background: 'var(--background)', borderColor: 'var(--section-border)' }} suppressHydrationWarning>
-      <div className="max-w-[1920px] w-full mx-auto px-2 sm:px-4 lg:px-6">
-        <div className="flex justify-between h-14">
-          <div className="flex items-center">
-            <Link href={user ? "/dashboard" : "/"} className="flex-shrink-0 flex items-center">
-              <BookOpen className="h-8 w-8 text-blue-600" />
-              <span className="ml-2 text-xl font-bold" style={{ color: 'var(--foreground)' }}>LMS</span>
-            </Link>
-          </div>
+      <div className="max-w-[1920px] w-full mx-auto px-4 sm:px-6 lg:px-8">
+        <div className="flex flex-row items-center justify-between h-14">
+          {/* Logo */}
+          <Link href={user ? "/dashboard" : "/"} className="flex-shrink-0 flex items-center" style={{ marginLeft: 0, paddingLeft: 0 }} aria-label="SAPIntegrationExpert Home">
+            <svg width={320} height={36} viewBox="0 50 1100 160" preserveAspectRatio="xMinYMid meet" fill="none" xmlns="http://www.w3.org/2000/svg" role="img" aria-labelledby="title desc" style={{ filter: 'drop-shadow(0 1px 4px rgba(0,0,0,0.1))', display: 'block' }}>
+              <title id="title">SAPIntegrationExpert — Wordmark</title>
+              <desc id="desc">SAP in blue gradient, IntegrationExpert in theme foreground color. No background.</desc>
+              <defs>
+                <linearGradient id="sap-gradient" x1="0" y1="0" x2="220" y2="0" gradientUnits="userSpaceOnUse">
+                  <stop stopColor="#0A74DA" />
+                  <stop offset="1" stopColor="#60A5FA" />
+                </linearGradient>
+              </defs>
+              <text x={0} y={155} fontFamily="Inter, Segoe UI, Arial, sans-serif" fontSize={105} fontWeight={800} letterSpacing={1.5} fill="url(#sap-gradient)">SAP</text>
+              <text x={250} y={155} fontFamily="Inter, Segoe UI, Arial, sans-serif" fontSize={105} fontWeight={800} letterSpacing={1.5} style={{ fill: 'var(--foreground)', filter: 'drop-shadow(0 0 6px rgba(0,0,0,0.10))' }}>IntegrationExpert</text>
+            </svg>
+          </Link>
 
           {/* Desktop Navigation */}
           <div className="hidden md:flex items-center space-x-8">
