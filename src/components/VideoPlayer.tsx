@@ -516,7 +516,7 @@ export default function VideoPlayer({
         )}
 
         {attachFailed && (
-          <div className="p-3 bg-yellow-50 text-yellow-900 rounded-md mt-3">
+          <div className="p-3 rounded-md mt-3 border" style={{ background: 'rgba(234, 179, 8, 0.1)', color: '#eab308', borderColor: 'rgba(234, 179, 8, 0.3)' }}>
             <div className="flex items-center justify-between">
               <div>
                 <strong>Video playback is restricted.</strong>
@@ -548,14 +548,14 @@ export default function VideoPlayer({
       </div>
 
       {loadError && (
-        <div className="p-3 bg-red-50 text-red-800 rounded-md mb-3">
+        <div className="p-3 rounded-md mb-3 border" style={{ background: 'rgba(239, 68, 68, 0.1)', color: '#ef4444', borderColor: 'rgba(239, 68, 68, 0.3)' }}>
           <div className="flex items-center justify-between">
             <div>
               <strong>Player failed to load.</strong>
-              <div className="text-xs text-red-700 mt-1">{loadError}</div>
+              <div className="text-xs mt-1">{loadError}</div>
             </div>
             <div>
-              <a href={videoUrl} target="_blank" rel="noreferrer" className="underline text-red-700">
+              <a href={videoUrl} target="_blank" rel="noreferrer" className="underline">
                 Open raw URL
               </a>
             </div>

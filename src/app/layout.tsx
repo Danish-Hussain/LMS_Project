@@ -3,12 +3,30 @@ import { Inter } from 'next/font/google'
 import './globals.css'
 
 import ClientProviders from './ClientProviders'
+import PWARegister from './PWARegister'
 
 const inter = Inter({ subsets: ['latin'] })
 
 export const metadata: Metadata = {
-  title: 'LMS - Learning Management System',
-  description: 'Online training platform with video recordings',
+  title: 'SAP Integration Expert — SAP CPI Training',
+  description: 'Hands-on SAP Cloud Platform Integration (CPI) training, batches, recordings, and progress tracking.',
+  applicationName: 'SAP Integration Expert',
+  themeColor: [
+    { media: '(prefers-color-scheme: light)', color: '#ffffff' },
+    { media: '(prefers-color-scheme: dark)', color: '#0B1220' }
+  ],
+  appleWebApp: {
+    capable: true,
+    title: 'SAP Integration Expert',
+    statusBarStyle: 'default'
+  },
+  formatDetection: { telephone: false },
+  icons: {
+    icon: '/icon.png',
+    shortcut: '/icon.png',
+    apple: '/apple-icon.png',
+  },
+  manifest: '/site.webmanifest',
 }
 
 export default function RootLayout({
@@ -18,8 +36,9 @@ export default function RootLayout({
 }) {
   return (
     <html lang="en">
-      <body className={inter.className} suppressHydrationWarning={true}>
+      <body className={inter.className} suppressHydrationWarning={true} style={{ background: 'var(--background)', color: 'var(--foreground)' }}>
         <ClientProviders>
+          <PWARegister />
           <main className="pt-14 flex-1 w-full max-w-[1920px] mx-auto px-4 sm:px-6">
             {children}
           </main>
