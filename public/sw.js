@@ -1,5 +1,5 @@
-// Basic PWA service worker for SIE Academy
-const CACHE_NAME = 'sie-academy-v1';
+// Basic PWA service worker for SAP Integration Expert
+const CACHE_NAME = 'sie-academy-v2';
 const PRECACHE_URLS = [
   '/',
   '/offline.html',
@@ -19,6 +19,13 @@ self.addEventListener('activate', (event) => {
   event.waitUntil(
     caches.keys().then((keys) => Promise.all(keys.map((k) => k !== CACHE_NAME ? caches.delete(k) : Promise.resolve()))).then(() => self.clients.claim())
   );
+});
+
+// Allow page to trigger immediate activation of a waiting SW
+self.addEventListener('message', (event) => {
+  if (event.data === 'SKIP_WAITING') {
+    self.skipWaiting();
+  }
 });
 
 // Network-first for navigation requests with offline fallback

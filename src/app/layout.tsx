@@ -1,4 +1,4 @@
-import type { Metadata } from 'next'
+import type { Metadata, Viewport } from 'next'
 import { Inter } from 'next/font/google'
 import './globals.css'
 
@@ -11,10 +11,6 @@ export const metadata: Metadata = {
   title: 'SAP Integration Expert — SAP CPI Training',
   description: 'Hands-on SAP Cloud Platform Integration (CPI) training, batches, recordings, and progress tracking.',
   applicationName: 'SAP Integration Expert',
-  themeColor: [
-    { media: '(prefers-color-scheme: light)', color: '#ffffff' },
-    { media: '(prefers-color-scheme: dark)', color: '#0B1220' }
-  ],
   appleWebApp: {
     capable: true,
     title: 'SAP Integration Expert',
@@ -27,6 +23,13 @@ export const metadata: Metadata = {
     apple: '/apple-icon.png',
   },
   manifest: '/site.webmanifest',
+}
+
+export const viewport: Viewport = {
+  themeColor: [
+    { media: '(prefers-color-scheme: light)', color: '#ffffff' },
+    { media: '(prefers-color-scheme: dark)', color: '#0B1220' },
+  ],
 }
 
 export default function RootLayout({

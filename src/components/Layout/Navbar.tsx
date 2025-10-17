@@ -140,7 +140,8 @@ export default function Navbar() {
               <div className="flex items-center space-x-4">
                 <Link
                   href="/login"
-                  className="text-gray-700 hover:text-blue-600 px-3 py-2 rounded-md text-sm font-medium"
+                  className="px-4 py-2 rounded-md text-sm font-medium border transition-colors hover-bg-accent focus:outline-none focus:ring-2 focus:ring-blue-400 shadow-sm hover:shadow hover:text-blue-500"
+                  style={{ background: 'var(--section-bg)', color: 'var(--foreground)', borderColor: 'var(--section-border)' }}
                 >
                   Login
                 </Link>
@@ -212,7 +213,8 @@ export default function Navbar() {
                 <div className="border-t pt-4 space-y-1">
                   <Link
                     href="/login"
-                    className="text-gray-700 hover:text-blue-600 block px-3 py-2 rounded-md text-base font-medium"
+                    className="block px-3 py-2 rounded-md text-base font-medium border transition-colors hover-bg-accent hover:text-blue-500 shadow-sm hover:shadow"
+                    style={{ background: 'var(--section-bg)', color: 'var(--foreground)', borderColor: 'var(--section-border)' }}
                     onClick={() => setIsMenuOpen(false)}
                   >
                     Login
