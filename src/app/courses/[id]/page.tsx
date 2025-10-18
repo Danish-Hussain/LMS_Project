@@ -75,6 +75,7 @@ function CourseContent({
   const [sections, setSections] = useState<{ id: string; title: string; order: number; description?: string | null }[]>([])
   const enrolledBatchId = enrolledBatchIds && enrolledBatchIds.length > 0 ? enrolledBatchIds[0] : null
   const [liveProgressMap, setLiveProgressMap] = useState<Record<string, number>>({})
+  const [expandedSections, setExpandedSections] = useState<Set<string>>(new Set())
 
   // fetch sections for the enrolled batch when available
   useEffect(() => {
@@ -99,37 +100,143 @@ function CourseContent({
     <div className="min-h-screen" style={{ background: 'var(--background)' }}>
       {/* Main Content */}
       <div className="max-w-[1920px] mx-auto px-4 sm:px-6 py-6">
-        {/* Batch Management for Instructors*/}
+        {/* Batch and Recorded Courses Management for Instructors */}
+        {isAdmin && (
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 mb-8">
+            {/* Batches Section */}
+            <div className="rounded-lg shadow-md p-6" style={{ background: 'var(--section-bg)', border: '1px solid var(--section-border)' }}>
+              <div className="flex items-center justify-between mb-4">
+                <div>
+                  <h2 className="text-xl font-semibold text-gray-900">Batches</h2>
+                  <p className="text-gray-600">Create and manage batches for this course.</p>
+                </div>
+                <Link
+                  href={`/batches/new?courseId=${course.id}`}
+                  className="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg font-semibold transition-colors"
+                >
+                  Create Batch
+                </Link>
+              </div>
+
+              <div className="space-y-3">
+                {course.batches.length === 0 ? (
+                  <div className="p-6 text-center text-gray-500 bg-gray-50 rounded-lg">
+                    No batches created yet.
+                  </div>
+                ) : (
+                  course.batches.map((batch) => (
+                    <Link
+                      key={batch.id}
+                      href={`/batches/${batch.id}`}
+                      className="block border border-gray-200 rounded-lg p-4 hover:border-blue-300 hover:shadow-md transition-all"
+                    >
+                      <h3 className="font-semibold text-gray-900 mb-2">{batch.name}</h3>
+                      <div className="text-sm text-gray-600 space-y-1">
+                        <p>Starts: {new Date(batch.startDate).toLocaleDateString()}</p>
+                        {batch.endDate && <p>Ends: {new Date(batch.endDate).toLocaleDateString()}</p>}
+                        <p>{batch._count.students} students enrolled</p>
+                      </div>
+                    </Link>
+                  ))
+                )}
+              </div>
+            </div>
+
+            {/* Recorded Courses Section */}
+            <div className="rounded-lg shadow-md p-6" style={{ background: 'var(--section-bg)', border: '1px solid var(--section-border)' }}>
+              <div className="flex items-center justify-between mb-4">
+                <div>
+                  <h2 className="text-xl font-semibold text-gray-900">Recorded Courses</h2>
+                  <p className="text-gray-600">Create and manage recorded courses for this course.</p>
+                </div>
+                <Link
+                  href={`/recorded-courses/new?courseId=${course.id}`}
+                  className="bg-green-600 hover:bg-green-700 text-white px-4 py-2 rounded-lg font-semibold transition-colors"
+                >
+                  Create Course
+                </Link>
+              </div>
+
+              <div className="space-y-3">
+                <div className="p-6 text-center text-gray-500 bg-gray-50 rounded-lg">
+                  <p className="mb-3">No recorded courses created yet.</p>
+                  <p className="text-sm">Create recorded courses for students who prefer self-paced learning without live sessions.</p>
+                </div>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* Course Content for Instructors */}
         {isAdmin && (
           <div className="rounded-lg shadow-md p-6 mb-8" style={{ background: 'var(--section-bg)', border: '1px solid var(--section-border)' }}>
             <div className="flex items-center justify-between mb-4">
               <div>
-                <h2 className="text-xl font-semibold text-gray-900">Batches</h2>
-                <p className="text-gray-600">Create and manage batches for this course.</p>
+                <h2 className="text-xl font-semibold text-gray-900">Course Content</h2>
+                <p className="text-gray-600 text-sm">
+                  {course.sessions.length} lectures • {course.sessions.reduce((sum, s) => sum + (s.duration || 0), 0)} min total length
+                </p>
               </div>
-              <Link
-                href={`/batches/new?courseId=${course.id}`}
-                className="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg font-semibold transition-colors"
+              <button
+                onClick={() => setExpandedSections(new Set(course.sessions.map(s => s.sectionId || '').filter(Boolean)))}
+                className="text-blue-600 hover:text-blue-700 font-semibold text-sm transition-colors"
               >
-                Create Batch
-              </Link>
+                Expand all sections
+              </button>
             </div>
 
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-              {course.batches.map((batch) => (
-                <Link
-                  key={batch.id}
-                  href={`/batches/${batch.id}`}
-                  className="border border-gray-200 rounded-lg p-4 hover:border-blue-300 transition-colors"
-                >
-                  <h3 className="font-semibold text-gray-900 mb-2">{batch.name}</h3>
-                  <div className="text-sm text-gray-600">
-                    <p>Starts: {new Date(batch.startDate).toLocaleDateString()}</p>
-                    {batch.endDate && <p>Ends: {new Date(batch.endDate).toLocaleDateString()}</p>}
-                    <p>{batch._count.students} students enrolled</p>
+            <div className="space-y-0 border border-gray-200 rounded-lg divide-y">
+              {course.sessions.length === 0 ? (
+                <div className="p-6 text-center text-gray-500">
+                  No lectures added yet. Add lectures through batch sessions.
+                </div>
+              ) : (
+                course.sessions.map((session, idx) => (
+                  <div key={session.id} className="border-b last:border-b-0">
+                    <div 
+                      className="p-4 flex items-center space-x-3 hover:bg-gray-50 cursor-pointer transition-colors"
+                      onClick={() => {
+                        const sectionId = session.sectionId || ''
+                        const newExpanded = new Set(expandedSections)
+                        if (newExpanded.has(sectionId)) {
+                          newExpanded.delete(sectionId)
+                        } else {
+                          newExpanded.add(sectionId)
+                        }
+                        setExpandedSections(newExpanded)
+                      }}
+                    >
+                      <div className="flex-shrink-0 w-8 h-8 flex items-center justify-center text-gray-500">
+                        <span className="text-sm font-semibold">{idx + 1}</span>
+                      </div>
+                      <div className="flex-grow">
+                        <h3 className="font-semibold text-gray-900">{session.title}</h3>
+                        <p className="text-sm text-gray-600">{session.duration ? `${session.duration} min` : 'Duration not set'}</p>
+                      </div>
+                      <div className="flex items-center space-x-2">
+                        {session.isPublished ? (
+                          <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-800">
+                            Published
+                          </span>
+                        ) : (
+                          <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-yellow-100 text-yellow-800">
+                            Draft
+                          </span>
+                        )}
+                        <button
+                          onClick={(e) => {
+                            e.stopPropagation()
+                            setSelectedSession(session)
+                          }}
+                          className="px-3 py-1 bg-blue-600 hover:bg-blue-700 text-white text-xs font-semibold rounded transition-colors"
+                        >
+                          Preview
+                        </button>
+                      </div>
+                    </div>
                   </div>
-                </Link>
-              ))}
+                ))
+              )}
             </div>
           </div>
         )}
@@ -173,28 +280,12 @@ function CourseContent({
         )}
 
         {/* Course Layout Grid */}
+        {canAccess && !isAdmin && course.sessions.length > 0 && (
         <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 max-w-[1920px] mx-auto">
           {/* Sessions List */}
           <div className="lg:col-span-3 lg:min-h-[calc(100vh-6rem)]">
             <div className="rounded-xl shadow-sm h-full sticky top-4 border" style={{ background: 'var(--section-bg)', borderColor: 'var(--section-border)' }}>
               <div className="p-4">
-                <div className="mb-6 border-b pb-4" style={{ borderColor: 'var(--section-border)' }}>
-                  <h3 className="text-xl font-semibold" style={{ color: 'var(--foreground)' }}>{course.title}</h3>
-                  <div className="mt-2 flex items-center text-sm" style={{ color: 'var(--session-subtext)' }}>
-                    <div className="flex items-center">
-                      <div className="mr-4 flex items-center">
-                        <BookOpen className="h-4 w-4 mr-1" />
-                        {course.sessions.length} {course.sessions.length === 1 ? 'Session' : 'Sessions'}
-                      </div>
-                      {sections.length > 0 && (
-                        <div className="flex items-center">
-                          <Layers className="h-4 w-4 mr-1" />
-                          {sections.length} {sections.length === 1 ? 'Section' : 'Sections'}
-                        </div>
-                      )}
-                    </div>
-                  </div>
-                </div>
                 <div className="space-y-6">
                   {sections && sections.length > 0 ? (
                     // Render grouped by section for enrolled batch
@@ -379,34 +470,10 @@ function CourseContent({
                   )}
                 </div>
               </div>
-            ) : (
-              <div className="rounded-xl shadow-sm border p-12 text-center" style={{ background: 'var(--section-bg)', borderColor: 'var(--section-border)' }}>
-                <div className="rounded-full w-16 h-16 mx-auto mb-4 flex items-center justify-center" style={{ background: 'var(--background)' }}>
-                  <BookOpen className="h-8 w-8" style={{ color: 'var(--session-subtext)' }} />
-                </div>
-                <h3 className="text-xl font-semibold mb-3" style={{ color: 'var(--foreground)' }}>
-                  {!canAccess ? 'Enroll to Start Learning' : 'Choose a Lesson'}
-                </h3>
-                <p className="max-w-md mx-auto" style={{ color: 'var(--session-subtext)' }}>
-                  {!canAccess 
-                    ? 'Please enroll in this course to access the video lessons and start your learning journey.'
-                    : 'Select a lesson from the list to begin watching the video content.'
-                  }
-                </p>
-                {!canAccess && (
-                  <div className="mt-6">
-                    <button
-                      onClick={() => course.batches.length > 0 && handleEnroll(course.batches[0].id)}
-                      className="px-6 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg font-semibold transition-colors"
-                    >
-                      {course.price && course.price > 0 ? `Enroll for $${course.price}` : 'Enroll Free'}
-                    </button>
-                  </div>
-                )}
-              </div>
-            )}
+            ) : null}
           </div>
         </div>
+        )}
       </div>
     </div>
   )
