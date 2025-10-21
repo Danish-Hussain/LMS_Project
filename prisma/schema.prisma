@@ -21,26 +21,28 @@ model User {
   payments       Payment[]
   progress       Progress[]
   batches        Batch[]      @relation("BatchStudents")
+  recordedCourseEnrollments RecordedCourseEnrollment[]
 
   @@map("users")
 }
 
 model Course {
-  id          String          @id @default(cuid())
-  title       String
-  description String?
-  thumbnail   String?
-  price       Float?
-  isPublished Boolean         @default(false)
-  createdAt   DateTime        @default(now())
-  updatedAt   DateTime        @updatedAt
-  creatorId   String
-  enrollments Enrollment[]
-  batches     Batch[]
-  sections    CourseSection[]
-  creator     User            @relation("CourseCreator", fields: [creatorId], references: [id])
-  payments    Payment[]
-  sessions    Session[]
+  id              String            @id @default(cuid())
+  title           String
+  description     String?
+  thumbnail       String?
+  price           Float?
+  isPublished     Boolean           @default(false)
+  createdAt       DateTime          @default(now())
+  updatedAt       DateTime          @updatedAt
+  creatorId       String
+  enrollments     Enrollment[]
+  batches         Batch[]
+  sections        CourseSection[]
+  creator         User              @relation("CourseCreator", fields: [creatorId], references: [id])
+  payments        Payment[]
+  sessions        Session[]
+  recordedCourses RecordedCourse[]
 
   @@map("courses")
 }
@@ -51,10 +53,10 @@ model CourseSection {
   description String?
   order       Int
   courseId    String
-  batchId     String
+  batchId     String?
   createdAt   DateTime  @default(now())
   updatedAt   DateTime  @updatedAt
-  batch       Batch     @relation(fields: [batchId], references: [id], onDelete: Cascade)
+  batch       Batch?    @relation(fields: [batchId], references: [id], onDelete: Cascade)
   course      Course    @relation(fields: [courseId], references: [id], onDelete: Cascade)
   sessions    Session[]
 
@@ -69,15 +71,16 @@ model Session {
   endTime     DateTime?
   order       Int
   isPublished Boolean           @default(false)
+  isPreview   Boolean           @default(false)
   createdAt   DateTime          @default(now())
   updatedAt   DateTime          @updatedAt
   courseId    String
-  batchId     String
+  batchId     String?
   sectionId   String?
   progress    Progress[]
   documents   SessionDocument[]
   section     CourseSection?    @relation(fields: [sectionId], references: [id])
-  batch       Batch             @relation(fields: [batchId], references: [id], onDelete: Cascade)
+  batch       Batch?            @relation(fields: [batchId], references: [id], onDelete: Cascade)
   course      Course            @relation(fields: [courseId], references: [id], onDelete: Cascade)
 
   @@map("sessions")
@@ -95,6 +98,33 @@ model SessionDocument {
   session   Session  @relation(fields: [sessionId], references: [id], onDelete: Cascade)
 
   @@map("session_documents")
+}
+
+model RecordedCourse {
+  id          String    @id @default(cuid())
+  courseId    String
+  name        String
+  description String?
+  price       Float     @default(0)
+  isPublished Boolean   @default(false)
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+  course      Course    @relation(fields: [courseId], references: [id], onDelete: Cascade)
+  enrollments RecordedCourseEnrollment[]
+
+  @@map("recorded_courses")
+}
+
+model RecordedCourseEnrollment {
+  id               String         @id @default(cuid())
+  userId           String
+  recordedCourseId String
+  enrolledAt       DateTime       @default(now())
+  user             User           @relation(fields: [userId], references: [id], onDelete: Cascade)
+  recordedCourse   RecordedCourse @relation(fields: [recordedCourseId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, recordedCourseId])
+  @@map("recorded_course_enrollments")
 }
 
 model Batch {

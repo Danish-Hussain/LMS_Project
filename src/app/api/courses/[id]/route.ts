@@ -54,6 +54,14 @@ type HandlerContext<T extends Record<string, string> = Record<string, string>> =
 export async function GET(req: NextRequest, context: HandlerContext<{ id: string }>) {
   try {
     const token = req.cookies.get('auth-token')?.value
+    const isPublic = (() => {
+      try {
+        const p = req.nextUrl.searchParams.get('public')
+        return p === '1' || p === 'true'
+      } catch {
+        return false
+      }
+    })()
     const params = (await context.params) as { id: string }
     const courseId = params.id
     
@@ -65,7 +73,85 @@ export async function GET(req: NextRequest, context: HandlerContext<{ id: string
       )
     }
 
-    // Check authentication
+    // Allow public preview when explicitly requested via query parameter
+    if (!token && isPublic) {
+      // Fetch minimal, published-only course data for guests
+      const course = await prisma.course.findUnique({
+        where: { id: courseId },
+        include: {
+          creator: { select: { id: true, name: true } },
+          sessions: {
+            where: { courseId },
+            orderBy: { order: 'asc' },
+            select: {
+              id: true,
+              title: true,
+              videoUrl: true,
+              order: true,
+              isPublished: true,
+              // Rely on prisma schema where `isPreview` exists
+              isPreview: true as any
+            } as any
+          },
+          batches: {
+            where: { isActive: true },
+            select: {
+              id: true,
+              name: true,
+              isActive: true,
+              _count: { select: { students: true } }
+            }
+          },
+          _count: { select: { enrollments: true } }
+        }
+      }) as any
+
+      if (!course) {
+        return NextResponse.json({ error: 'Course not found' }, { status: 404 })
+      }
+
+      if (!course.isPublished) {
+        // Do not expose unpublished courses publicly
+        return NextResponse.json({ error: 'Course not available' }, { status: 403 })
+      }
+
+      // Filter sessions: expose title/order, and only expose videoUrl if explicitly marked preview
+      const safeSessions = (course.sessions || []).map((s: any) => {
+        const isPreview = Boolean((s as any).isPreview)
+        const isVimeo = typeof s.videoUrl === 'string' && /vimeo\.com/.test(s.videoUrl)
+        return {
+          id: s.id,
+          title: s.title,
+          order: s.order,
+          isPublished: s.isPublished,
+          // only keep videoUrl if preview and supported provider
+          videoUrl: isPreview && isVimeo ? s.videoUrl : null,
+          isPreview
+        }
+      })
+
+      const payload = {
+        course: {
+          id: course.id,
+          title: course.title,
+          description: course.description,
+          thumbnail: course.thumbnail,
+          price: course.price,
+          isPublished: true,
+          creator: course.creator,
+          _count: course._count,
+          sessions: safeSessions,
+          batches: course.batches
+        },
+        isEnrolled: false,
+        enrolledBatchIds: [],
+        enrolledRecordedCourseIds: []
+      }
+
+      return NextResponse.json(payload)
+    }
+
+    // Check authentication for non-public access
     if (!token) {
       console.error('No auth token in request');
       return NextResponse.json(
@@ -273,6 +359,21 @@ export async function GET(req: NextRequest, context: HandlerContext<{ id: string
     const isEnrolled = enrollments.length > 0
     const enrolledBatchIds = enrollments.map(e => e.batchId).filter((id): id is string => id !== null)
 
+    // Get recorded course enrollments
+    const recordedCourseEnrollments: any = await (prisma as any).recordedCourseEnrollment.findMany({
+      where: {
+        userId: user.id,
+        recordedCourse: {
+          courseId: course.id
+        }
+      },
+      select: {
+        recordedCourseId: true
+      }
+    })
+
+    const enrolledRecordedCourseIds = recordedCourseEnrollments.map((e: any) => e.recordedCourseId)
+
 
     // Get progress for each session if user is enrolled
     const finalSessions = isEnrolled
@@ -303,7 +404,8 @@ export async function GET(req: NextRequest, context: HandlerContext<{ id: string
     return NextResponse.json({
       course: courseWithProgress,
       isEnrolled,
-      enrolledBatchIds
+      enrolledBatchIds,
+      enrolledRecordedCourseIds
     })
 
   } catch (error) {

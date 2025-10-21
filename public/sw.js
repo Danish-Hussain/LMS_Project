@@ -1,10 +1,11 @@
 // Basic PWA service worker for SAP Integration Expert
-const CACHE_NAME = 'sie-academy-v2';
+const CACHE_NAME = 'sie-academy-v6';
 const PRECACHE_URLS = [
   '/',
   '/offline.html',
-  '/icon.png',
-  '/apple-icon.png',
+  '/icon.png?v=4',
+  '/apple-icon.png?v=4',
+  '/favicon.ico',
   '/icons/icon-192x192.png',
   '/icons/icon-512x512.png',
 ];

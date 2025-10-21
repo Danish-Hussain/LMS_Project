@@ -1,0 +1,35 @@
+[
+  {
+    "id": 1,
+    "title": "Join our new cohort",
+    "description": "Fresh batches opening this month. Reserve your seat now.",
+    "cta": {
+      "label": "View Batches",
+      "href": "/batches"
+    },
+    "imageUrl": "",
+    "linkUrl": ""
+  },
+  {
+    "id": 2,
+    "title": "On-demand courses",
+    "description": "Learn at your own pace with recorded sessions.",
+    "cta": {
+      "label": "Explore Courses",
+      "href": "/on-demand-courses"
+    },
+    "imageUrl": "",
+    "linkUrl": ""
+  },
+  {
+    "id": 3,
+    "title": "Career mentorship",
+    "description": "Book 1:1 time with instructors for guidance and mock interviews.",
+    "cta": {
+      "label": "Book a Session",
+      "href": "/contact"
+    },
+    "imageUrl": "",
+    "linkUrl": ""
+  }
+]

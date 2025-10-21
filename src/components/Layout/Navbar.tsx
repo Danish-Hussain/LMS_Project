@@ -3,9 +3,9 @@
 import { useAuth } from '@/contexts/AuthContext'
 import { useState, useRef, useEffect } from 'react'
 import { useDarkMode } from '@/contexts/DarkModeContext'
-import { Moon, Sun } from 'lucide-react'
+import { Moon, Sun, ChevronDown } from 'lucide-react'
 import Link from 'next/link'
-import { Menu, X, BookOpen, Users, Home } from 'lucide-react'
+import { Menu, X, BookOpen, Users, Home, Video } from 'lucide-react'
 import ContactModal from '@/components/ContactModal'
 
 type ContactDefaults = { name?: string; email?: string }
@@ -13,11 +13,13 @@ type ContactDefaults = { name?: string; email?: string }
 export default function Navbar() {
   const { user, logout } = useAuth()
   const { darkMode, toggleDarkMode } = useDarkMode()
+  
   const [isMenuOpen, setIsMenuOpen] = useState(false)
   const [isContactOpen, setIsContactOpen] = useState(false)
   const [contactDefaults, setContactDefaults] = useState<ContactDefaults>({})
   const [isAccountOpen, setIsAccountOpen] = useState(false)
-  const accountRef = useRef<HTMLDivElement | null>(null)
+  const accountRefDesktop = useRef<HTMLDivElement | null>(null)
+  const accountRefMobile = useRef<HTMLDivElement | null>(null)
   const menuRef = useRef<HTMLDivElement | null>(null)
   const firstMenuItemRef = useRef<HTMLAnchorElement | null>(null)
 
@@ -29,9 +31,10 @@ export default function Navbar() {
 
   useEffect(() => {
     function handleClick(e: MouseEvent) {
-      if (accountRef.current && !accountRef.current.contains(e.target as Node)) {
-        setIsAccountOpen(false)
-      }
+      const target = e.target as Node
+      const insideDesktop = accountRefDesktop.current?.contains(target)
+      const insideMobile = accountRefMobile.current?.contains(target)
+      if (!insideDesktop && !insideMobile) setIsAccountOpen(false)
     }
     window.addEventListener('click', handleClick)
     function handleKey(e: KeyboardEvent) {
@@ -57,37 +60,50 @@ export default function Navbar() {
     setIsMenuOpen(false)
   }
 
-    const navigation = [
+  // Ensure proper title-case for known roles
+  const formatRole = (role?: string) => {
+    if (!role) return ''
+    const r = String(role).toUpperCase()
+    switch (r) {
+      case 'ADMIN':
+        return 'Admin'
+      case 'INSTRUCTOR':
+        return 'Instructor'
+      case 'STUDENT':
+        return 'Student'
+      default:
+        return role.charAt(0).toUpperCase() + role.slice(1).toLowerCase()
+    }
+  }
+
+  const navigation = [
     { name: 'Dashboard', href: '/dashboard', icon: Home },
     { name: 'Courses', href: '/courses', icon: BookOpen },
     ...(user?.role === 'ADMIN' || user?.role === 'INSTRUCTOR' ? [
+      { name: 'On-Demand Courses', href: '/on-demand-courses', icon: Video },
       { name: 'Students', href: '/students', icon: Users },
       { name: 'Batches', href: '/batches', icon: Users },
     ] : [])
   ]
 
   return (
-  <nav className="shadow-sm border-b fixed top-0 left-0 right-0 z-50" style={{ background: 'var(--background)', borderColor: 'var(--section-border)' }} suppressHydrationWarning>
+  <nav className="shadow-sm border-b" style={{ background: 'var(--background)', borderColor: 'var(--section-border)' }} suppressHydrationWarning>
       <div className="max-w-[1920px] w-full mx-auto px-4 sm:px-6 lg:px-8">
         <div className="flex flex-row items-center justify-between h-14">
           {/* Logo */}
-          <Link href={user ? "/dashboard" : "/"} className="flex-shrink-0 flex items-center" style={{ marginLeft: 0, paddingLeft: 0 }} aria-label="SAPIntegrationExpert Home">
-            <svg width={320} height={36} viewBox="0 50 1100 160" preserveAspectRatio="xMinYMid meet" fill="none" xmlns="http://www.w3.org/2000/svg" role="img" aria-labelledby="title desc" style={{ filter: 'drop-shadow(0 1px 4px rgba(0,0,0,0.1))', display: 'block' }}>
-              <title id="title">SAPIntegrationExpert — Wordmark</title>
-              <desc id="desc">SAP in blue gradient, IntegrationExpert in theme foreground color. No background.</desc>
-              <defs>
-                <linearGradient id="sap-gradient" x1="0" y1="0" x2="220" y2="0" gradientUnits="userSpaceOnUse">
-                  <stop stopColor="#0A74DA" />
-                  <stop offset="1" stopColor="#60A5FA" />
-                </linearGradient>
-              </defs>
-              <text x={0} y={155} fontFamily="Inter, Segoe UI, Arial, sans-serif" fontSize={105} fontWeight={800} letterSpacing={1.5} fill="url(#sap-gradient)">SAP</text>
-              <text x={250} y={155} fontFamily="Inter, Segoe UI, Arial, sans-serif" fontSize={105} fontWeight={800} letterSpacing={1.5} style={{ fill: 'var(--foreground)', filter: 'drop-shadow(0 0 6px rgba(0,0,0,0.10))' }}>IntegrationExpert</text>
+          <Link href={user ? "/dashboard" : "/"} className="flex-shrink-0 flex items-center h-14" style={{ marginLeft: 0, paddingLeft: 0 }} aria-label="SAP Integration Expert Home">
+            <img src="/icon.png?v=4" alt="" aria-hidden="true" width={30} height={30} className="mr-1 self-center" style={{ display: 'block' }} />
+            <svg width={320} height={36} viewBox="0 50 1100 160" preserveAspectRatio="xMinYMid meet" fill="none" xmlns="http://www.w3.org/2000/svg" role="img" aria-labelledby="title desc" className="self-center translate-y-[1px]" style={{ filter: 'drop-shadow(0 1px 4px rgba(0,0,0,0.1))', display: 'block' }}>
+              <title id="title">SAP Integration Expert — Wordmark</title>
+              <desc id="desc">SAP in brand blue; Integration Expert in black (light) or light (dark). Logo shown before the wordmark.</desc>
+              <defs></defs>
+              <text x={0} y={155} fontFamily="Inter, Segoe UI, Arial, sans-serif" fontSize={105} fontWeight={800} letterSpacing={1.5} style={{ fill: 'var(--brand-primary)' }}>SAP</text>
+              <text x={250} y={155} fontFamily="Inter, Segoe UI, Arial, sans-serif" fontSize={105} fontWeight={800} letterSpacing={1.5} style={{ fill: 'var(--brand-integration)', filter: 'drop-shadow(0 0 4px rgba(0,0,0,0.03))' }}>Integration Expert</text>
             </svg>
           </Link>
 
           {/* Desktop Navigation */}
-          <div className="hidden md:flex items-center space-x-8">
+          <div className="hidden md:flex items-center h-14 space-x-8">
             {navigation.map((item) => (
               <Link
                 key={item.name}
@@ -98,16 +114,18 @@ export default function Navbar() {
                 {item.name}
               </Link>
             ))}
-            <button onClick={openContact} className="hover:text-blue-600 px-3 py-2 rounded-md text-sm font-medium" style={{ color: 'var(--session-text)' }}>
-              Contact Us
-            </button>
+            {!(user?.role === 'ADMIN' || user?.role === 'INSTRUCTOR') && (
+              <button onClick={openContact} className="hover:text-blue-600 px-3 py-2 rounded-md text-sm font-medium cursor-pointer" style={{ color: 'var(--session-text)' }}>
+                Contact Us
+              </button>
+            )}
           </div>
 
-          {/* Dark Mode Toggle */}
-          <div className="hidden md:flex items-center space-x-4">
+          {/* Desktop right controls: Dark mode on the left, account pill on the right */}
+          <div className="hidden md:flex items-center h-14 space-x-4">
             <button
               onClick={toggleDarkMode}
-              className="p-2 rounded-full hover:bg-gray-200 dark:hover:bg-gray-700 focus:outline-none focus:ring-2 focus:ring-blue-400"
+              className="p-2 rounded-full hover:bg-gray-200 dark:hover:bg-gray-700 focus:outline-none focus:ring-2 focus:ring-blue-400 cursor-pointer"
               aria-label="Toggle dark mode"
               title={darkMode ? 'Switch to light mode' : 'Switch to dark mode'}
               style={{ background: 'var(--section-bg)' }}
@@ -116,24 +134,40 @@ export default function Navbar() {
             </button>
             {user ? (
               <div className="flex items-center space-x-4">
-                <div className="flex items-center space-x-3">
-                  <div className="text-sm" style={{ color: 'var(--session-text)' }}>
-                    <div className="font-medium">{user.name}</div>
-                    <div className="text-xs" style={{ color: 'var(--session-subtext)' }}>{user.role?.toLowerCase()?.replace(/(^|\s)\S/g, s => s.toUpperCase())}</div>
-                  </div>
-                  <div className="relative" ref={accountRef}>
-                    <button id="account-button" aria-haspopup="true" aria-expanded={isAccountOpen} onClick={() => setIsAccountOpen(!isAccountOpen)} className="p-1 rounded-full w-9 h-9 flex items-center justify-center focus:outline-none focus:ring-2 focus:ring-blue-200" style={{ background: 'var(--section-bg)' }} aria-label="Open account menu">
-                      <span className="text-sm font-medium" style={{ color: 'var(--session-text)' }}>{(user?.name || '').split(' ').map(n => n[0]).slice(0,2).join('').toUpperCase() || 'U'}</span>
-                    </button>
-                    {isAccountOpen && (
-                      <div ref={menuRef} role="menu" aria-orientation="vertical" aria-labelledby="account-button" className="absolute right-0 mt-2 w-56 rounded-md shadow-md z-50 transition transform duration-150 ease-out" style={{ background: 'var(--section-bg)', border: '1px solid var(--section-border)' }}>
-                        <Link href="/account" ref={firstMenuItemRef} role="menuitem" tabIndex={-1} className="block px-4 py-3 text-sm focus:outline-none transition-colors hover-bg-accent" style={{ color: 'var(--session-text)' }}>Account details</Link>
-                        <Link href="/account/change-password" role="menuitem" tabIndex={-1} className="block px-4 py-3 text-sm focus:outline-none transition-colors hover-bg-accent" style={{ color: 'var(--session-text)' }}>Change password</Link>
-                        <div className="border-t" style={{ borderColor: 'var(--section-border)' }} />
-                        <button onClick={handleLogout} role="menuitem" tabIndex={-1} className="w-full text-left px-4 py-3 text-sm text-red-600 focus:outline-none transition-colors hover-bg-accent">Log out</button>
-                      </div>
-                    )}
-                  </div>
+                {/* Combined clickable pill with name */}
+                <div className="relative" ref={accountRefDesktop}>
+                  <button
+                    id="account-button"
+                    aria-haspopup="true"
+                    aria-expanded={isAccountOpen}
+                    onClick={() => setIsAccountOpen(!isAccountOpen)}
+                    className="group flex items-center gap-3 rounded-full border px-3 py-1.5 focus:outline-none focus:ring-2 focus:ring-blue-200 transition-colors hover-bg-accent hover:shadow-sm cursor-pointer"
+                    style={{ background: 'var(--section-bg)', borderColor: 'var(--section-border)' }}
+                    aria-label="Open account menu"
+                  >
+                    <span className="text-left text-sm leading-tight" style={{ color: 'var(--session-text)' }}>
+                      <span className="font-medium block truncate max-w-[10rem]">{user.name}</span>
+                      <span className="text-xs block" style={{ color: 'var(--session-subtext)' }}>
+                        {formatRole(user.role)}
+                      </span>
+                    </span>
+                    <ChevronDown className={`h-4 w-4 transition-transform ${isAccountOpen ? 'rotate-180' : ''}`} style={{ color: 'var(--session-subtext)' }} />
+                  </button>
+                  {isAccountOpen && (
+                    <div
+                      ref={menuRef}
+                      role="menu"
+                      aria-orientation="vertical"
+                      aria-labelledby="account-button"
+                      className="absolute right-0 mt-2 w-56 rounded-md shadow-md z-50 transition transform duration-150 ease-out"
+                      style={{ background: 'var(--section-bg)', border: '1px solid var(--section-border)' }}
+                    >
+                      <Link href="/account" ref={firstMenuItemRef} role="menuitem" tabIndex={-1} className="block px-4 py-3 text-sm focus:outline-none transition-colors hover-bg-accent" style={{ color: 'var(--session-text)' }}>Account Details</Link>
+                      <Link href="/account/change-password" role="menuitem" tabIndex={-1} className="block px-4 py-3 text-sm focus:outline-none transition-colors hover-bg-accent" style={{ color: 'var(--session-text)' }}>Change Password</Link>
+                      <div className="border-t" style={{ borderColor: 'var(--section-border)' }} />
+                      <button onClick={handleLogout} role="menuitem" tabIndex={-1} className="w-full text-left px-4 py-3 text-sm text-red-600 focus:outline-none transition-colors hover-bg-accent">Log Out</button>
+                    </div>
+                  )}
                 </div>
               </div>
             ) : (
@@ -157,15 +191,54 @@ export default function Navbar() {
           </div>
 
           {/* Mobile menu button and dark mode toggle */}
-          <div className="md:hidden flex items-center space-x-2">
+          <div className="md:hidden flex items-center h-14 space-x-2">
             <button
               onClick={toggleDarkMode}
-              className="p-2 rounded-full hover:bg-gray-200 dark:hover:bg-gray-700 focus:outline-none focus:ring-2 focus:ring-blue-400"
+              className="p-2 rounded-full hover:bg-gray-200 dark:hover:bg-gray-700 focus:outline-none focus:ring-2 focus:ring-blue-400 cursor-pointer"
               aria-label="Toggle dark mode"
               title={darkMode ? 'Switch to light mode' : 'Switch to dark mode'}
             >
               {darkMode ? <Sun className="h-5 w-5 text-yellow-400" /> : <Moon className="h-5 w-5 text-gray-700" />}
             </button>
+            {user && (
+              <div className="relative" ref={accountRefMobile}>
+                <button
+                  id="account-button-mobile"
+                  aria-haspopup="true"
+                  aria-expanded={isAccountOpen}
+                  onClick={() => setIsAccountOpen(!isAccountOpen)}
+                  className="group flex items-center gap-2 rounded-full border px-3 py-1 focus:outline-none focus:ring-2 focus:ring-blue-200 transition-colors hover-bg-accent hover:shadow-sm"
+                  style={{ background: 'var(--section-bg)', borderColor: 'var(--section-border)' }}
+                  aria-label="Open account menu"
+                >
+                  <span
+                    className="rounded-full w-8 h-8 flex items-center justify-center text-xs font-medium"
+                    style={{ background: 'var(--section-bg)', color: 'var(--session-text)' }}
+                  >
+                    {(user?.name || '').split(' ').map(n => n[0]).slice(0,2).join('').toUpperCase() || 'U'}
+                  </span>
+                  <span className="text-left text-xs leading-tight max-w-[6rem] truncate" style={{ color: 'var(--session-text)' }}>
+                    <span className="font-medium block truncate">{user.name}</span>
+                  </span>
+                  <ChevronDown className={`h-4 w-4 transition-transform ${isAccountOpen ? 'rotate-180' : ''}`} style={{ color: 'var(--session-subtext)' }} />
+                </button>
+                {isAccountOpen && (
+                  <div
+                    ref={menuRef}
+                    role="menu"
+                    aria-orientation="vertical"
+                    aria-labelledby="account-button-mobile"
+                    className="absolute right-0 mt-2 w-56 rounded-md shadow-md z-50 transition transform duration-150 ease-out"
+                    style={{ background: 'var(--section-bg)', border: '1px solid var(--section-border)' }}
+                  >
+                    <Link href="/account" ref={firstMenuItemRef} role="menuitem" tabIndex={-1} className="block px-4 py-3 text-sm focus:outline-none transition-colors hover-bg-accent" style={{ color: 'var(--session-text)' }}>Account Details</Link>
+                    <Link href="/account/change-password" role="menuitem" tabIndex={-1} className="block px-4 py-3 text-sm focus:outline-none transition-colors hover-bg-accent" style={{ color: 'var(--session-text)' }}>Change Password</Link>
+                    <div className="border-t" style={{ borderColor: 'var(--section-border)' }} />
+                    <button onClick={handleLogout} role="menuitem" tabIndex={-1} className="w-full text-left px-4 py-3 text-sm text-red-600 focus:outline-none transition-colors hover-bg-accent">Log Out</button>
+                  </div>
+                )}
+              </div>
+            )}
             <button
               onClick={() => setIsMenuOpen(!isMenuOpen)}
               className="text-gray-700 hover:text-blue-600"
@@ -189,24 +262,26 @@ export default function Navbar() {
                   {item.name}
                 </Link>
               ))}
-              <button onClick={() => { openContact(); setIsMenuOpen(false) }} className="text-gray-700 hover:text-blue-600 block px-3 py-2 rounded-md text-base font-medium w-full text-left">
-                Contact Us
-              </button>
+              {!(user?.role === 'ADMIN' || user?.role === 'INSTRUCTOR') && (
+                <button onClick={() => { openContact(); setIsMenuOpen(false) }} className="text-gray-700 hover:text-blue-600 block px-3 py-2 rounded-md text-base font-medium w-full text-left cursor-pointer">
+                  Contact Us
+                </button>
+              )}
               {user ? (
                 <div className="border-t pt-4">
                   <div className="px-3 py-2">
                     <p className="text-sm text-gray-700 font-medium">{user.name}</p>
                     <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-blue-100 text-blue-800 mt-1">
-                      {user.role?.toLowerCase()?.replace(/(^|\s)\S/g, s => s.toUpperCase())}
+                      {formatRole(user.role)}
                     </span>
                   </div>
-                  <Link href="/account" className="text-gray-700 block px-3 py-2 rounded-md text-base font-medium w-full text-left" onClick={() => setIsMenuOpen(false)}>Account details</Link>
-                  <Link href="/account/change-password" className="text-gray-700 block px-3 py-2 rounded-md text-base font-medium w-full text-left" onClick={() => setIsMenuOpen(false)}>Change password</Link>
+                  <Link href="/account" className="text-gray-700 block px-3 py-2 rounded-md text-base font-medium w-full text-left" onClick={() => setIsMenuOpen(false)}>Account Details</Link>
+                  <Link href="/account/change-password" className="text-gray-700 block px-3 py-2 rounded-md text-base font-medium w-full text-left" onClick={() => setIsMenuOpen(false)}>Change Password</Link>
                   <button
                     onClick={handleLogout}
                     className="text-gray-700 hover:text-red-600 block px-3 py-2 rounded-md text-base font-medium w-full text-left"
                   >
-                    Logout
+                    Log Out
                   </button>
                 </div>
               ) : (

@@ -125,7 +125,7 @@ export default function CreateCoursePage() {
       
       if (response.ok && data.data?.id) {
         console.log('Course created successfully:', data.data)
-        router.push(`/courses/${data.data.id}`)
+        router.push(`/courses/${data.data.id}/options`)
       } else {
         // Handle specific error cases
         switch (response.status) {

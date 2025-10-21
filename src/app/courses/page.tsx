@@ -32,10 +32,9 @@ export default function CoursesPage() {
   const [isLoading, setIsLoading] = useState(true)
 
   useEffect(() => {
-    if (user) {
-      fetchCourses()
-    }
-  }, [user])
+    // Allow guests to browse published courses as well
+    fetchCourses()
+  }, [])
 
   const fetchCourses = async () => {
     try {
@@ -59,24 +58,9 @@ export default function CoursesPage() {
     )
   }
 
-  if (!user) {
-    return (
-  <div className="min-h-screen bg-gray-50 dark:bg-[#18181b] flex items-center justify-center">
-        <div className="text-center">
-          <h1 className="text-2xl font-bold mb-4" style={{ color: 'var(--foreground)' }}>Access Denied</h1>
-          <p className="mb-8" style={{ color: 'var(--session-subtext)' }}>Please log in to view courses.</p>
-          <Link
-            href="/login"
-            className="bg-blue-600 hover:bg-blue-700 text-white px-6 py-2 rounded-lg font-semibold transition-colors"
-          >
-            Login
-          </Link>
-        </div>
-      </div>
-    )
-  }
+  // Guests can browse courses without logging in
 
-  const isAdmin = user.role === 'ADMIN' || user.role === 'INSTRUCTOR'
+  const isAdmin = user?.role === 'ADMIN' || user?.role === 'INSTRUCTOR'
 
   return (
   <div className="min-h-screen" style={{ background: 'var(--background)' }}>

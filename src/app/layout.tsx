@@ -18,11 +18,11 @@ export const metadata: Metadata = {
   },
   formatDetection: { telephone: false },
   icons: {
-    icon: '/icon.png',
-    shortcut: '/icon.png',
-    apple: '/apple-icon.png',
+    icon: [{ url: '/icon.png?v=4' }],
+    shortcut: [{ url: '/icon.png?v=4' }],
+    apple: [{ url: '/apple-icon.png?v=4' }],
   },
-  manifest: '/site.webmanifest',
+  manifest: '/site.webmanifest?v=4',
 }
 
 export const viewport: Viewport = {
@@ -42,7 +42,7 @@ export default function RootLayout({
       <body className={inter.className} suppressHydrationWarning={true} style={{ background: 'var(--background)', color: 'var(--foreground)' }}>
         <ClientProviders>
           <PWARegister />
-          <main className="pt-14 flex-1 w-full max-w-[1920px] mx-auto px-4 sm:px-6">
+          <main className="flex-1 w-full max-w-[1920px] mx-auto px-4 sm:px-6">
             {children}
           </main>
         </ClientProviders>
