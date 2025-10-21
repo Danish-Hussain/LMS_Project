@@ -3,10 +3,9 @@
 import { useEffect, useState } from 'react'
 import { useParams, useRouter } from 'next/navigation'
 import Link from 'next/link'
-import { useAuth } from '@/contexts/AuthContext'
-import { useDarkMode } from '@/contexts/DarkModeContext'
+import { useAuth } from '../../../contexts/AuthContext'
 import { ArrowLeft, Play, Download, BookOpen, Clock, User } from 'lucide-react'
-import useToast from '@/hooks/useToast'
+import useToast from '../../../hooks/useToast'
 
 interface RecordedCourse {
   id: string
@@ -32,7 +31,6 @@ export default function OnDemandCourseDetailPage() {
   const params = useParams()
   const router = useRouter()
   const { user } = useAuth()
-  const { darkMode } = useDarkMode()
   const toast = useToast()
   
   const courseId = params.id as string
