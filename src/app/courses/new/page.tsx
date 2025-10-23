@@ -13,10 +13,66 @@ export default function CreateCoursePage() {
     title: '',
     description: '',
     thumbnail: '',
-    price: ''
+    // price is the final (discounted) price; we derive it from actualPrice & discountPercent
+    price: '',
+    actualPrice: '',
+    discountPercent: ''
   })
   const [isSubmitting, setIsSubmitting] = useState(false)
   const [error, setError] = useState('')
+  const [isUploading, setIsUploading] = useState(false)
+  const [uploadError, setUploadError] = useState('')
+  const [isDragging, setIsDragging] = useState(false)
+
+  const allowedTypes = ['image/png', 'image/jpeg', 'image/webp']
+  const maxBytes = 5 * 1024 * 1024 // 5MB
+
+  const handleFileUpload = async (file: File) => {
+    setUploadError('')
+    if (!file) return
+    if (!allowedTypes.includes(file.type)) {
+      setUploadError('Only PNG, JPG, or WebP images are allowed')
+      return
+    }
+    if (file.size > maxBytes) {
+      setUploadError('File is too large (max 5MB)')
+      return
+    }
+    try {
+      setIsUploading(true)
+      // Use FileReader to avoid spreading large Uint8Arrays into fromCharCode, which can overflow the stack
+      const base64 = await new Promise<string>((resolve, reject) => {
+        const reader = new FileReader()
+        reader.onload = () => {
+          try {
+            const result = reader.result as string
+            const commaIndex = result.indexOf(',')
+            resolve(commaIndex >= 0 ? result.slice(commaIndex + 1) : result)
+          } catch (err) {
+            reject(err)
+          }
+        }
+        reader.onerror = () => reject(reader.error)
+        reader.readAsDataURL(file)
+      })
+      const res = await fetch('/api/upload', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        credentials: 'same-origin',
+        body: JSON.stringify({ filename: file.name, contentBase64: base64 })
+      })
+      const data = await res.json().catch(() => null)
+      if (!res.ok || !data?.url) {
+        throw new Error(data?.error || 'Upload failed')
+      }
+      setFormData((prev) => ({ ...prev, thumbnail: data.url }))
+    } catch (err: any) {
+      console.error('Upload failed', err)
+      setUploadError(err?.message || 'Upload failed')
+    } finally {
+      setIsUploading(false)
+    }
+  }
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
     setFormData({
@@ -54,6 +110,35 @@ export default function CreateCoursePage() {
         return
       }
 
+      // Validate pricing inputs
+      if (formData.actualPrice) {
+        const ap = parseFloat(formData.actualPrice)
+        if (isNaN(ap)) {
+          setError('Actual price must be a valid number')
+          return
+        }
+        if (ap < 0) {
+          setError('Actual price cannot be negative')
+          return
+        }
+        if (ap > 999999.99) {
+          setError('Actual price is too high')
+          return
+        }
+      }
+
+      if (formData.discountPercent) {
+        const dp = parseFloat(formData.discountPercent)
+        if (isNaN(dp)) {
+          setError('Discount must be a valid percentage')
+          return
+        }
+        if (dp < 0 || dp > 100) {
+          setError('Discount must be between 0 and 100')
+          return
+        }
+      }
+
       if (formData.price) {
         const price = parseFloat(formData.price)
         if (isNaN(price)) {
@@ -70,15 +155,7 @@ export default function CreateCoursePage() {
         }
       }
 
-      // Validate thumbnail URL if provided
-      if (formData.thumbnail) {
-        try {
-          new URL(formData.thumbnail)
-        } catch (e) {
-          setError('Please enter a valid URL for the thumbnail')
-          return
-        }
-      }
+      // No URL validation needed: thumbnail is set via PNG upload (optional)
 
       // Log the validated form data being sent
       console.log('Submitting course data:', {
@@ -94,26 +171,46 @@ export default function CreateCoursePage() {
         isAuthenticated: !!user 
       })
 
+      // Compute final price from actual + discount if provided
+      const actualPriceNum = formData.actualPrice ? parseFloat(formData.actualPrice) : null
+      const discountNum = formData.discountPercent ? Math.max(0, Math.min(100, parseFloat(formData.discountPercent))) : null
+      const finalPrice = (actualPriceNum != null && discountNum != null)
+        ? Math.round((actualPriceNum * (1 - discountNum / 100)) * 100) / 100
+        : (formData.price ? parseFloat(formData.price) : null)
+
       const response = await fetch('/api/courses', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
           'Accept': 'application/json'
         },
-        credentials: 'same-origin',
+        credentials: 'include',
         body: JSON.stringify({
-          ...formData,
-          price: formData.price ? parseFloat(formData.price) : null
+          title: formData.title,
+          description: formData.description,
+          thumbnail: formData.thumbnail,
+          price: finalPrice,
+          discountPercent: discountNum
         })
       })
 
-      let data
+      let data: any = null
+      let rawText = ''
       try {
-        const text = await response.text()
-        data = text ? JSON.parse(text) : {}
+        const ct = response.headers.get('content-type')?.toLowerCase() || ''
+        if (ct.includes('application/json')) {
+          data = await response.json()
+        } else {
+          // Non-JSON: read text only; don't try to parse
+          rawText = await response.text()
+        }
       } catch (parseError) {
-        console.error('Error parsing response:', parseError)
-        setError('Invalid response from server')
+        if (!rawText) {
+          try { rawText = await response.text() } catch {}
+        }
+        console.error('Error parsing response:', parseError, { rawText })
+        // Fallback to basic message if server returned non-JSON (e.g., HTML error page)
+        setError(`Invalid response from server${response.status ? ` (HTTP ${response.status})` : ''}`)
         return
       }
 
@@ -123,9 +220,18 @@ export default function CreateCoursePage() {
         data
       })
       
-      if (response.ok && data.data?.id) {
-        console.log('Course created successfully:', data.data)
-        router.push(`/courses/${data.data.id}`)
+      // Accept a few possible shapes to be resilient
+      let createdId = data?.data?.id || data?.course?.id || data?.id
+      if (!createdId) {
+        const loc = response.headers.get('location') || response.headers.get('Location')
+        if (loc) {
+          const m = /\/courses\/([^\/\?#]+)/.exec(loc)
+          if (m && m[1]) createdId = m[1]
+        }
+      }
+      if ((response.status === 201 || response.ok) && createdId) {
+        console.log('Course created successfully:', data.data || data)
+        router.push(`/courses/${createdId}/options`)
       } else {
         // Handle specific error cases
         switch (response.status) {
@@ -149,10 +255,17 @@ export default function CreateCoursePage() {
             console.error('Failed to create course:', {
               status: response.status,
               statusText: response.statusText,
-              error: data.error,
-              data
+              error: data?.error || data?.message,
+              data,
+              rawText
             })
-            setError(data.error || 'Failed to create course. Please try again later.')
+            setError(
+              data?.error ||
+              data?.message ||
+              (rawText ? rawText.slice(0, 300) : '') ||
+              (response.ok ? 'Empty response from server' : '') ||
+              `Failed to create course${response.status ? ` (HTTP ${response.status})` : ''}. Please try again later.`
+            )
         }
       }
     } catch (err) {
@@ -247,18 +360,42 @@ export default function CreateCoursePage() {
               </div>
 
               <div>
-                <label htmlFor="thumbnail" className="block text-sm font-medium text-gray-700 mb-2">
-                  Thumbnail URL
-                </label>
-                <input
-                  type="url"
-                  id="thumbnail"
-                  name="thumbnail"
-                  value={formData.thumbnail}
-                  onChange={handleChange}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-blue-500 focus:border-blue-500"
-                  placeholder="https://example.com/image.jpg"
-                />
+                <label className="block text-sm font-medium text-gray-700 mb-2">Thumbnail (PNG/JPG/WebP)</label>
+                {/* Drag & Drop area */}
+                <div
+                  className={`border-2 border-dashed rounded-md p-4 text-center ${isDragging ? 'border-blue-400 bg-blue-50' : 'border-gray-300'}`}
+                  onDragOver={(e) => { e.preventDefault(); setIsDragging(true) }}
+                  onDragLeave={() => setIsDragging(false)}
+                  onDrop={(e) => {
+                    e.preventDefault();
+                    setIsDragging(false)
+                    const file = e.dataTransfer.files?.[0]
+                    if (file) { void handleFileUpload(file) }
+                  }}
+                >
+                  <p className="text-xs text-gray-600">Drag & drop an image here, or click to choose</p>
+                  <input
+                    type="file"
+                    accept="image/png,image/jpeg,image/webp"
+                    onChange={async (e) => {
+                      const inputEl = e.currentTarget as HTMLInputElement
+                      const file = inputEl?.files?.[0]
+                      if (file) {
+                        await handleFileUpload(file)
+                        // Clear file input to allow re-selecting the same file if needed
+                        if (inputEl) inputEl.value = ''
+                      }
+                    }}
+                    className="mt-2 block w-full text-sm text-gray-700 file:mr-3 file:py-2 file:px-3 file:rounded-md file:border file:border-gray-300 file:text-sm file:bg-white file:hover:bg-gray-50"
+                  />
+                  <p className="text-[11px] text-gray-500 mt-2">Max size 5MB. Supported: PNG, JPG, WebP.</p>
+                  {isUploading && (
+                    <div className="text-[11px] text-gray-500 mt-1">Uploading…</div>
+                  )}
+                  {uploadError && (
+                    <div className="text-xs text-red-600 mt-1">{uploadError}</div>
+                  )}
+                </div>
                 {formData.thumbnail && (
                   <div className="mt-2">
                     <img
@@ -273,24 +410,58 @@ export default function CreateCoursePage() {
                 )}
               </div>
 
-              <div>
-                <label htmlFor="price" className="block text-sm font-medium text-gray-700 mb-2">
-                  Course Price (USD)
-                </label>
-                <input
-                  type="number"
-                  id="price"
-                  name="price"
-                  value={formData.price}
-                  onChange={handleChange}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-blue-500 focus:border-blue-500"
-                  placeholder="0.00 (leave empty for free course)"
-                  min="0"
-                  step="0.01"
-                />
-                <p className="text-sm text-gray-500 mt-1">
-                  Leave empty for a free course
-                </p>
+              {/* Pricing */}
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                <div>
+                  <label htmlFor="actualPrice" className="block text-sm font-medium text-gray-700 mb-2">
+                    Actual Price (USD)
+                  </label>
+                  <input
+                    type="number"
+                    id="actualPrice"
+                    name="actualPrice"
+                    value={formData.actualPrice}
+                    onChange={handleChange}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-blue-500 focus:border-blue-500"
+                    placeholder="e.g., 59.99"
+                    min="0"
+                    step="0.01"
+                  />
+                </div>
+                <div>
+                  <label htmlFor="discountPercent" className="block text-sm font-medium text-gray-700 mb-2">
+                    Discount (%)
+                  </label>
+                  <input
+                    type="number"
+                    id="discountPercent"
+                    name="discountPercent"
+                    value={formData.discountPercent}
+                    onChange={handleChange}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-blue-500 focus:border-blue-500"
+                    placeholder="e.g., 80"
+                    min="0"
+                    max="100"
+                    step="1"
+                  />
+                </div>
+                <div>
+                  <label htmlFor="price" className="block text-sm font-medium text-gray-700 mb-2">
+                    Final Price (USD)
+                  </label>
+                  <input
+                    type="number"
+                    id="price"
+                    name="price"
+                    value={formData.price}
+                    onChange={handleChange}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-blue-500 focus:border-blue-500"
+                    placeholder="Auto if actual+discount provided"
+                    min="0"
+                    step="0.01"
+                  />
+                  <p className="text-xs text-gray-500 mt-1">If you enter Actual Price and Discount, Final Price is calculated automatically on save.</p>
+                </div>
               </div>
             </div>
 

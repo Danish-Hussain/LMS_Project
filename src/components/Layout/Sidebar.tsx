@@ -3,7 +3,7 @@
 import { useAuth } from '@/contexts/AuthContext'
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
-import { Home, BookOpen, Users, GraduationCap, BarChart3 } from 'lucide-react'
+import { Home, BookOpen, Users, GraduationCap, BarChart3, Video } from 'lucide-react'
 import { clsx } from 'clsx'
 
 const navigation = [
@@ -15,6 +15,7 @@ const navigation = [
 const adminNavigation = [
   { name: 'Dashboard', href: '/dashboard', icon: Home },
   { name: 'Courses', href: '/courses', icon: BookOpen },
+  { name: 'On-Demand Courses', href: '/on-demand-courses', icon: Video },
   { name: 'Students', href: '/students', icon: Users },
   { name: 'Batches', href: '/batches', icon: GraduationCap },
   { name: 'Analytics', href: '/analytics', icon: BarChart3 },

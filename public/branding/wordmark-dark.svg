@@ -1,0 +1,22 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg width="2600" height="400" viewBox="0 0 2600 400" fill="none" xmlns="http://www.w3.org/2000/svg" role="img" aria-labelledby="title desc">
+  <title id="title">SAP Integration Expert — Dark Wordmark</title>
+  <desc id="desc">Transparent background with the wordmark tuned for dark UI: SAP in brand blue, Integration in light slate, Expert in blue accent.</desc>
+
+  <!-- Styles -->
+  <defs>
+    <style>
+      .word { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Inter, Arial, sans-serif; font-size:180px; letter-spacing:0.2px; }
+      .sap { fill:#0B5EA8; font-weight:800; }          /* brand primary */
+      .integration { fill:#E5E7EB; font-weight:700; }  /* light gray on dark */
+      .expert { fill:#0B84D6; font-weight:800; }       /* brand secondary */
+    </style>
+  </defs>
+
+  <!-- Wordmark -->
+  <text x="80" y="270" class="word">
+    <tspan class="sap">SAP </tspan>
+    <tspan class="integration">Integration </tspan>
+    <tspan class="expert">Expert</tspan>
+  </text>
+</svg>

@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { prisma } from '@/lib/db'
 import { verifyToken } from '@/lib/auth'
+import { Prisma } from '@prisma/client'
 
 export async function GET(request: NextRequest) {
   try {
@@ -44,40 +45,72 @@ export async function GET(request: NextRequest) {
 
     console.log('Where clause:', whereClause)
     
-    const courses = await prisma.course.findMany({
-      where: whereClause,
-      select: {
-        id: true,
-        title: true,
-        description: true,
-        thumbnail: true,
-        price: true,
-        isPublished: true,
-        creatorId: true,
-        creator: {
-          select: {
-            name: true
-          }
-        },
-        sessions: {
-          select: {
-            id: true,
-            title: true,
-            startTime: true,
-            endTime: true,
-            isPublished: true
-          }
-        },
-        _count: {
-          select: {
-            enrollments: true
-          }
+    // Build base select without discountPercent
+    const baseSelect: any = {
+      id: true,
+      title: true,
+      description: true,
+      thumbnail: true,
+      price: true,
+      isPublished: true,
+      creatorId: true,
+      creator: {
+        select: {
+          name: true
         }
       },
-      orderBy: {
-        createdAt: 'desc'
+      sessions: {
+        select: {
+          id: true,
+          title: true,
+          startTime: true,
+          endTime: true,
+          isPublished: true
+        }
+      },
+      _count: {
+        select: {
+          enrollments: true
+        }
       }
-    })
+    }
+
+    const selectWithDiscount: any = { ...baseSelect, discountPercent: true }
+
+    let courses
+    try {
+      // Try selecting discountPercent (works if Prisma Client knows the field)
+      courses = await prisma.course.findMany({
+        where: whereClause,
+        select: selectWithDiscount,
+        orderBy: { createdAt: 'desc' }
+      })
+    } catch (e: any) {
+      const msg = typeof e?.message === 'string' ? e.message : ''
+      const unknownField = msg.includes('Unknown field `discountPercent`')
+      if (!unknownField) throw e
+      console.warn('Prisma client missing discountPercent in select; retrying without the field')
+      const result = await prisma.course.findMany({
+        where: whereClause,
+        select: baseSelect,
+        orderBy: { createdAt: 'desc' }
+      })
+      // Fetch discountPercent via raw SQL for the returned ids
+      const ids = result.map((c: any) => c.id)
+      let discountMap = new Map<string, number>()
+      if (ids.length) {
+        try {
+          const rows = await prisma.$queryRaw<Array<{ id: string; discountPercent: number }>>`
+            SELECT id, discountPercent FROM courses
+            WHERE id IN (${Prisma.join(ids)})
+          `
+          discountMap = new Map(rows.map(r => [r.id, typeof r.discountPercent === 'number' ? r.discountPercent : 0]))
+        } catch (rawErr) {
+          console.warn('Failed to fetch discountPercent via raw SQL, defaulting to 0:', rawErr)
+        }
+      }
+      courses = result.map((c: any) => ({ ...c, discountPercent: discountMap.get(c.id) ?? 0 }))
+    }
 
     console.log('Query results:', { count: courses.length, courses: courses.map(c => ({ id: c.id, title: c.title })) })
 
@@ -108,8 +141,14 @@ export async function POST(request: NextRequest) {
       return NextResponse.json(resp, { status: 401 })
     }
 
-  const user = await verifyToken(token as string)
-  console.log('User verified:', { id: user?.id, role: user?.role })
+  let user
+  try {
+    user = await verifyToken(token as string)
+    console.log('User verified:', { id: user?.id, role: user?.role })
+  } catch (e) {
+    console.warn('Token verification failed in POST /api/courses:', e)
+    return NextResponse.json({ error: 'Session expired. Please log in again' }, { status: 401 })
+  }
 
     if (!user || !user.id) {
       console.log('Invalid user data:', { user })
@@ -169,8 +208,8 @@ export async function POST(request: NextRequest) {
       )
     }
 
-    // Extract and validate all fields
-    const { title, description, thumbnail, price, isPublished = true } = body
+  // Extract and validate all fields
+  const { title, description, thumbnail, price, isPublished = true, discountPercent } = body
 
     // Validate required fields with specific constraints
     if (!title) {
@@ -213,12 +252,23 @@ export async function POST(request: NextRequest) {
         console.error('Sending response (thumbnail type):', resp, 400)
         return NextResponse.json(resp, { status: 400 })
       }
-      try {
-        new URL(thumbnail)
-      } catch (e) {
-        const resp = { error: 'Thumbnail must be a valid URL starting with http:// or https://' }
-        console.error('Sending response (thumbnail url):', resp, 400)
-        return NextResponse.json(resp, { status: 400 })
+      // Only validate URL if a non-empty string is provided
+      const thumb = thumbnail.trim()
+      if (thumb.length > 0) {
+        // Allow app-relative uploads like /uploads/xyz.png
+        const isAppRelative = thumb.startsWith('/')
+        if (!isAppRelative) {
+          try {
+            const parsed = new URL(thumb)
+            if (parsed.protocol !== 'http:' && parsed.protocol !== 'https:') {
+              throw new Error('invalid protocol')
+            }
+          } catch (e) {
+            const resp = { error: 'Thumbnail must be a valid URL starting with http:// or https:// or an app relative path like /uploads/…' }
+            console.error('Sending response (thumbnail url):', resp, 400)
+            return NextResponse.json(resp, { status: 400 })
+          }
+        }
       }
     }
 
@@ -240,13 +290,31 @@ export async function POST(request: NextRequest) {
       validatedPrice = Math.round(numPrice * 100) / 100
     }
 
+    // Validate and normalize discountPercent (optional)
+    let validatedDiscount: number | undefined = undefined
+    if (discountPercent !== undefined && discountPercent !== null && discountPercent !== '') {
+      const dp = Number(discountPercent)
+      if (isNaN(dp)) {
+        const resp = { error: 'Discount must be a valid number' }
+        console.error('Sending response (discount NaN):', resp, 400)
+        return NextResponse.json(resp, { status: 400 })
+      }
+      if (dp < 0 || dp > 100) {
+        const resp = { error: 'Discount must be between 0 and 100' }
+        console.error('Sending response (discount bounds):', resp, 400)
+        return NextResponse.json(resp, { status: 400 })
+      }
+      validatedDiscount = Math.round(dp * 100) / 100
+    }
+
     // Prepare course data with validated fields
     const courseData = {
       title: trimmedTitle,
-      description: description?.trim() || null,
-      thumbnail: thumbnail || null,
+  description: (typeof description === 'string' && description.trim().length > 0) ? description.trim() : null,
+  thumbnail: (typeof thumbnail === 'string' && thumbnail.trim().length > 0) ? thumbnail.trim() : null,
       price: validatedPrice,
       isPublished: Boolean(isPublished),
+      ...(validatedDiscount !== undefined ? { discountPercent: validatedDiscount } : {}),
       creatorId: user.id
     }
 
@@ -259,7 +327,7 @@ export async function POST(request: NextRequest) {
         creatorId: user.id
       })
 
-      // Use a transaction to ensure data consistency
+    // Use a transaction to ensure data consistency
   const course = await prisma.$transaction(async (tx) => {
         // Double check user exists within transaction
         const userExists = await tx.user.findUnique({
@@ -271,25 +339,50 @@ export async function POST(request: NextRequest) {
           throw new Error('Creator no longer exists in database')
         }
 
-        // Create the course
-        return await tx.course.create({
-          data: courseData,
-          include: {
-            creator: {
-              select: {
-                name: true,
-                email: true
-              }
-            },
-            sessions: true,
-            _count: {
-              select: {
-                enrollments: true,
-                sessions: true
-              }
+        // Create the course with a fallback for older Prisma Client (without discountPercent)
+        const includeBlock = {
+          creator: {
+            select: {
+              name: true,
+              email: true
+            }
+          },
+          sessions: true,
+          _count: {
+            select: {
+              enrollments: true,
+              sessions: true
             }
           }
-        })
+        }
+
+        try {
+          return await tx.course.create({
+            data: courseData,
+            include: includeBlock
+          })
+        } catch (e: any) {
+          const msg = typeof e?.message === 'string' ? e.message : ''
+          const looksLikeUnknownArg = msg.includes('Unknown argument `discountPercent`')
+          if (!looksLikeUnknownArg) throw e
+
+          // Prisma Client not yet regenerated: retry without discountPercent and set it via raw SQL
+          const { discountPercent: _dp, ...fallbackData } = courseData as any
+          const created = await tx.course.create({
+            data: fallbackData,
+            include: includeBlock
+          })
+          if (validatedDiscount !== undefined) {
+            try {
+              await tx.$executeRaw`UPDATE courses SET discountPercent = ${validatedDiscount} WHERE id = ${created.id}`
+              // Reflect discount in the returned object
+              ;(created as any).discountPercent = validatedDiscount
+            } catch (rawErr) {
+              console.warn('Failed to set discountPercent via raw SQL, proceeding without it:', rawErr)
+            }
+          }
+          return created
+        }
       })
 
       console.log('Course created successfully:', {
@@ -299,11 +392,15 @@ export async function POST(request: NextRequest) {
         isPublished: course.isPublished
       })
 
-      return NextResponse.json({
-        success: true,
-        data: course,
-        message: 'Course created successfully'
-      })
+      return NextResponse.json(
+        {
+          success: true,
+          data: course,
+          id: course.id,
+          message: 'Course created successfully'
+        },
+        { status: 201, headers: { Location: `/courses/${course.id}` } }
+      )
 
     } catch (dbError) {
       console.error('Database error during course creation:', {

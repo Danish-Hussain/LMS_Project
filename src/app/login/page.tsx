@@ -4,7 +4,8 @@ import { useState } from 'react'
 import { useAuth } from '@/contexts/AuthContext'
 import { useRouter } from 'next/navigation'
 import Link from 'next/link'
-import { BookOpen, Eye, EyeOff } from 'lucide-react'
+import { Eye, EyeOff } from 'lucide-react'
+import Image from 'next/image'
 
 export default function LoginPage() {
   const [email, setEmail] = useState('')
@@ -40,7 +41,7 @@ export default function LoginPage() {
       <div className="sm:mx-auto sm:w-full sm:max-w-md">
         <div className="flex justify-center">
           <div className="p-3 rounded-full" style={{ background: 'rgba(37, 99, 235, 0.1)' }}>
-            <BookOpen className="h-10 w-10" style={{ color: 'var(--accent)' }} />
+            <Image src="/icon.png?v=4" alt="Brand icon" width={40} height={40} priority unoptimized />
           </div>
         </div>
         <h2 className="mt-6 text-center text-3xl font-extrabold" style={{ color: 'var(--foreground)' }}>

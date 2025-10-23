@@ -74,7 +74,7 @@ export default function ContactModal({ open, onClose, defaultName, defaultEmail 
           <div>
             <label className="block text-sm font-medium mb-1" style={{ color: 'var(--session-text)' }}>Message</label>
             <textarea
-              placeholder="Enter your message"
+              placeholder="Tell us how we can help — whether it’s for queries, support, mentorship, or collaboration..."
               value={message}
               onChange={(e) => setMessage(e.target.value)}
               className="mt-1 block w-full rounded-lg px-3 py-2 focus:ring-2 focus:ring-blue-400 outline-none resize-none"

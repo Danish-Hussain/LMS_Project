@@ -54,6 +54,14 @@ type HandlerContext<T extends Record<string, string> = Record<string, string>> =
 export async function GET(req: NextRequest, context: HandlerContext<{ id: string }>) {
   try {
     const token = req.cookies.get('auth-token')?.value
+    const isPublic = (() => {
+      try {
+        const p = req.nextUrl.searchParams.get('public')
+        return p === '1' || p === 'true'
+      } catch {
+        return false
+      }
+    })()
     const params = (await context.params) as { id: string }
     const courseId = params.id
     
@@ -65,7 +73,102 @@ export async function GET(req: NextRequest, context: HandlerContext<{ id: string
       )
     }
 
-    // Check authentication
+    // Allow public preview when explicitly requested via query parameter
+    if (!token && isPublic) {
+      // Fetch minimal, published-only course data for guests
+      const course = await prisma.course.findUnique({
+        where: { id: courseId },
+        include: {
+          creator: { select: { id: true, name: true } },
+          sessions: {
+            where: { courseId },
+            orderBy: { order: 'asc' },
+            select: {
+              id: true,
+              title: true,
+              videoUrl: true,
+              order: true,
+              isPublished: true,
+              // Rely on prisma schema where `isPreview` exists
+              isPreview: true as any
+            } as any
+          },
+          batches: {
+            where: { isActive: true },
+            select: {
+              id: true,
+              name: true,
+              isActive: true,
+              _count: { select: { students: true } }
+            }
+          },
+          _count: { select: { enrollments: true } }
+        }
+      }) as any
+
+      if (!course) {
+        return NextResponse.json({ error: 'Course not found' }, { status: 404 })
+      }
+
+      if (!course.isPublished) {
+        // Do not expose unpublished courses publicly
+        return NextResponse.json({ error: 'Course not available' }, { status: 403 })
+      }
+
+      // Ensure discountPercent is available (fallback to raw SQL if Prisma Client doesn't know the field)
+      let discountPercent = 0
+      try {
+        const val = (course as any)?.discountPercent
+        if (typeof val === 'number' && isFinite(val)) {
+          discountPercent = Math.max(0, Math.min(100, val))
+        } else {
+          const rows = await prisma.$queryRaw<Array<{ discountPercent: number | null }>>`SELECT discountPercent FROM courses WHERE id = ${courseId} LIMIT 1`
+          const raw = rows?.[0]?.discountPercent
+          discountPercent = typeof raw === 'number' && isFinite(raw) ? Math.max(0, Math.min(100, raw)) : 0
+        }
+      } catch (e) {
+        // default to 0 if any error
+        discountPercent = 0
+      }
+
+      // Filter sessions: expose title/order, and only expose videoUrl if explicitly marked preview
+      const safeSessions = (course.sessions || []).map((s: any) => {
+        const isPreview = Boolean((s as any).isPreview)
+        const isVimeo = typeof s.videoUrl === 'string' && /vimeo\.com/.test(s.videoUrl)
+        return {
+          id: s.id,
+          title: s.title,
+          order: s.order,
+          isPublished: s.isPublished,
+          // only keep videoUrl if preview and supported provider
+          videoUrl: isPreview && isVimeo ? s.videoUrl : null,
+          isPreview
+        }
+      })
+
+      const payload = {
+        course: {
+          id: course.id,
+          title: course.title,
+          description: course.description,
+          thumbnail: course.thumbnail,
+          price: course.price,
+          discountPercent,
+          isPublished: true,
+          creator: course.creator,
+          _count: course._count,
+          sessions: safeSessions,
+          batches: course.batches
+        },
+        isEnrolled: false,
+        enrolledBatchIds: [],
+        enrolledRecordedCourseIds: []
+      }
+
+      return NextResponse.json(payload)
+    }
+
+    // Check authentication for non-public access
     if (!token) {
       console.error('No auth token in request');
       return NextResponse.json(
@@ -259,6 +362,20 @@ export async function GET(req: NextRequest, context: HandlerContext<{ id: string
       )
     }
 
+    // Ensure discountPercent present on course (fallback via raw SQL)
+    try {
+      const val = (course as any)?.discountPercent
+      if (!(typeof val === 'number' && isFinite(val))) {
+        const rows = await prisma.$queryRaw<Array<{ discountPercent: number | null }>>`SELECT discountPercent FROM courses WHERE id = ${course.id} LIMIT 1`
+        const raw = rows?.[0]?.discountPercent
+        ;(course as any).discountPercent = typeof raw === 'number' && isFinite(raw) ? Math.max(0, Math.min(100, raw)) : 0
+      } else {
+        ;(course as any).discountPercent = Math.max(0, Math.min(100, val))
+      }
+    } catch (e) {
+      ;(course as any).discountPercent = 0
+    }
+
     // Get enrollment status
     const enrollments = await prisma.enrollment.findMany({
       where: {
@@ -272,6 +389,21 @@ export async function GET(req: NextRequest, context: HandlerContext<{ id: string
 
     const isEnrolled = enrollments.length > 0
     const enrolledBatchIds = enrollments.map(e => e.batchId).filter((id): id is string => id !== null)
+
+    // Get recorded course enrollments
+    const recordedCourseEnrollments: any = await (prisma as any).recordedCourseEnrollment.findMany({
+      where: {
+        userId: user.id,
+        recordedCourse: {
+          courseId: course.id
+        }
+      },
+      select: {
+        recordedCourseId: true
+      }
+    })
+
+    const enrolledRecordedCourseIds = recordedCourseEnrollments.map((e: any) => e.recordedCourseId)
 
 
     // Get progress for each session if user is enrolled
@@ -303,7 +435,8 @@ export async function GET(req: NextRequest, context: HandlerContext<{ id: string
     return NextResponse.json({
       course: courseWithProgress,
       isEnrolled,
-      enrolledBatchIds
+      enrolledBatchIds,
+      enrolledRecordedCourseIds
     })
 
   } catch (error) {
@@ -343,9 +476,17 @@ export async function PUT(request: NextRequest, context: HandlerContext<{ id: st
       description?: string
       thumbnail?: string | null
       isPublished?: boolean
+      price?: number | string | null
+      discountPercent?: number | string | null
     }
 
     const { title, description, thumbnail, isPublished } = body
+    const price = body.price !== undefined && body.price !== null && body.price !== ''
+      ? Number(body.price)
+      : undefined
+    const discountPercent = body.discountPercent !== undefined && body.discountPercent !== null && body.discountPercent !== ''
+      ? Math.max(0, Math.min(100, Number(body.discountPercent)))
+      : undefined
 
     // Validate thumbnail URL if provided
     if (thumbnail !== undefined && thumbnail !== null) {
@@ -355,13 +496,22 @@ export async function PUT(request: NextRequest, context: HandlerContext<{ id: st
           { status: 400 }
         )
       }
-      try {
-        new URL(thumbnail)
-      } catch (e) {
-        return NextResponse.json(
-          { error: 'Thumbnail must be a valid URL starting with http:// or https://' },
-          { status: 400 }
-        )
+      const thumb = thumbnail.trim()
+      if (thumb.length > 0) {
+        const isAppRelative = thumb.startsWith('/')
+        if (!isAppRelative) {
+          try {
+            const parsed = new URL(thumb)
+            if (parsed.protocol !== 'http:' && parsed.protocol !== 'https:') {
+              throw new Error('invalid protocol')
+            }
+          } catch (e) {
+            return NextResponse.json(
+              { error: 'Thumbnail must be a valid URL starting with http:// or https:// or an app relative path like /uploads/…' },
+              { status: 400 }
+            )
+          }
+        }
       }
     }
 
@@ -390,7 +540,9 @@ export async function PUT(request: NextRequest, context: HandlerContext<{ id: st
         title,
         description,
         thumbnail,
-        isPublished
+        isPublished,
+        ...(price !== undefined ? { price } : {}),
+        ...(discountPercent !== undefined ? { discountPercent } : {}),
       },
       include: {
         creator: {

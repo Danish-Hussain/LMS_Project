@@ -25,6 +25,11 @@ body {
   --session-text: #18181b;
   --session-subtext: #6b7280;
   --accent: #2563eb;
+  /* Brand palette */
+  --brand-primary: #0B5EA8;   /* Dark brand blue (SAP) */
+  --brand-secondary: #0B84D6; /* Lighter brand blue (Integration/Expert) */
+  /* Wordmark specific */
+  --brand-integration: #000000; /* Integration Expert in light mode */
 }
 
 html.dark {
@@ -40,6 +45,11 @@ html.dark {
   --session-text: #f3f4f6;
   --session-subtext: #a1a1aa;
   --accent: #60a5fa;
+  /* Brand palette stays consistent in dark mode */
+  --brand-primary: #0B5EA8;
+  --brand-secondary: #0B84D6;
+  /* Wordmark specific */
+  --brand-integration: #f3f4f6; /* readable on dark background */
 }
 
 /* Form styles */
