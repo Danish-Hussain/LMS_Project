@@ -17,6 +17,8 @@ function CreateRecordedCourseContent() {
   const courseId = searchParams.get('courseId')
   const [formData, setFormData] = useState({
     price: '',
+    actualPrice: '',
+    discountPercent: '',
   })
   const [isSubmitting, setIsSubmitting] = useState(false)
   const [formError, setFormError] = useState('')
@@ -95,6 +97,11 @@ function CreateRecordedCourseContent() {
     try {
       setIsSubmitting(true)
 
+      // Compute final price: prefer actualPrice & discount if provided
+      const ap = formData.actualPrice ? parseFloat(formData.actualPrice) : null
+      const dp = formData.discountPercent ? Math.max(0, Math.min(100, parseFloat(formData.discountPercent))) : null
+      const finalPrice = (ap != null && dp != null) ? Math.round((ap * (1 - dp / 100)) * 100) / 100 : (formData.price ? parseFloat(formData.price) : 0)
+
       const response = await fetch('/api/recorded-courses', {
         method: 'POST',
         headers: {
@@ -102,7 +109,8 @@ function CreateRecordedCourseContent() {
         },
         body: JSON.stringify({
           courseId,
-          price: formData.price ? parseFloat(formData.price) : 0,
+          price: finalPrice,
+          discountPercent: dp != null ? dp : undefined,
         }),
         credentials: 'same-origin',
       })
@@ -164,27 +172,61 @@ function CreateRecordedCourseContent() {
 
             {/* Name/Description not required for on-demand creation; auto-generated server-side */}
 
-            {/* Price */}
-            <div>
-              <label htmlFor="price" className="block text-sm font-medium text-gray-900 mb-2">
-                Course Price (USD)
-              </label>
-              <div className="relative">
-                <span className="absolute left-4 top-2 text-gray-500">$</span>
+            {/* Pricing */}
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+              <div>
+                <label htmlFor="actualPrice" className="block text-sm font-medium text-gray-900 mb-2">Actual Price (USD)</label>
+                <div className="relative">
+                  <span className="absolute left-4 top-2 text-gray-500">$</span>
+                  <input
+                    type="number"
+                    id="actualPrice"
+                    name="actualPrice"
+                    value={formData.actualPrice}
+                    onChange={handleChange}
+                    placeholder="0.00"
+                    min="0"
+                    step="0.01"
+                    className="w-full pl-8 pr-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none transition"
+                    disabled={isSubmitting}
+                  />
+                </div>
+              </div>
+              <div>
+                <label htmlFor="discountPercent" className="block text-sm font-medium text-gray-900 mb-2">Discount (%)</label>
                 <input
                   type="number"
-                  id="price"
-                  name="price"
-                  value={formData.price}
+                  id="discountPercent"
+                  name="discountPercent"
+                  value={formData.discountPercent}
                   onChange={handleChange}
-                  placeholder="0.00"
+                  placeholder="0"
                   min="0"
-                  step="0.01"
-                  className="w-full pl-8 pr-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none transition"
+                  max="100"
+                  step="1"
+                  className="w-full pr-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none transition"
                   disabled={isSubmitting}
                 />
               </div>
-              <p className="mt-1 text-sm text-gray-500">Set to 0 for free courses</p>
+              <div>
+                <label htmlFor="price" className="block text-sm font-medium text-gray-900 mb-2">Final Price (USD)</label>
+                <div className="relative">
+                  <span className="absolute left-4 top-2 text-gray-500">$</span>
+                  <input
+                    type="number"
+                    id="price"
+                    name="price"
+                    value={formData.price}
+                    onChange={handleChange}
+                    placeholder="0.00"
+                    min="0"
+                    step="0.01"
+                    className="w-full pl-8 pr-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none transition"
+                    disabled={isSubmitting}
+                  />
+                </div>
+                <p className="mt-1 text-sm text-gray-500">If you fill Actual + Discount, Final Price is auto-calculated on save.</p>
+              </div>
             </div>
 
             {/* Buttons */}

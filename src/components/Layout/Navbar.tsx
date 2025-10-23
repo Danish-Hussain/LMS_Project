@@ -92,7 +92,6 @@ export default function Navbar() {
         <div className="flex flex-row items-center justify-between h-14">
           {/* Logo */}
           <Link href={user ? "/dashboard" : "/"} className="flex-shrink-0 flex items-center h-14" style={{ marginLeft: 0, paddingLeft: 0 }} aria-label="SAP Integration Expert Home">
-            <img src="/icon.png?v=4" alt="" aria-hidden="true" width={30} height={30} className="mr-1 self-center" style={{ display: 'block' }} />
             <svg width={320} height={36} viewBox="0 50 1100 160" preserveAspectRatio="xMinYMid meet" fill="none" xmlns="http://www.w3.org/2000/svg" role="img" aria-labelledby="title desc" className="self-center translate-y-[1px]" style={{ filter: 'drop-shadow(0 1px 4px rgba(0,0,0,0.1))', display: 'block' }}>
               <title id="title">SAP Integration Expert — Wordmark</title>
               <desc id="desc">SAP in brand blue; Integration Expert in black (light) or light (dark). Logo shown before the wordmark.</desc>

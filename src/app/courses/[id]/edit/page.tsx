@@ -17,6 +17,7 @@ export default function EditCoursePage() {
     description: '',
     thumbnail: '',
     price: '',
+    discountPercent: '',
     isPublished: false
   })
   const [isSubmitting, setIsSubmitting] = useState(false)
@@ -37,6 +38,7 @@ export default function EditCoursePage() {
           description: course.description || '',
           thumbnail: course.thumbnail || '',
           price: course.price != null ? String(course.price) : '',
+          discountPercent: course.discountPercent != null ? String(course.discountPercent) : '',
           isPublished: !!course.isPublished
         })
       }
@@ -63,6 +65,7 @@ export default function EditCoursePage() {
           description: formData.description,
           thumbnail: formData.thumbnail,
           price: formData.price,
+          discountPercent: formData.discountPercent,
           isPublished: formData.isPublished
         })
       })
@@ -117,6 +120,11 @@ export default function EditCoursePage() {
           <div className="mb-4">
             <label className="block text-sm font-medium mb-2">Price</label>
             <input name="price" value={formData.price} onChange={handleChange} className="w-full px-3 py-2 border rounded-md" />
+          </div>
+
+          <div className="mb-4">
+            <label className="block text-sm font-medium mb-2">Discount (%)</label>
+            <input name="discountPercent" value={formData.discountPercent} onChange={handleChange} type="number" min={0} max={100} className="w-full px-3 py-2 border rounded-md" />
           </div>
 
           <div className="mb-4 flex items-center">

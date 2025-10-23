@@ -258,12 +258,6 @@ export default function BatchDetailPage() {
                   <div className="text-center py-8">
                     <h3 className="text-lg font-medium text-gray-900 mb-2">No sessions yet</h3>
                     <p className="text-gray-600 mb-4">Add video sessions to this batch.</p>
-                    <Link
-                      href={`/batches/${batchId}/sessions`}
-                      className="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg font-semibold transition-colors"
-                    >
-                      Manage Sessions
-                    </Link>
                   </div>
                 ) : (
                   <div className="space-y-3">

@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { PrismaClient } from '@prisma/client'
+import { PrismaClient, Prisma } from '@prisma/client'
 import { verifyToken } from '@/lib/auth'
 
 const prisma = new PrismaClient()
@@ -7,7 +7,7 @@ const prisma = new PrismaClient()
 export async function POST(request: NextRequest) {
   try {
     const body = await request.json()
-    const { courseId, courseName, description, price } = body
+    const { courseId, courseName, description, price, discountPercent } = body
 
     // Validate required fields
     if (!courseId) {
@@ -33,18 +33,61 @@ export async function POST(request: NextRequest) {
       if (!finalName) finalName = 'Self‑paced Course'
     }
 
-    // Create recorded course
-    const recordedCourse = await prisma.recordedCourse.create({
-      data: {
-        courseId,
-        name: finalName,
-        description: (description ?? null) as string | null,
-        price: price ? parseFloat(price) : 0,
-        isPublished: true,
-      },
-    })
+    // Validate and normalize input
+    const normalizedPrice = (price !== undefined && price !== null && String(price) !== '')
+      ? Math.max(0, Math.round(Number(price) * 100) / 100)
+      : 0
 
-    return NextResponse.json(recordedCourse, { status: 201 })
+    let normalizedDiscount: number | undefined = undefined
+    if (discountPercent !== undefined && discountPercent !== null && String(discountPercent) !== '') {
+      const dp = Number(discountPercent)
+      if (Number.isNaN(dp)) {
+        return NextResponse.json({ error: 'Discount must be a valid number' }, { status: 400 })
+      }
+      if (dp < 0 || dp > 100) {
+        return NextResponse.json({ error: 'Discount must be between 0 and 100' }, { status: 400 })
+      }
+      normalizedDiscount = Math.round(dp * 100) / 100
+    }
+
+    // Create recorded course with fallback if Prisma Client doesn't know discountPercent yet
+    let recordedCourse
+    try {
+      recordedCourse = await prisma.recordedCourse.create({
+        data: {
+          courseId,
+          name: finalName,
+          description: (description ?? null) as string | null,
+          price: normalizedPrice,
+          isPublished: true,
+          ...(normalizedDiscount !== undefined ? { discountPercent: normalizedDiscount } : {}),
+        },
+      })
+    } catch (e: any) {
+      const msg = typeof e?.message === 'string' ? e.message : ''
+      const unknownArg = msg.includes('Unknown argument `discountPercent`')
+      if (!unknownArg) throw e
+      // Retry without discount and patch via raw SQL
+      recordedCourse = await prisma.recordedCourse.create({
+        data: {
+          courseId,
+          name: finalName,
+          description: (description ?? null) as string | null,
+          price: normalizedPrice,
+          isPublished: true,
+        },
+      })
+      if (normalizedDiscount !== undefined) {
+        try {
+          await prisma.$executeRaw`UPDATE recorded_courses SET discountPercent = ${normalizedDiscount} WHERE id = ${recordedCourse.id}`
+          ;(recordedCourse as any).discountPercent = normalizedDiscount
+        } catch (rawErr) {
+          console.warn('Failed to set recorded discount via raw SQL:', rawErr)
+        }
+      }
+    }
+
+  return NextResponse.json({ success: true, data: recordedCourse, id: recordedCourse.id }, { status: 201, headers: { Location: `/recorded-courses/${recordedCourse.id}` } })
   } catch (error) {
     console.error('Error creating recorded course:', error)
     return NextResponse.json(
@@ -77,22 +120,71 @@ export async function GET(request: NextRequest) {
       whereClause.isPublished = true
     }
 
-    const recordedCourses = await prisma.recordedCourse.findMany({
-      where: whereClause,
-      include: {
-        course: {
-          select: {
-            id: true,
-            title: true,
-            thumbnail: true,
-          },
+    // Build a safe include block
+    const includeBlock: any = {
+      course: {
+        select: {
+          id: true,
+          title: true,
+          thumbnail: true,
         },
       },
-      orderBy: {
-        createdAt: 'desc',
-      },
-    })
-    
+    }
+
+    // Try to include discountPercent directly; if Prisma Client is outdated,
+    // retry without it and then fetch via raw SQL.
+    let recordedCourses: any[]
+    try {
+      recordedCourses = await prisma.recordedCourse.findMany({
+        where: whereClause,
+        orderBy: { createdAt: 'desc' },
+        select: {
+          id: true,
+          name: true,
+          description: true,
+          price: true,
+          isPublished: true,
+          createdAt: true,
+          courseId: true,
+          discountPercent: true,
+          course: includeBlock.course,
+        } as any,
+      })
+    } catch (e: any) {
+      const msg = typeof e?.message === 'string' ? e.message : ''
+      const unknownField = msg.includes('Unknown field `discountPercent`')
+      if (!unknownField) throw e
+      // Retry without discountPercent and fetch it via raw SQL
+      const base = await prisma.recordedCourse.findMany({
+        where: whereClause,
+        orderBy: { createdAt: 'desc' },
+        select: {
+          id: true,
+          name: true,
+          description: true,
+          price: true,
+          isPublished: true,
+          createdAt: true,
+          courseId: true,
+          course: includeBlock.course,
+        } as any,
+      })
+      const ids = base.map((c: any) => c.id)
+      let dmap = new Map<string, number>()
+      if (ids.length) {
+        try {
+          const rows = await prisma.$queryRaw<Array<{ id: string; discountPercent: number | null }>>`
+            SELECT id, discountPercent FROM recorded_courses
+            WHERE id IN (${Prisma.join(ids)})
+          `
+          dmap = new Map(rows.map(r => [r.id, typeof r.discountPercent === 'number' ? r.discountPercent : 0]))
+        } catch (rawErr) {
+          console.warn('Failed to fetch recorded discountPercent via raw SQL:', rawErr)
+        }
+      }
+      recordedCourses = base.map((c: any) => ({ ...c, discountPercent: dmap.get(c.id) ?? 0 }))
+    }
+
     return NextResponse.json(recordedCourses)
   } catch (error) {
     console.error('Error fetching recorded courses:', error)

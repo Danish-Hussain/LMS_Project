@@ -32,6 +32,7 @@ model Course {
   description     String?
   thumbnail       String?
   price           Float?
+  discountPercent Float             @default(0)
   isPublished     Boolean           @default(false)
   createdAt       DateTime          @default(now())
   updatedAt       DateTime          @updatedAt
@@ -106,6 +107,7 @@ model RecordedCourse {
   name        String
   description String?
   price       Float     @default(0)
+  discountPercent Float  @default(0)
   isPublished Boolean   @default(false)
   createdAt   DateTime  @default(now())
   updatedAt   DateTime  @updatedAt

@@ -97,9 +97,25 @@ function CourseContent({
   const [descExpanded, setDescExpanded] = useState(false)
   const [showPreviewModal, setShowPreviewModal] = useState(false)
   const [selectedPreview, setSelectedPreview] = useState<{ id: string; title: string; videoUrl: string } | null>(null)
+  // Pricing: localize USD price to INR for users in India
+  const [currency, setCurrency] = useState<'USD' | 'INR'>('USD')
+  const [usdToInr, setUsdToInr] = useState<number | null>(null)
+  const [loadingPricing, setLoadingPricing] = useState(false)
 
   // Lightweight trailer player (CSR only)
   const ReactPlayer = useMemo(() => dynamic(() => import('react-player'), { ssr: false }), [])
+  const computePriceParts = (usd?: number | null, d?: number | null) => {
+    const price = typeof usd === 'number' ? usd : null
+    const pct = typeof d === 'number' ? Math.max(0, Math.min(100, d)) : 0
+    if (!price || price <= 0) {
+      return { label: 'Free', original: null as string | null, percent: 0 }
+    }
+    const label = formatLocalizedPrice(price)
+    if (!pct) return { label, original: null as string | null, percent: 0 }
+    const originalUSD = price / (1 - pct / 100)
+    const original = formatLocalizedPrice(originalUSD)
+    return { label, original, percent: Math.round(pct) }
+  }
 
   // Type guard: section object may or may not embed sessions
   const hasSessionsArray = (obj: any): obj is { sessions: Array<{ id: string; title: string; order: number; sectionId?: string | null; videoUrl?: string | null }> } => {
@@ -148,9 +164,19 @@ function CourseContent({
     () => (previewSections?.reduce((sum, s) => sum + ((hasSessionsArray(s) ? s.sessions.length : 0)), 0) || 0),
     [previewSections]
   )
-  const formatPrice = (p?: number | null) => {
+  // Format price based on detected currency (default USD)
+  const formatLocalizedPrice = (p?: number | null) => {
     if (!p || p <= 0) return 'Free'
-    try { return `$${p.toFixed(2)}` } catch { return `$${p}` }
+    if (currency === 'INR') {
+      const rate = usdToInr || 83 // sensible fallback
+      const inr = p * rate
+      try {
+        return new Intl.NumberFormat('en-IN', { style: 'currency', currency: 'INR', maximumFractionDigits: 0 }).format(inr)
+      } catch {
+        return `₹${Math.round(inr).toLocaleString('en-IN')}`
+      }
+    }
+    try { return new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD' }).format(p) } catch { return `$${p}` }
   }
 
   // fetch sections for the enrolled batch when available
@@ -195,6 +221,40 @@ function CourseContent({
     }
     fetchRecordedCourseSections()
   }, [hasRecordedCourseEnrollment, enrolledRecordedCourseIds])
+
+  // Detect user location and exchange rate (client-side)
+  useEffect(() => {
+    const detectPricing = async () => {
+      try {
+        setLoadingPricing(true)
+        const geoRes = await fetch('https://ipapi.co/json/')
+        if (geoRes.ok) {
+          const geo = await geoRes.json().catch(() => null)
+          if (geo && (geo.country_code === 'IN' || geo.country === 'India')) {
+            setCurrency('INR')
+            // Fetch USD->INR rate only if we need INR
+            try {
+              const rateRes = await fetch('https://api.exchangerate.host/latest?base=USD&symbols=INR')
+              if (rateRes.ok) {
+                const data = await rateRes.json().catch(() => null)
+                const r = data?.rates?.INR
+                if (typeof r === 'number' && r > 0) setUsdToInr(r)
+              }
+            } catch (_) {
+              // ignore, fallback in formatter
+            }
+          } else {
+            setCurrency('USD')
+          }
+        }
+      } catch (_) {
+        // Ignore errors; default USD
+      } finally {
+        setLoadingPricing(false)
+      }
+    }
+    detectPricing()
+  }, [])
 
   // Fetch recorded courses for this course
   useEffect(() => {
@@ -333,38 +393,40 @@ function CourseContent({
           </li>
         </ol>
       </nav>
-      {/* Header: title + description + counts */}
-      <div className="max-w-[1920px] mx-auto px-4 sm:px-6 pt-6">
-        <div className="rounded-lg shadow-md p-6 mb-6" style={{ background: 'var(--section-bg)', border: '1px solid var(--section-border)' }}>
-          <h1 className="text-2xl sm:text-3xl font-bold mb-2" style={{ color: 'var(--foreground)' }}>{course.title}</h1>
-          {course.description && (
-            <>
-              <p
-                className="text-sm sm:text-base mb-2"
-                style={{
-                  color: 'var(--session-text)',
-                  display: descExpanded ? undefined : '-webkit-box',
-                  WebkitLineClamp: descExpanded ? (undefined as any) : 3,
-                  WebkitBoxOrient: descExpanded ? (undefined as any) : 'vertical',
-                  overflow: descExpanded ? undefined : 'hidden'
-                }}
-              >
-                {shortDescription}
-              </p>
-              {course.description.length > 220 && (
-                <button
-                  type="button"
-                  className="text-blue-600 hover:text-blue-700 text-sm font-semibold mb-2"
-                  onClick={() => setDescExpanded((v) => !v)}
+      {/* Header: title + description + counts (hidden for enrolled students while watching) */}
+      {(!canAccess || isAdmin) && (
+        <div className="max-w-[1920px] mx-auto px-4 sm:px-6 pt-6">
+          <div className="rounded-lg shadow-md p-6 mb-6" style={{ background: 'var(--section-bg)', border: '1px solid var(--section-border)' }}>
+            <h1 className="text-2xl sm:text-3xl font-bold mb-2" style={{ color: 'var(--foreground)' }}>{course.title}</h1>
+            {course.description && (
+              <>
+                <p
+                  className="text-sm sm:text-base mb-2"
+                  style={{
+                    color: 'var(--session-text)',
+                    display: descExpanded ? undefined : '-webkit-box',
+                    WebkitLineClamp: descExpanded ? (undefined as any) : 3,
+                    WebkitBoxOrient: descExpanded ? (undefined as any) : 'vertical',
+                    overflow: descExpanded ? undefined : 'hidden'
+                  }}
                 >
-                  {descExpanded ? 'Show less' : 'Read more'}
-                </button>
-              )}
-            </>
-          )}
-          {/* Sections/sessions counts and "What you'll learn" intentionally removed for a cleaner header */}
+                  {shortDescription}
+                </p>
+                {course.description.length > 220 && (
+                  <button
+                    type="button"
+                    className="text-blue-600 hover:text-blue-700 text-sm font-semibold mb-2"
+                    onClick={() => setDescExpanded((v) => !v)}
+                  >
+                    {descExpanded ? 'Show less' : 'Read more'}
+                  </button>
+                )}
+              </>
+            )}
+            {/* Sections/sessions counts and "What you'll learn" intentionally removed for a cleaner header */}
+          </div>
         </div>
-      </div>
+      )}
 
       {/* Main Content */}
       <div className="max-w-[1920px] mx-auto px-4 sm:px-6 py-6">
@@ -614,9 +676,20 @@ function CourseContent({
               {/* Preview Tile - 70% width on large screens (left) */}
               <div className="lg:col-span-7 rounded-lg shadow-md p-6" style={{ background: 'var(--section-bg)', border: '1px solid var(--section-border)' }}>
                 <h3 className="text-lg font-semibold mb-2" style={{ color: 'var(--foreground)' }}>Course Content Preview</h3>
-                <p className="text-xs mb-4" style={{ color: 'var(--session-subtext)' }}>
-                  {previewSections.length} sections • {previewSections.reduce((sum, s) => sum + (s.sessions?.length || 0), 0)} sessions
-                </p>
+                <div className="text-xs mb-4 flex items-center gap-4" style={{ color: 'var(--session-subtext)' }}>
+                  <span className="inline-flex items-center gap-1">
+                    <Layers className="h-3.5 w-3.5" aria-hidden />
+                    <span>
+                      <span className="font-semibold text-blue-600">{previewSectionsCount}</span> {previewSectionsCount === 1 ? 'section' : 'sections'}
+                    </span>
+                  </span>
+                  <span className="inline-flex items-center gap-1">
+                    <Play className="h-3.5 w-3.5" aria-hidden />
+                    <span>
+                      <span className="font-semibold text-blue-600">{previewSessionsCount}</span> {previewSessionsCount === 1 ? 'session' : 'sessions'}
+                    </span>
+                  </span>
+                </div>
                 {loadingPreview ? (
                   <div className="text-sm text-gray-500">Loading content…</div>
                 ) : previewSections.length === 0 ? (
@@ -650,7 +723,7 @@ function CourseContent({
                                   }}
                                   title={clickable ? 'Play preview' : undefined}
                                 >
-                                  <span>• {sess.title}</span>
+                                  <span>{sess.title}</span>
                                   {isPreview && isVimeo && (
                                     <span className="inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-semibold bg-blue-100 text-blue-700">
                                       Preview
@@ -695,7 +768,7 @@ function CourseContent({
                     </div>
                   </div>
                 </div>
-                <h2 className="text-xl font-semibold mb-4" style={{ color: 'var(--foreground)' }}>Enroll in This Course</h2>
+                {/* Removed main course price ribbon per request */}
                 <p className="mb-6" style={{ color: 'var(--session-subtext)' }}>Choose how you'd like to learn this course.</p>
 
                 {/* Live Batch Enrollment */}
@@ -767,20 +840,48 @@ function CourseContent({
                               <Users className="h-4 w-4" />
                               <span>{batch._count.students} students enrolled</span>
                             </div>
+                            {/* Key benefits for live sessions */}
+                            <ul className="mt-2 text-xs space-y-1" style={{ color: 'var(--session-subtext)' }}>
+                              <li className="flex items-center gap-2"><CheckCircle className="h-4 w-4 text-green-600" /> Live interactive classes</li>
+                              <li className="flex items-center gap-2"><CheckCircle className="h-4 w-4 text-green-600" /> Doubt clearing with instructor</li>
+                              <li className="flex items-center gap-2"><CheckCircle className="h-4 w-4 text-green-600" /> Access to session recordings</li>
+                            </ul>
+                            {/* Price moved to bottom with divider */}
+                            {(() => {
+                              const parts = computePriceParts(course.price || 0, (course as any).discountPercent)
+                              return (
+                                <div className="mt-3 pt-3 border-t" style={{ borderColor: 'var(--section-border)' }}>
+                                  <div className="flex items-baseline gap-2">
+                                    <div className={`font-bold ${parts.label === 'Free' ? 'text-green-600' : 'text-blue-600'} text-base sm:text-lg`}>{parts.label}</div>
+                                    {parts.original && (
+                                      <>
+                                        <div className="text-gray-500 line-through text-xs sm:text-sm">{parts.original}</div>
+                                        <div className="text-green-700 text-[11px] sm:text-xs font-semibold">{parts.percent}% off</div>
+                                      </>
+                                    )}
+                                  </div>
+                                  {parts.original && (
+                                    <div className="mt-0.5 text-[11px] sm:text-xs" style={{ color: 'var(--session-subtext)' }}>
+                                      Actual price: <span className="font-medium">{parts.original}</span> • Discount: <span className="font-medium">{parts.percent}%</span>
+                                    </div>
+                                  )}
+                                </div>
+                              )
+                            })()}
                           </div>
                           <button
                             onClick={() => { if (isGuest) { openLoginPrompt(); } else { handleEnroll(batch.id) } }}
                             disabled={enrolledBatchIds.includes(batch.id)}
-                            className={`mt-4 md:mt-5 w-full px-4 ${course.batches.length === 1 ? 'py-3 text-base' : 'py-2 text-sm'} rounded-lg font-semibold transition-colors ${
+                            className={`mt-4 md:mt-5 w-full px-4 ${course.batches.length === 1 ? 'py-3 text-base' : 'py-2 text-sm'} rounded-lg font-semibold transition-colors shadow-sm focus:outline-none focus:ring-2 focus:ring-offset-0 ${
                               enrolledBatchIds.includes(batch.id)
-                                ? 'bg-gray-300 cursor-not-allowed text-gray-700'
-                                : 'bg-blue-600 hover:bg-blue-700 text-white'
+                                ? 'bg-gray-300 cursor-not-allowed text-gray-700 focus:ring-gray-300'
+                                : 'bg-blue-600 hover:bg-blue-700 text-white focus:ring-blue-500'
                             }`}
                           >
                             {enrolledBatchIds.includes(batch.id)
                               ? 'Already Enrolled'
                               : course.price && course.price > 0
-                                ? `Enroll - $${course.price}`
+                                ? `Enroll - ${computePriceParts(course.price, (course as any).discountPercent).label}`
                                 : 'Enroll Free'}
                           </button>
                         </div>
@@ -793,36 +894,22 @@ function CourseContent({
                 {recordedCourses.length > 0 && (
                   <div>
                     <div className="flex items-center gap-2 mb-4">
-                      <h3 className="text-lg font-semibold" style={{ color: 'var(--foreground)' }}>🎥 On-Demand (Self-Paced)</h3>
+                      <h3 className="text-lg font-semibold" style={{ color: 'var(--foreground)' }}>🎬 Recorded Sessions</h3>
                       <span className="text-[10px] font-semibold px-2 py-0.5 rounded-full border bg-blue-50 text-blue-700 border-blue-200">Best for self learners</span>
                     </div>
                     <div className="grid grid-cols-1 gap-4">
                       {recordedCourses.map((rc) => {
                         const isEnrolledRc = enrolledRecordedCourseIds.includes(rc.id)
                         const isAvailable = !!rc.isPublished
-                        const priceLabel = formatPrice(rc.price)
+                        const parts = computePriceParts(rc.price, (rc as any).discountPercent)
                         return (
                           <div key={rc.id} className="rounded-lg p-4 hover:shadow-sm transition-all border" style={{ borderColor: 'var(--section-border)', background: 'var(--background)' }}>
-                            {/* Top row: price + status */}
+                            {/* Top row: status and short info (price moved to bottom) */}
                             <div className="flex items-start justify-between">
-                              <div className="flex flex-col">
-                                <div className={`text-lg font-bold ${priceLabel === 'Free' ? 'text-green-600' : 'text-blue-600'}`}>{priceLabel}</div>
-                                <p className="text-xs mt-1" style={{ color: 'var(--session-subtext)' }}>Self-paced version of this course.</p>
-                              </div>
+                              <p className="text-xs leading-5" style={{ color: 'var(--session-subtext)' }}>Self-paced version of this course.</p>
                               <span className={`text-xs px-2 py-1 rounded-full whitespace-nowrap ${isAvailable ? 'bg-green-100 text-green-800' : 'bg-yellow-100 text-yellow-800'}`}>
                                 {isAvailable ? 'Available' : 'Coming Soon'}
                               </span>
-                            </div>
-                            {/* Meta: sections • sessions */}
-                            <div className="mt-3 flex items-center gap-4 text-xs" style={{ color: 'var(--session-subtext)' }}>
-                              <div className="flex items-center gap-1">
-                                <Layers className="h-4 w-4" />
-                                <span>{previewSectionsCount} {previewSectionsCount === 1 ? 'section' : 'sections'}</span>
-                              </div>
-                              <div className="flex items-center gap-1">
-                                <Play className="h-4 w-4" />
-                                <span>{previewSessionsCount} {previewSessionsCount === 1 ? 'session' : 'sessions'}</span>
-                              </div>
                             </div>
                             {/* Features */}
                             <ul className="mt-3 text-xs space-y-1" style={{ color: 'var(--session-subtext)' }}>
@@ -830,24 +917,41 @@ function CourseContent({
                               <li className="flex items-center gap-2"><CheckCircle className="h-4 w-4 text-green-600" /> Immediate access on enrollment</li>
                               <li className="flex items-center gap-2"><CheckCircle className="h-4 w-4 text-green-600" /> Course content preview available</li>
                             </ul>
+                            {/* Price ribbon moved to bottom */}
+                            <div className="mt-4 pt-3 border-t" style={{ borderColor: 'var(--section-border)' }}>
+                                  <div className="flex items-baseline gap-2">
+                                    <div className={`font-bold ${parts.label === 'Free' ? 'text-green-600' : 'text-blue-600'} text-lg sm:text-xl`}>{parts.label}</div>
+                                {parts.original && (
+                                  <>
+                                        <div className="text-gray-500 line-through text-xs sm:text-sm">{parts.original}</div>
+                                    <div className="text-green-700 text-xs font-semibold">{parts.percent}% off</div>
+                                  </>
+                                )}
+                              </div>
+                              {parts.original && (
+                                <div className="mt-0.5 text-[11px]" style={{ color: 'var(--session-subtext)' }}>
+                                  Actual price: <span className="font-medium">{parts.original}</span> • Discount: <span className="font-medium">{parts.percent}%</span>
+                                </div>
+                              )}
+                            </div>
                             <button
                               onClick={() => { if (isGuest) { openLoginPrompt(); } else { handleRecordedCourseEnroll(rc.id) } }}
                               disabled={!isAvailable || isEnrolledRc}
-                              className={`mt-4 w-full px-4 py-2 rounded-lg font-semibold transition-colors ${
+                              className={`mt-4 w-full px-4 py-2 rounded-lg font-semibold transition-colors shadow-sm focus:outline-none focus:ring-2 focus:ring-offset-0 ${
                                 isEnrolledRc
-                                  ? 'bg-gray-300 cursor-not-allowed text-gray-700'
+                                  ? 'bg-gray-300 cursor-not-allowed text-gray-700 focus:ring-gray-300'
                                   : !isAvailable
-                                  ? 'bg-gray-300 cursor-not-allowed text-gray-700'
-                                  : 'bg-green-600 hover:bg-green-700 text-white'
+                                  ? 'bg-gray-300 cursor-not-allowed text-gray-700 focus:ring-gray-300'
+                                  : 'bg-green-600 hover:bg-green-700 text-white focus:ring-green-600'
                               }`}
                             >
                               {isEnrolledRc
                                 ? 'Already Enrolled'
                                 : !isAvailable
                                 ? 'Coming Soon'
-                                : priceLabel === 'Free'
+                                : parts.label === 'Free'
                                   ? 'Enroll Free'
-                                  : `Enroll - ${priceLabel}`}
+                                  : `Enroll - ${parts.label}`}
                             </button>
                           </div>
                         )
@@ -879,14 +983,27 @@ function CourseContent({
                 <div className="space-y-6">
                   {/* Show course info for students when sections are available (batch or recorded) */}
                   {sections && sections.length > 0 && !isAdmin && (
-                    <div className="mb-4 pb-4 border-b" style={{ borderColor: 'var(--section-border)' }}>
-                      <h2 className="text-base font-bold mb-2 line-clamp-2" style={{ color: 'var(--foreground)' }}>{course.title}</h2>
-                      <p className="text-xs" style={{ color: 'var(--session-subtext)' }}>
-                        <span className="font-semibold text-blue-600">{sections.length}</span> sections • 
-                        <span className="font-semibold text-blue-600"> {sections.reduce((sum, s) => {
-                          const sessionCount = course.sessions.filter(session => session.sectionId === s.id).length
-                          return sum + sessionCount
-                        }, 0)}</span> sessions
+                    <div className="mb-3 pb-2 border-b" style={{ borderColor: 'var(--section-border)' }}>
+                      <h2 className="text-sm sm:text-base font-semibold mb-1 line-clamp-2" style={{ color: 'var(--foreground)' }}>{course.title}</h2>
+                      <p className="text-[11px] sm:text-xs flex items-center gap-2" style={{ color: 'var(--session-subtext)' }}>
+                        <span className="inline-flex items-center gap-1">
+                          <Layers className="h-3 w-3 sm:h-3.5 sm:w-3.5" aria-hidden />
+                          <span>
+                            <span className="font-semibold text-blue-600">{sections.length}</span> {sections.length === 1 ? 'section' : 'sections'}
+                          </span>
+                        </span>
+                        <span className="inline-flex items-center gap-1">
+                          <Play className="h-3 w-3 sm:h-3.5 sm:w-3.5" aria-hidden />
+                          <span>
+                            <span className="font-semibold text-blue-600">{sections.reduce((sum, s) => {
+                              const sessionCount = course.sessions.filter(session => session.sectionId === s.id).length
+                              return sum + sessionCount
+                            }, 0)}</span> {sections.reduce((sum, s) => {
+                              const sessionCount = course.sessions.filter(session => session.sectionId === s.id).length
+                              return sum + sessionCount
+                            }, 0) === 1 ? 'session' : 'sessions'}
+                          </span>
+                        </span>
                       </p>
                     </div>
                   )}
@@ -902,16 +1019,16 @@ function CourseContent({
                                 {idx + 1}
                               </div>
                               <div>
-                                <h3 className="text-base font-semibold" style={{ color: 'var(--foreground)' }}>
+                                <h3 className="text-sm sm:text-base font-semibold" style={{ color: 'var(--foreground)' }}>
                                   {section.title}
                                 </h3>
                                 {section.description && (
-                                  <p className="mt-1 text-sm" style={{ color: 'var(--session-subtext)' }}>{section.description}</p>
+                                  <p className="mt-1 text-xs sm:text-sm" style={{ color: 'var(--session-subtext)' }}>{section.description}</p>
                                 )}
                               </div>
                             </div>
                           </div>
-                          <div className="p-3 space-y-2">
+                          <div className="p-2 sm:p-3 space-y-2">
                             {course.sessions
                               .filter((s) => s.sectionId === section.id)
                               .sort((a, b) => a.order - b.order)
@@ -924,7 +1041,7 @@ function CourseContent({
                                   onKeyDown={(e) => {
                                     if (e.key === 'Enter' || e.key === ' ') setSelectedSession(session)
                                   }}
-                                  className="w-full text-left p-4 rounded-lg transition-all cursor-pointer border"
+                                  className="w-full text-left p-3 sm:p-4 rounded-lg transition-all cursor-pointer border"
                                   style={{
                                     background: selectedSession?.id === session.id 
                                       ? 'rgba(37, 99, 235, 0.1)' 
@@ -940,8 +1057,8 @@ function CourseContent({
                                 >
                                   <div className="flex items-center justify-between">
                                     <div className="flex items-center flex-grow">
-                                      <div className="mr-3">
-                                        <span className="font-medium" style={{ color: 'var(--foreground)' }}>{session.title}</span>
+                                      <div className="mr-3 flex items-center gap-2">
+                                        <span className="text-sm font-medium" style={{ color: 'var(--foreground)' }}>{session.title}</span>
                                         {liveProgressMap[session.id] && !session.progress?.completed && (
                                           <div className="h-1 rounded-full mt-2" style={{ background: 'var(--section-border)' }}>
                                             <div className="h-1 bg-yellow-500 rounded-full" style={{ width: `${liveProgressMap[session.id]}%` }} />
@@ -951,14 +1068,14 @@ function CourseContent({
                                     </div>
                                     <button type="button" onClick={(e) => { e.stopPropagation(); handleSessionComplete(session.id); }} className="ml-2 p-1 rounded-full transition-colors" style={{ background: session.progress?.completed ? 'rgba(16, 185, 129, 0.2)' : 'var(--section-border)' }}>
                                         {session.progress?.completed ? (
-                                          <CheckCircle className="h-5 w-5 text-green-600" />
+                                          <CheckCircle className="h-4 w-4 text-green-600" />
                                         ) : (
-                                          <Circle className="h-5 w-5" style={{ color: 'var(--session-subtext)' }} />
+                                          <Circle className="h-4 w-4" style={{ color: 'var(--session-subtext)' }} />
                                         )}
                                     </button>
                                   </div>
                                   {session.duration && (
-                                    <div className="flex items-center mt-2 text-sm ml-0" style={{ color: 'var(--session-subtext)' }}>
+                                    <div className="flex items-center mt-2 text-xs sm:text-sm ml-0" style={{ color: 'var(--session-subtext)' }}>
                                       <Clock className="h-4 w-4 mr-1.5" />
                                       <span>{Math.floor(session.duration)} min</span>
                                     </div>
@@ -983,7 +1100,7 @@ function CourseContent({
                               setSelectedSession(session);
                             }
                           }}
-                          className="w-full text-left p-4 rounded-lg transition-all cursor-pointer border"
+                          className="w-full text-left p-3 sm:p-4 rounded-lg transition-all cursor-pointer border"
                           style={{
                             background: selectedSession?.id === session.id 
                               ? 'rgba(37, 99, 235, 0.1)' 
@@ -999,8 +1116,8 @@ function CourseContent({
                         >
                           <div className="flex items-center justify-between">
                             <div className="flex items-center flex-grow">
-                              <div className="mr-3">
-                                <span className="font-medium" style={{ color: 'var(--foreground)' }}>{session.title}</span>
+                              <div className="mr-3 flex items-center gap-2">
+                                <span className="text-sm font-medium" style={{ color: 'var(--foreground)' }}>{session.title}</span>
                                         {liveProgressMap[session.id] && !session.progress?.completed && (
                                           <div className="h-1 rounded-full mt-2" style={{ background: 'var(--section-border)' }}>
                                             <div className="h-1 bg-yellow-500 rounded-full" style={{ width: `${liveProgressMap[session.id]}%` }} />
@@ -1010,14 +1127,14 @@ function CourseContent({
                             </div>
                             <button type="button" onClick={(e) => { e.stopPropagation(); handleSessionComplete(session.id); }} className="ml-2 p-1 rounded-full transition-colors" style={{ background: session.progress?.completed ? 'rgba(16, 185, 129, 0.2)' : 'var(--section-border)' }}>
                                 {session.progress?.completed ? (
-                                  <CheckCircle className="h-5 w-5 text-green-600" />
+                                  <CheckCircle className="h-4 w-4 text-green-600" />
                                 ) : (
-                                  <Circle className="h-5 w-5" style={{ color: 'var(--session-subtext)' }} />
+                                  <Circle className="h-4 w-4" style={{ color: 'var(--session-subtext)' }} />
                                 )}
                             </button>
                           </div>
                           {session.duration && (
-                            <div className="flex items-center mt-2 text-sm ml-0" style={{ color: 'var(--session-subtext)' }}>
+                            <div className="flex items-center mt-2 text-xs sm:text-sm ml-0" style={{ color: 'var(--session-subtext)' }}>
                               <Clock className="h-4 w-4 mr-1.5" />
                               <span>{Math.floor(session.duration)} min</span>
                             </div>
@@ -1034,12 +1151,12 @@ function CourseContent({
           <div className="lg:col-span-9">
             {selectedSession && canAccess ? (
               <div className="rounded-xl shadow-sm border" style={{ background: 'var(--section-bg)', borderColor: 'var(--section-border)' }}>
-                <div className="p-6 border-b flex items-center justify-between" style={{ borderColor: 'var(--section-border)' }}>
-                  <h2 className="text-2xl font-semibold" style={{ color: 'var(--foreground)' }}>
+                <div className="p-5 sm:p-6 border-b flex items-center justify-between" style={{ borderColor: 'var(--section-border)' }}>
+                  <h2 className="text-lg sm:text-xl md:text-2xl font-semibold" style={{ color: 'var(--foreground)' }}>
                     {selectedSession.title}
                   </h2>
-                  <div className="text-sm flex items-center space-x-3" style={{ color: 'var(--session-subtext)' }}>
-                    <div className="text-xs" style={{ color: 'var(--session-subtext)' }}>Progress</div>
+                  <div className="text-xs sm:text-sm flex items-center space-x-3" style={{ color: 'var(--session-subtext)' }}>
+                    <div className="text-[11px] sm:text-xs" style={{ color: 'var(--session-subtext)' }}>Progress</div>
                     {(() => {
                       // derive course-level progress from current `course` object (will reflect optimistic updates)
                       const total = course?.sessions?.length || 0
@@ -1048,7 +1165,7 @@ function CourseContent({
                       const bgColor = percent >= 80 ? 'rgba(16, 185, 129, 0.15)' : percent >= 30 ? 'rgba(234, 179, 8, 0.15)' : 'rgba(107, 114, 128, 0.15)'
                       const textColor = percent >= 80 ? 'rgb(16, 185, 129)' : percent >= 30 ? 'rgb(234, 179, 8)' : 'var(--session-subtext)'
                       return (
-                        <div className="px-3 py-1 rounded-full text-sm font-medium" style={{ background: bgColor, color: textColor }}>{percent}%</div>
+                        <div className="px-2.5 py-0.5 rounded-full text-xs sm:text-sm font-medium" style={{ background: bgColor, color: textColor }}>{percent}%</div>
                       )
                     })()}
                   </div>

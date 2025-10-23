@@ -1,5 +1,5 @@
 // Basic PWA service worker for SAP Integration Expert
-const CACHE_NAME = 'sie-academy-v6';
+const CACHE_NAME = 'sie-academy-v7';
 const PRECACHE_URLS = [
   '/',
   '/offline.html',
@@ -32,6 +32,20 @@ self.addEventListener('message', (event) => {
 // Network-first for navigation requests with offline fallback
 self.addEventListener('fetch', (event) => {
   const { request } = event;
+  const url = new URL(request.url);
+
+  // Always bypass caching for Next.js dev assets, API routes, and HMR/event streams
+  const accept = request.headers.get('accept') || '';
+  const isDevAsset = url.pathname.startsWith('/_next/') || url.pathname.startsWith('/__nextjs_original-stack-frame');
+  const isApi = url.pathname.startsWith('/api/');
+  const isEventStream = accept.includes('text/event-stream');
+  const isDevHost = self.location.hostname === 'localhost' || self.location.hostname === '127.0.0.1';
+
+  if (isDevHost && (isDevAsset || isApi || isEventStream)) {
+    // Let these requests go straight to the network without SW handling
+    return; // default browser fetch
+  }
+
   if (request.mode === 'navigate') {
     event.respondWith(
       fetch(request)
@@ -50,7 +64,11 @@ self.addEventListener('fetch', (event) => {
   }
 
   // Cache-first for same-origin static assets
-  if (request.method === 'GET' && new URL(request.url).origin === location.origin) {
+  if (request.method === 'GET' && url.origin === location.origin) {
+    // Avoid caching Next dev assets and API even on GET
+    if (isDevHost && (isDevAsset || isApi || isEventStream)) {
+      return; // default browser fetch
+    }
     event.respondWith(
       caches.match(request).then((cached) => {
         if (cached) return cached;

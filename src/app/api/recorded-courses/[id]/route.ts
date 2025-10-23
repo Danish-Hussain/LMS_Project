@@ -63,9 +63,9 @@ export async function PUT(
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
-    const { id } = await params
-    const body = await request.json()
-    const { name, description, price, isPublished } = body
+  const { id } = await params
+  const body = await request.json()
+  const { name, description, price, isPublished, discountPercent } = body
 
     const recordedCourse = await prisma.recordedCourse.update({
       where: { id },
@@ -73,6 +73,7 @@ export async function PUT(
         ...(name && { name }),
         ...(description !== undefined && { description }),
         ...(price !== undefined && { price: parseFloat(price) }),
+        ...(discountPercent !== undefined && { discountPercent: Math.max(0, Math.min(100, Number(discountPercent))) }),
         ...(isPublished !== undefined && { isPublished }),
       },
     })

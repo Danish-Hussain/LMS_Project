@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import { useAuth } from '@/contexts/AuthContext';
 import { useToast } from '@/hooks/useToast';
@@ -38,6 +38,7 @@ interface RecordedCourse {
   name: string;
   description?: string;
   price: number;
+  discountPercent?: number;
   isPublished: boolean;
   courseId: string;
 }
@@ -54,8 +55,13 @@ export default function EditRecordedCoursePage() {
   const [sections, setSections] = useState<Section[]>([]);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
+  const [pricingSaving, setPricingSaving] = useState(false);
+  const [pricingSavedMsg, setPricingSavedMsg] = useState<string | null>(null);
   const [previewInFlight, setPreviewInFlight] = useState<Set<string>>(new Set());
   const [expandedSectionId, setExpandedSectionId] = useState<string | null>(null);
+  // Track initial pricing to show Save only when changed
+  const [initialPrice, setInitialPrice] = useState<number | null>(null);
+  const [initialDiscount, setInitialDiscount] = useState<number | null>(null);
 
   // New section form state
   const [newSectionTitle, setNewSectionTitle] = useState('');
@@ -80,8 +86,10 @@ export default function EditRecordedCoursePage() {
       // Fetch recorded course
       const courseRes = await fetch(`/api/recorded-courses/${recordedCourseId}`);
       if (!courseRes.ok) throw new Error('Failed to fetch course');
-      const courseData = await courseRes.json();
-      setCourse(courseData);
+    const courseData = await courseRes.json();
+    setCourse(courseData);
+    setInitialPrice(courseData.price ?? 0);
+    setInitialDiscount(courseData.discountPercent ?? 0);
       setCourseId(courseData.courseId);
 
       // Fetch sections using the actual courseId from the recorded course
@@ -105,6 +113,62 @@ export default function EditRecordedCoursePage() {
     }
     fetchCourseAndSections();
   }, [recordedCourseId, user, router]);
+
+  // Localized pricing preview (same logic as listing page)
+  const [currency, setCurrency] = useState<'USD' | 'INR'>('USD');
+  const [usdToInr, setUsdToInr] = useState<number | null>(null);
+
+  useEffect(() => {
+    const detect = async () => {
+      try {
+        const geoRes = await fetch('https://ipapi.co/json/');
+        if (geoRes.ok) {
+          const geo = await geoRes.json().catch(() => null);
+          if (geo && (geo.country_code === 'IN' || geo.country === 'India')) {
+            setCurrency('INR');
+            try {
+              const rRes = await fetch('https://api.exchangerate.host/latest?base=USD&symbols=INR');
+              if (rRes.ok) {
+                const data = await rRes.json().catch(() => null);
+                const r = data?.rates?.INR;
+                if (typeof r === 'number' && r > 0) setUsdToInr(r);
+              }
+            } catch {}
+          }
+        }
+      } catch {}
+    };
+    detect();
+  }, []);
+
+  const formatLocalizedPrice = (p?: number | null) => {
+    if (!p || p <= 0) return 'Free';
+    if (currency === 'INR') {
+      const rate = usdToInr || 83;
+      const inr = p * rate;
+      try { return new Intl.NumberFormat('en-IN', { style: 'currency', currency: 'INR', maximumFractionDigits: 0 }).format(inr); } catch { return `₹${Math.round(inr).toLocaleString('en-IN')}`; }
+    }
+    try { return new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD' }).format(p); } catch { return `$${p}`; }
+  };
+
+  const computePriceParts = (usd?: number | null, d?: number | null) => {
+    const price = typeof usd === 'number' ? usd : null;
+    const pct = typeof d === 'number' ? Math.max(0, Math.min(100, d)) : 0;
+    if (!price || price <= 0) return { label: 'Free', original: null as string | null, percent: 0 };
+    const label = formatLocalizedPrice(price);
+    if (!pct) return { label, original: null as string | null, percent: 0 };
+    const original = formatLocalizedPrice(price / (1 - pct / 100));
+    return { label, original, percent: Math.round(pct) };
+  };
+
+  const isPricingDirty = useMemo(() => {
+    if (!course) return false;
+    const price = Math.round((course.price ?? 0) * 100) / 100;
+    const disc = Math.round((course.discountPercent ?? 0) * 100) / 100;
+    const iPrice = Math.round((initialPrice ?? 0) * 100) / 100;
+    const iDisc = Math.round((initialDiscount ?? 0) * 100) / 100;
+    return price !== iPrice || disc !== iDisc;
+  }, [course, initialPrice, initialDiscount]);
 
   // Add new section
   const handleAddSection = async (e: React.FormEvent) => {
@@ -289,10 +353,16 @@ export default function EditRecordedCoursePage() {
 
   if (loading) {
     return (
-      <div className="min-h-screen bg-gradient-to-br from-background to-background/50 flex items-center justify-center">
-        <div className="text-center">
-          <Loader className="w-8 h-8 text-purple-500 animate-spin mx-auto mb-3" />
-          <p className="text-gray-400">Loading course...</p>
+      <div className="min-h-screen" style={{ background: 'var(--background)' }}>
+        <div className="max-w-5xl mx-auto px-4 py-10 animate-pulse">
+          {/* Back */}
+          <div className="h-4 w-16 rounded mb-6" style={{ background: 'var(--section-border)' }} />
+          {/* Title skeleton */}
+          <div className="h-8 w-64 rounded mb-6" style={{ background: 'var(--section-border)' }} />
+          {/* Pricing card skeleton */}
+          <div className="h-52 rounded border" style={{ borderColor: 'var(--section-border)' }} />
+          {/* Sections skeleton */}
+          <div className="mt-8 h-40 rounded border" style={{ borderColor: 'var(--section-border)' }} />
         </div>
       </div>
     );
@@ -307,7 +377,7 @@ export default function EditRecordedCoursePage() {
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-background to-background/50">
+    <div className="min-h-screen" style={{ background: 'var(--background)' }}>
       <div className="max-w-5xl mx-auto px-4 py-8">
         {/* Header */}
         <div className="mb-8">
@@ -318,8 +388,103 @@ export default function EditRecordedCoursePage() {
             <X className="w-5 h-5" />
             Back
           </button>
-          <h1 className="text-4xl font-bold text-foreground mb-2">{course.name}</h1>
-          <p className="text-gray-400">{course.description}</p>
+          <h1 className="text-3xl font-bold text-foreground mb-1">{course.name}</h1>
+          {course.description ? (
+            <p className="text-sm" style={{ color: 'var(--session-subtext)' }}>{course.description}</p>
+          ) : null}
+        </div>
+
+        {/* Pricing Panel */}
+        <div className="mb-8 grid grid-cols-1 md:grid-cols-2 gap-4">
+          <div className="p-4 rounded-lg" style={{ background: 'var(--section-bg)', border: '1px solid var(--section-border)' }}>
+            <h3 className="font-semibold text-foreground mb-3">Pricing</h3>
+            <div className="space-y-3">
+              <label className="block text-sm text-gray-400">
+                Price (USD)
+                <input
+                  type="number"
+                  step="0.01"
+                  value={course.price}
+                  onChange={(e) => setCourse((prev) => (prev ? { ...prev, price: Number(e.target.value) } as any : prev))}
+                  className="mt-1 w-full px-3 py-2 rounded text-foreground"
+                  style={{ background: 'var(--background)', border: '1px solid var(--section-border)' }}
+                />
+              </label>
+              <label className="block text-sm text-gray-400">
+                Discount (%)
+                <input
+                  type="number"
+                  min={0}
+                  max={100}
+                  value={course.discountPercent ?? 0}
+                  onChange={(e) =>
+                    setCourse((prev) =>
+                      prev
+                        ? {
+                            ...prev,
+                            discountPercent: Math.max(0, Math.min(100, Number(e.target.value))),
+                          } as any
+                        : prev
+                    )
+                  }
+                  className="mt-1 w-full px-3 py-2 rounded text-foreground"
+                  style={{ background: 'var(--background)', border: '1px solid var(--section-border)' }}
+                />
+              </label>
+              {/* Student-view localized preview */}
+              <div className="text-xs" style={{ color: 'var(--session-subtext)' }}>
+                {(() => {
+                  const parts = computePriceParts(course.price ?? 0, course.discountPercent ?? 0);
+                  return (
+                    <div>
+                      Student view: <span className="font-medium text-foreground">{parts.label}</span>
+                      {parts.original && (
+                        <>
+                          {' '}
+                          <span className="line-through">{parts.original}</span>{' '}
+                          <span className="text-green-700">{parts.percent}% off</span>
+                        </>
+                      )}
+                    </div>
+                  );
+                })()}
+              </div>
+              <div className="flex justify-end">
+                <button
+                  onClick={async () => {
+                    try {
+                      setPricingSaving(true);
+                      const res = await fetch(`/api/recorded-courses/${recordedCourseId}`, {
+                        method: 'PUT',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ price: course.price, discountPercent: course.discountPercent }),
+                      });
+                      if (!res.ok) throw new Error('Failed to save pricing');
+                      const updated = await res.json();
+                      setCourse((prev) => (prev ? { ...prev, price: updated.price, discountPercent: updated.discountPercent } as any : prev));
+                      setInitialPrice(updated.price ?? 0);
+                      setInitialDiscount(updated.discountPercent ?? 0);
+                      toast.success('Pricing updated');
+                      setPricingSavedMsg('Saved');
+                      setTimeout(() => setPricingSavedMsg(null), 2000);
+                    } catch (err) {
+                      console.error(err);
+                      toast.error('Failed to update pricing');
+                    } finally {
+                      setPricingSaving(false);
+                    }
+                  }}
+                  disabled={pricingSaving || !isPricingDirty}
+                  className="px-4 py-2 bg-purple-500 text-white rounded hover:bg-purple-600 disabled:opacity-50"
+                >
+                  {pricingSaving ? 'Saving…' : 'Save Pricing'}
+                </button>
+              </div>
+              {pricingSavedMsg && (
+                <div className="text-right text-xs text-green-700">✓ {pricingSavedMsg}</div>
+              )}
+            </div>
+          </div>
         </div>
 
         {/* Sections Container */}
@@ -340,10 +505,12 @@ export default function EditRecordedCoursePage() {
             sections.map((section) => (
               <div
                 key={section.id}
-                className="bg-background border border-gray-300 rounded-lg overflow-hidden"
+                className="rounded-lg overflow-hidden"
+                style={{ background: 'var(--section-bg)', border: '1px solid var(--section-border)' }}
               >
                 {/* Section Header */}
-                <div className="p-4 bg-gradient-to-r from-purple-500/20 to-blue-500/20 border-b border-gray-300 flex items-center justify-between cursor-pointer hover:bg-gradient-to-r hover:from-purple-500/30 hover:to-blue-500/30 transition-colors"
+                <div className="p-4 border-b flex items-center justify-between cursor-pointer hover:bg-black/5 transition-colors"
+                  style={{ borderColor: 'var(--section-border)' }}
                   onClick={() =>
                     setExpandedSectionId(
                       expandedSectionId === section.id ? null : section.id
@@ -358,7 +525,7 @@ export default function EditRecordedCoursePage() {
                     />
                     <div>
                       <h3 className="font-semibold text-foreground">{section.title}</h3>
-                      <p className="text-xs text-gray-500">
+                      <p className="text-xs" style={{ color: 'var(--session-subtext)' }}>
                         {section.sessions?.length || 0} sessions
                       </p>
                     </div>
@@ -370,7 +537,7 @@ export default function EditRecordedCoursePage() {
                         e.stopPropagation();
                         handleDeleteSection(section.id);
                       }}
-                      className="p-2 text-red-400 hover:bg-red-500/20 rounded transition-colors"
+                      className="p-2 text-red-500 hover:bg-red-500/10 rounded transition-colors"
                     >
                       <Trash2 className="w-5 h-5" />
                     </button>
@@ -388,7 +555,8 @@ export default function EditRecordedCoursePage() {
                           .map((session) => (
                             <div
                               key={session.id}
-                              className="p-3 bg-background border border-gray-300 rounded flex items-center justify-between hover:border-purple-500 transition-colors"
+                              className="p-3 rounded flex items-center justify-between hover:bg-black/5 transition-colors"
+                              style={{ background: 'var(--background)', border: '1px solid var(--section-border)' }}
                             >
                               <div className="flex items-center gap-3 flex-1">
                                 <PlayCircle className="w-5 h-5 text-purple-400" />
@@ -401,7 +569,7 @@ export default function EditRecordedCoursePage() {
                                       </span>
                                     ) : null}
                                   </p>
-                                  <p className="text-xs text-gray-500 truncate">
+                                  <p className="text-xs truncate" style={{ color: 'var(--session-subtext)' }}>
                                     {session.videoUrl}
                                   </p>
                                 </div>
@@ -419,8 +587,8 @@ export default function EditRecordedCoursePage() {
                                   title={session.isPreview ? 'Remove preview' : 'Mark as preview'}
                                   className={`p-2 rounded transition-colors ${
                                     session.isPreview
-                                      ? 'text-blue-600 hover:bg-blue-500/20'
-                                      : 'text-gray-400 hover:bg-gray-500/20'
+                                      ? 'text-blue-600 hover:bg-blue-500/10'
+                                      : 'text-gray-400 hover:bg-gray-500/10'
                                   }`}
                                   disabled={previewInFlight.has(session.id)}
                                 >
@@ -435,7 +603,7 @@ export default function EditRecordedCoursePage() {
                                   onClick={() =>
                                     handleDeleteSession(section.id, session.id)
                                   }
-                                  className="p-2 text-red-400 hover:bg-red-500/20 rounded transition-colors"
+                                  className="p-2 text-red-500 hover:bg-red-500/10 rounded transition-colors"
                                 >
                                   <Trash2 className="w-4 h-4" />
                                 </button>
@@ -447,7 +615,7 @@ export default function EditRecordedCoursePage() {
 
                     {/* Add Session Form */}
                     {showNewSessionForm === section.id ? (
-                      <form onSubmit={handleAddSession} className="p-4 bg-purple-500/10 border border-purple-500/30 rounded space-y-3">
+                      <form onSubmit={handleAddSession} className="p-4 rounded space-y-3" style={{ border: '1px dashed var(--section-border)' }}>
                         <input
                           type="text"
                           placeholder="Session title"
@@ -459,7 +627,8 @@ export default function EditRecordedCoursePage() {
                               sectionId: section.id,
                             })
                           }
-                          className="w-full px-3 py-2 bg-background border border-gray-300 rounded text-foreground placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-purple-500 text-sm"
+                          className="w-full px-3 py-2 rounded text-foreground placeholder-gray-500 focus:outline-none text-sm"
+                          style={{ background: 'var(--background)', border: '1px solid var(--section-border)' }}
                         />
 
                         <input
@@ -473,7 +642,8 @@ export default function EditRecordedCoursePage() {
                               sectionId: section.id,
                             })
                           }
-                          className="w-full px-3 py-2 bg-background border border-gray-300 rounded text-foreground placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-purple-500 text-sm"
+                          className="w-full px-3 py-2 rounded text-foreground placeholder-gray-500 focus:outline-none text-sm"
+                          style={{ background: 'var(--background)', border: '1px solid var(--section-border)' }}
                         />
 
                         <label className="flex items-center gap-2 text-sm text-foreground/80">
@@ -502,7 +672,7 @@ export default function EditRecordedCoursePage() {
                               setShowNewSessionForm(null);
                               setNewSessionData({ sectionId: '', title: '', videoUrl: '', isPreview: false });
                             }}
-                            className="flex-1 px-3 py-2 bg-gray-500/20 text-gray-400 rounded hover:bg-gray-500/30 transition-colors text-sm font-medium"
+                            className="flex-1 px-3 py-2 bg-gray-500/10 text-gray-500 rounded hover:bg-gray-500/20 transition-colors text-sm font-medium"
                           >
                             Cancel
                           </button>
@@ -511,7 +681,8 @@ export default function EditRecordedCoursePage() {
                     ) : (
                       <button
                         onClick={() => setShowNewSessionForm(section.id)}
-                        className="w-full px-3 py-2 border border-dashed border-gray-400 rounded text-gray-400 hover:text-gray-300 hover:border-gray-300 transition-colors text-sm font-medium flex items-center justify-center gap-2"
+                        className="w-full px-3 py-2 rounded text-gray-500 hover:text-gray-300 transition-colors text-sm font-medium flex items-center justify-center gap-2"
+                        style={{ border: '1px dashed var(--section-border)' }}
                       >
                         <Plus className="w-4 h-4" />
                         Add Session
@@ -528,7 +699,8 @@ export default function EditRecordedCoursePage() {
         {showNewSectionForm ? (
           <form
             onSubmit={handleAddSection}
-            className="p-6 bg-purple-500/10 border border-purple-500/30 rounded-lg space-y-4 mb-8"
+            className="p-6 rounded-lg space-y-4 mb-8"
+            style={{ border: '1px dashed var(--section-border)' }}
           >
             <h3 className="font-semibold text-foreground">Add New Section</h3>
 
@@ -537,7 +709,8 @@ export default function EditRecordedCoursePage() {
               placeholder="Section title"
               value={newSectionTitle}
               onChange={(e) => setNewSectionTitle(e.target.value)}
-              className="w-full px-4 py-2 bg-background border border-gray-300 rounded-lg text-foreground placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-purple-500"
+              className="w-full px-4 py-2 rounded-lg text-foreground placeholder-gray-500 focus:outline-none"
+              style={{ background: 'var(--background)', border: '1px solid var(--section-border)' }}
             />
 
             <div className="flex gap-2">
@@ -555,7 +728,7 @@ export default function EditRecordedCoursePage() {
                   setShowNewSectionForm(false);
                   setNewSectionTitle('');
                 }}
-                className="flex-1 px-4 py-2 bg-gray-500/20 text-gray-400 rounded-lg hover:bg-gray-500/30 transition-colors font-medium"
+                className="flex-1 px-4 py-2 bg-gray-500/10 text-gray-500 rounded-lg hover:bg-gray-500/20 transition-colors font-medium"
               >
                 Cancel
               </button>
@@ -564,7 +737,8 @@ export default function EditRecordedCoursePage() {
         ) : (
           <button
             onClick={() => setShowNewSectionForm(true)}
-            className="w-full px-4 py-3 border border-dashed border-purple-500 rounded-lg text-purple-400 hover:text-purple-300 hover:border-purple-400 transition-colors font-medium flex items-center justify-center gap-2"
+            className="w-full px-4 py-3 rounded-lg text-purple-400 hover:text-purple-300 transition-colors font-medium flex items-center justify-center gap-2"
+            style={{ border: '1px dashed var(--section-border)' }}
           >
             <Plus className="w-5 h-5" />
             Add Section

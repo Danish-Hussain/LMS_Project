@@ -1,11 +1,11 @@
 [
   {
     "id": 1,
-    "title": "Join our new cohort",
-    "description": "Fresh batches opening this month. Reserve your seat now.",
+    "title": "bb",
+    "description": "",
     "cta": {
-      "label": "View Batches",
-      "href": "/batches"
+      "label": "",
+      "href": ""
     },
     "imageUrl": "",
     "linkUrl": ""
