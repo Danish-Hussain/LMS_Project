@@ -33,6 +33,8 @@ jobs:
         run: npm ci
       - name: Set DATABASE_URL for Prisma
         run: echo "DATABASE_URL=file:./tmp/test.db" >> $GITHUB_ENV
+      - name: Ensure tmp directory exists
+        run: mkdir -p tmp
       - name: Generate prisma client
         run: npx prisma generate
       - name: Apply migrations / push schema
@@ -49,6 +51,7 @@ jobs:
       - name: Prepare auth storage and run E2E via start-server-and-test
         env:
           DATABASE_URL: file:./tmp/test.db
+          PORT: 3001
         run: |
           rm -f tests/e2e/storageState.json || true
           npm run auth:setup || true
