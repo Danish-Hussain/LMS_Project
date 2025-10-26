@@ -5,7 +5,7 @@ import { useState, useRef, useEffect } from 'react'
 import { useDarkMode } from '@/contexts/DarkModeContext'
 import { Moon, Sun, ChevronDown } from 'lucide-react'
 import Link from 'next/link'
-import { Menu, X, BookOpen, Users, Home, Video } from 'lucide-react'
+import { Menu, X, BookOpen, Users, Home, Video, FileText } from 'lucide-react'
 import ContactModal from '@/components/ContactModal'
 
 type ContactDefaults = { name?: string; email?: string }
@@ -79,6 +79,7 @@ export default function Navbar() {
   const navigation = [
     { name: 'Dashboard', href: '/dashboard', icon: Home },
     { name: 'Courses', href: '/courses', icon: BookOpen },
+    { name: 'Blogs', href: '/blogs', icon: FileText },
     ...(user?.role === 'ADMIN' || user?.role === 'INSTRUCTOR' ? [
       { name: 'On-Demand Courses', href: '/on-demand-courses', icon: Video },
       { name: 'Students', href: '/students', icon: Users },
