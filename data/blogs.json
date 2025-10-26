@@ -1,0 +1,54 @@
+[
+  {
+    "id": "1761383471758",
+    "title": "dlfdsf",
+    "topic": "CPI",
+    "coverImage": "",
+    "content": [
+      {
+        "id": "1761386975912",
+        "type": "heading",
+        "data": {
+          "level": 1,
+          "text": "kdflsdfjdslfsdf"
+        }
+      },
+      {
+        "id": "1761386985445",
+        "type": "paragraph",
+        "data": {
+          "text": "fdmkfnsdfndslkfndslfsdkfsadflkjasf"
+        }
+      },
+      {
+        "id": "1761386992946",
+        "type": "paragraph",
+        "data": {
+          "text": "fdfasdfasdffdsf"
+        }
+      }
+    ],
+    "published": false,
+    "createdAt": "2025-10-25T09:11:11.758Z",
+    "excerpt": "fdmkfnsdfndslkfndslfsdkfsadflkjasf",
+    "isPublished": true
+  },
+  {
+    "id": "1761382986939",
+    "title": "Newww",
+    "topic": "CPI",
+    "coverImage": "",
+    "content": [],
+    "published": false,
+    "createdAt": "2025-10-25T09:03:06.939Z"
+  },
+  {
+    "id": "1761382890120",
+    "title": "Neww",
+    "topic": "CPI",
+    "coverImage": "",
+    "content": [],
+    "published": false,
+    "createdAt": "2025-10-25T09:01:30.120Z"
+  }
+]

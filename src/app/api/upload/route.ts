@@ -1,28 +1,26 @@
-import { NextRequest, NextResponse } from 'next/server'
-import path from 'path'
+import { NextResponse } from 'next/server'
 import fs from 'fs/promises'
+import path from 'path'
 
-export async function POST(request: NextRequest) {
+export async function POST(req: Request) {
   try {
-    const { filename, contentBase64 } = await request.json()
-    if (!filename || !contentBase64) {
-      return NextResponse.json({ error: 'filename and contentBase64 are required' }, { status: 400 })
-    }
-
+    const body = await req.json()
+    const { filename, data } = body as { filename?: string; data?: string }
+    if (!data) return NextResponse.json({ error: 'Missing data' }, { status: 400 })
+    const ext = path.extname(filename || '') || '.png'
+    const name = `${Date.now()}${ext}`
     const uploadsDir = path.join(process.cwd(), 'public', 'uploads')
     await fs.mkdir(uploadsDir, { recursive: true })
-
-    const safeName = filename.replace(/[^a-zA-Z0-9._-]/g, '_')
-    const filePath = path.join(uploadsDir, safeName)
-
-    const buffer = Buffer.from(contentBase64, 'base64')
+    // data may be dataURL or raw base64
+    const base64 = data.startsWith('data:') ? data.split(',')[1] : data
+    const buffer = Buffer.from(base64, 'base64')
+    const filePath = path.join(uploadsDir, name)
     await fs.writeFile(filePath, buffer)
-
-    const url = `/uploads/${safeName}`
+    const url = `/uploads/${name}`
     return NextResponse.json({ url })
-  } catch (error) {
-    console.error('Upload error:', error)
-    return NextResponse.json({ error: 'Internal server error' }, { status: 500 })
+  } catch (e: any) {
+    console.error('Upload error', e)
+    return NextResponse.json({ error: e?.message || 'Upload failed' }, { status: 500 })
   }
 }
 
