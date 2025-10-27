@@ -42,17 +42,32 @@ export async function POST(request: NextRequest) {
       }
     })
   } catch (error: unknown) {
-    console.error('Registration error:', error)
-    
-    if (error && typeof error === 'object' && 'code' in error && error.code === 'P2002') {
+    // Log detailed error information to help debugging in production logs
+    try {
+      const errAny = error as any
+      const details = {
+        message: errAny?.message,
+        code: errAny?.code,
+        meta: errAny?.meta,
+        stack: errAny?.stack
+      }
+      console.error('Registration error details:', JSON.stringify(details))
+    } catch (logErr) {
+      console.error('Registration error (could not serialize):', error)
+    }
+
+    if (error && typeof error === 'object' && 'code' in error && (error as any).code === 'P2002') {
       return NextResponse.json(
         { error: 'Email already exists' },
         { status: 409 }
       )
     }
-    
+
+    // Return the server error message when available to help debugging (avoid leaking sensitive info in production)
+    const errAny = error as any
+    const message = errAny?.message || 'Internal server error'
     return NextResponse.json(
-      { error: 'Internal server error' },
+      { error: message },
       { status: 500 }
     )
   }
