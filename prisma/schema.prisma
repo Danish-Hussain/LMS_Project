@@ -1,5 +1,8 @@
 generator client {
   provider = "prisma-client-js"
+  // Include the platform used by Netlify (Debian + OpenSSL 3.0) so the Query Engine
+  // binary is bundled during `prisma generate` on CI / build servers.
+  binaryTargets = ["native", "debian-openssl-3.0.x"]
 }
 
 datasource db {
