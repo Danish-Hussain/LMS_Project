@@ -3,7 +3,8 @@
   "version": "0.1.0",
   "private": true,
   "scripts": {
-    "dev": "next dev --turbopack",
+  "dev": "next dev --turbopack",
+  "postinstall": "prisma generate",
     "seed": "ts-node prisma/seed.ts",
     "build": "next build --turbopack",
     "start": "next start",
@@ -30,6 +31,7 @@
     "nodemailer": "^6.9.3",
     "react": "^19.1.0",
     "react-dom": "^19.1.0",
+    "prisma": "^6.17.1",
     "react-player": "^3.3.3"
   },
   "devDependencies": {
@@ -42,7 +44,6 @@
     "@types/react-dom": "^19",
     "eslint": "^9",
     "eslint-config-next": "15.5.4",
-    "prisma": "^6.17.1",
     "start-server-and-test": "^1.14.0",
     "tailwindcss": "^4",
     "ts-node": "^10.9.2",
