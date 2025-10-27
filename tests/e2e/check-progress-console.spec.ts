@@ -8,7 +8,7 @@ test('capture console for /progress', async ({ page }) => {
     console.log(text)
   })
 
-  await page.goto('http://localhost:3003/progress', { waitUntil: 'networkidle' })
+  await page.goto('http://127.0.0.1:3003/progress', { waitUntil: 'networkidle' })
   // wait a bit for client scripts to run
   await page.waitForTimeout(1500)
 

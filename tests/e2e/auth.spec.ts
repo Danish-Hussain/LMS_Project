@@ -1,6 +1,6 @@
 import { test } from '@playwright/test'
 
-const BASE = process.env.PLAYWRIGHT_BASE_URL || 'http://localhost:3001'
+const BASE = process.env.PLAYWRIGHT_BASE_URL || 'http://127.0.0.1:3001'
 
 test('save auth storage state', async ({ page, request }) => {
   // programmatic login using seeded instructor

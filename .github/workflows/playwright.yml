@@ -48,11 +48,35 @@ jobs:
           npm run seed
       - name: Install Playwright browsers
         run: npx playwright install --with-deps
-      - name: Prepare auth storage and run E2E via start-server-and-test
+      - name: Prepare auth storage
         env:
           DATABASE_URL: file:./tmp/test.db
-          PORT: 3001
         run: |
           rm -f tests/e2e/storageState.json || true
           npm run auth:setup || true
-          npx start-server-and-test "npm run dev" http://localhost:3001 "npx playwright test --config=playwright.config.ts"
+
+      - name: Build production server
+        run: npm run build
+
+      - name: Start production server on 3003 (background)
+        run: |
+          HOST=0.0.0.0 PORT=3003 npm start &
+
+      - name: Start dev server on 3001 (background)
+        run: |
+          HOST=0.0.0.0 PORT=3001 npm run dev &
+
+      - name: Wait for servers to be ready
+        run: |
+          npx wait-on http://127.0.0.1:3001/api/auth/login
+          npx wait-on http://127.0.0.1:3003/progress
+
+      - name: Health-check servers (print status)
+        run: |
+          echo "Checking http://127.0.0.1:3001/api/auth/login"
+          curl -s -o /dev/null -w "%{http_code}\n" http://127.0.0.1:3001/api/auth/login || true
+          echo "Checking http://127.0.0.1:3003/progress"
+          curl -s -o /dev/null -w "%{http_code}\n" http://127.0.0.1:3003/progress || true
+
+      - name: Run Playwright tests
+        run: npx playwright test --config=playwright.config.ts
