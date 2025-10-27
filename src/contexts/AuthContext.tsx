@@ -17,7 +17,7 @@ interface AuthContextType {
   user: User | null
   loading: boolean
   login: (email: string, password: string) => Promise<boolean>
-  register: (email: string, password: string, name: string, role?: Role) => Promise<boolean>
+  register: (email: string, password: string, name: string, role?: Role) => Promise<{ success: boolean; message?: string }>
   logout: () => Promise<void>
 }
 // Add optional setter to update user from components
@@ -79,7 +79,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     }
   }
 
-  const register = async (email: string, password: string, name: string, role?: Role): Promise<boolean> => {
+  const register = async (email: string, password: string, name: string, role?: Role): Promise<{ success: boolean; message?: string }> => {
     try {
       const response = await fetch('/api/auth/register', {
         method: 'POST',
@@ -87,15 +87,22 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         body: JSON.stringify({ email, password, name, role })
       })
 
+      const text = await response.text()
+      let data: any = {}
+      try { data = text ? JSON.parse(text) : {} } catch (e) { data = { message: text } }
+
       if (response.ok) {
-        const data = await response.json()
         setUser(data.user)
-        return true
+        return { success: true }
       }
-      return false
+
+      // Log server-provided error details for easier debugging
+      console.error('Registration failed:', { status: response.status, body: data })
+      const message = data?.error || data?.message || 'Registration failed'
+      return { success: false, message }
     } catch (error) {
       console.error('Registration failed:', error)
-      return false
+      return { success: false, message: 'Network or server error' }
     }
   }
 

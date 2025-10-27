@@ -54,16 +54,16 @@ export default function RegisterPage() {
     setLoading(true)
 
     try {
-      const success = await register(
+      const result = await register(
         formData.email,
         formData.password,
         formData.name,
         formData.role
       )
-      if (success) {
+      if (result.success) {
         router.push('/dashboard')
       } else {
-        setError('Registration failed. Email might already exist.')
+        setError(result.message || 'Registration failed. Email might already exist.')
       }
     } catch {
       setError('An error occurred. Please try again.')
