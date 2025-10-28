@@ -15,7 +15,8 @@ export async function GET(request: NextRequest) {
 
   const user = await verifyToken(token)
 
-    if (!user || (user.role !== 'ADMIN' && user.role !== 'INSTRUCTOR')) {
+    // Only ADMIN users may fetch the full students list. Instructors are denied.
+    if (!user || user.role !== 'ADMIN') {
       return NextResponse.json(
         { error: 'Unauthorized' },
         { status: 403 }

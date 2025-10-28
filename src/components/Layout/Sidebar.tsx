@@ -25,9 +25,11 @@ export default function Sidebar() {
   const { user } = useAuth()
   const pathname = usePathname()
 
-  const navItems = user?.role === 'ADMIN' || user?.role === 'INSTRUCTOR' 
-    ? adminNavigation 
-    : navigation
+  const navItems = user?.role === 'ADMIN'
+    ? adminNavigation
+    : user?.role === 'INSTRUCTOR'
+      ? adminNavigation.filter(item => item.name !== 'Students')
+      : navigation
 
   return (
     <div className="hidden md:flex md:w-72 md:flex-col md:fixed md:inset-y-0">

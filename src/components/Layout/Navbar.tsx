@@ -78,21 +78,31 @@ export default function Navbar() {
 
   const navigation = [
     { name: 'Dashboard', href: '/dashboard', icon: Home },
-    { name: 'Courses', href: '/courses', icon: BookOpen },
+    // Courses dropdown will be rendered separately to allow sub-menu items
     { name: 'Blogs', href: '/blogs', icon: FileText },
-    ...(user?.role === 'ADMIN' || user?.role === 'INSTRUCTOR' ? [
-      { name: 'On-Demand Courses', href: '/on-demand-courses', icon: Video },
+    ...(user?.role === 'ADMIN' ? [
       { name: 'Students', href: '/students', icon: Users },
-      { name: 'Batches', href: '/batches', icon: Users },
     ] : [])
   ]
+
+  const [isCoursesOpen, setIsCoursesOpen] = useState(false)
+  const coursesRef = useRef<HTMLDivElement | null>(null)
+
+  useEffect(() => {
+    function handleClick(e: MouseEvent) {
+      const target = e.target as Node
+      if (!coursesRef.current?.contains(target)) setIsCoursesOpen(false)
+    }
+    window.addEventListener('click', handleClick)
+    return () => window.removeEventListener('click', handleClick)
+  }, [])
 
   return (
   <nav className="shadow-sm border-b" style={{ background: 'var(--background)', borderColor: 'var(--section-border)' }} suppressHydrationWarning>
       <div className="max-w-[1920px] w-full mx-auto px-4 sm:px-6 lg:px-8">
         <div className="flex flex-row items-center justify-between h-14">
           {/* Logo */}
-          <Link href={user ? "/dashboard" : "/"} className="flex-shrink-0 flex items-center h-14" style={{ marginLeft: 0, paddingLeft: 0 }} aria-label="SAP Integration Expert Home">
+          <Link href="/" className="flex-shrink-0 flex items-center h-14" style={{ marginLeft: 0, paddingLeft: 0 }} aria-label="SAP Integration Expert Home">
             <svg width={320} height={36} viewBox="0 50 1100 160" preserveAspectRatio="xMinYMid meet" fill="none" xmlns="http://www.w3.org/2000/svg" role="img" aria-labelledby="title desc" className="self-center translate-y-[1px]" style={{ filter: 'drop-shadow(0 1px 4px rgba(0,0,0,0.1))', display: 'block' }}>
               <title id="title">SAP Integration Expert — Wordmark</title>
               <desc id="desc">SAP in brand blue; Integration Expert in black (light) or light (dark). Logo shown before the wordmark.</desc>
@@ -104,7 +114,96 @@ export default function Navbar() {
 
           {/* Desktop Navigation */}
           <div className="hidden md:flex items-center h-14 space-x-8">
-            {navigation.map((item) => (
+            {/* Dashboard first */}
+            <Link href="/dashboard" className="hover:text-blue-600 px-3 py-2 rounded-md text-sm font-medium transition-colors" style={{ color: 'var(--session-text)' }}>Dashboard</Link>
+
+            {/* Courses dropdown */}
+            <div className="relative" ref={coursesRef}>
+              {user ? (
+                // Logged-in users
+                user.role === 'ADMIN' || user.role === 'INSTRUCTOR' ? (
+                  <div className="flex items-center">
+                    <Link
+                      href="/courses"
+                      className="hover:text-blue-600 px-3 py-2 rounded-md text-sm font-medium transition-colors"
+                      style={{ color: 'var(--session-text)' }}
+                    >
+                      Courses
+                    </Link>
+                    <button
+                      onClick={() => setIsCoursesOpen(!isCoursesOpen)}
+                      className="px-2 py-2 rounded-md hover:bg-gray-100 ml-0"
+                      aria-haspopup="true"
+                      aria-expanded={isCoursesOpen}
+                      aria-label="Open courses menu"
+                      style={{ color: 'var(--session-text)' }}
+                    >
+                      <ChevronDown className={`h-4 w-4 transition-transform ${isCoursesOpen ? 'rotate-180' : ''}`} />
+                    </button>
+                    {isCoursesOpen && (
+                      <div className="absolute right-0 top-full translate-y-2 -translate-x-1 origin-top-right w-44 rounded-md shadow-md z-40" style={{ background: 'var(--section-bg)', border: '1px solid var(--section-border)' }}>
+                        <Link
+                          href="/on-demand-courses"
+                          onClick={() => setIsCoursesOpen(false)}
+                          className="block px-4 py-2 text-sm hover:bg-gray-50"
+                          style={{ color: 'var(--session-text)' }}
+                        >
+                          Recorded Courses
+                        </Link>
+                        <Link href="/batches" onClick={() => setIsCoursesOpen(false)} className="block px-4 py-2 text-sm hover:bg-gray-50" style={{ color: 'var(--session-text)' }}>Batches</Link>
+                      </div>
+                    )}
+                  </div>
+                ) : user.role === 'STUDENT' ? (
+                  // Students: no dropdown, open courses page
+                  <Link
+                    href="/courses"
+                    className="hover:text-blue-600 px-3 py-2 rounded-md text-sm font-medium transition-colors"
+                    style={{ color: 'var(--session-text)' }}
+                  >
+                    Courses
+                  </Link>
+                ) : (
+                  // Other logged-in roles: toggle dropdown
+                  <>
+                    <button
+                      onClick={() => setIsCoursesOpen(!isCoursesOpen)}
+                      className="hover:text-blue-600 px-3 py-2 rounded-md text-sm font-medium transition-colors flex items-center gap-2"
+                      style={{ color: 'var(--session-text)' }}
+                      aria-haspopup="true"
+                      aria-expanded={isCoursesOpen}
+                    >
+                      Courses
+                      <ChevronDown className={`h-4 w-4 transition-transform ${isCoursesOpen ? 'rotate-180' : ''}`} />
+                    </button>
+                    {isCoursesOpen && (
+                      <div className="absolute right-0 top-full translate-y-2 -translate-x-1 origin-top-right w-44 rounded-md shadow-md z-40" style={{ background: 'var(--section-bg)', border: '1px solid var(--section-border)' }}>
+                        <Link
+                          href="/recorded-courses"
+                          onClick={() => setIsCoursesOpen(false)}
+                          className="block px-4 py-2 text-sm hover:bg-gray-50"
+                          style={{ color: 'var(--session-text)' }}
+                        >
+                          Recorded Courses
+                        </Link>
+                      </div>
+                    )}
+                  </>
+                )
+              ) : (
+                // No user (guest): simple Courses link only (no chevron/dropdown)
+                <Link
+                  href="/courses"
+                  className="hover:text-blue-600 px-3 py-2 rounded-md text-sm font-medium transition-colors"
+                  style={{ color: 'var(--session-text)' }}
+                >
+                  Courses
+                </Link>
+              )}
+            </div>
+
+            {/* Other nav items */}
+            {navigation.filter(i => i.name !== 'Dashboard').map((item) => (
               <Link
                 key={item.name}
                 href={item.href}
@@ -252,7 +351,50 @@ export default function Navbar() {
         {isMenuOpen && (
           <div className="md:hidden">
             <div className="px-2 pt-2 pb-3 space-y-1 sm:px-3">
-              {navigation.map((item) => (
+              <Link href="/dashboard" className="text-gray-700 hover:text-blue-600 block px-3 py-2 rounded-md text-base font-medium" onClick={() => setIsMenuOpen(false)}>Dashboard</Link>
+
+              {/* Mobile Courses: match desktop behavior
+                  - Admin/Instructor: label -> /courses, chevron toggles nested links (On-demand, Batches)
+                  - Student: simple link to /courses
+                  - Guest: split control (label -> /courses, chevron toggles Recorded Courses)
+                  - Other roles: toggle dropdown with Recorded Courses
+              */}
+              {user ? (
+                (user.role === 'ADMIN' || user.role === 'INSTRUCTOR') ? (
+                  <div>
+                    <div className="flex items-center justify-between px-3 py-2">
+                      <Link href="/courses" className="text-gray-700 hover:text-blue-600 text-base font-medium" onClick={() => setIsMenuOpen(false)}>Courses</Link>
+                      <button onClick={() => setIsCoursesOpen(!isCoursesOpen)} className="p-1 rounded-md hover:bg-gray-100" aria-label="Toggle courses submenu">
+                        <ChevronDown className={`h-5 w-5 ${isCoursesOpen ? 'rotate-180' : ''}`} />
+                      </button>
+                    </div>
+                    {isCoursesOpen && (
+                      <div className="pl-4 space-y-1">
+                        <Link href="/on-demand-courses" className="block text-gray-700 hover:text-blue-600 px-3 py-2 rounded-md text-base font-medium" onClick={() => { setIsMenuOpen(false); setIsCoursesOpen(false); }}>Recorded Courses</Link>
+                        <Link href="/batches" className="block text-gray-700 hover:text-blue-600 px-3 py-2 rounded-md text-base font-medium" onClick={() => { setIsMenuOpen(false); setIsCoursesOpen(false); }}>Batches</Link>
+                      </div>
+                    )}
+                  </div>
+                ) : user.role === 'STUDENT' ? (
+                  <Link href="/courses" className="text-gray-700 hover:text-blue-600 block px-3 py-2 rounded-md text-base font-medium" onClick={() => setIsMenuOpen(false)}>Courses</Link>
+                ) : (
+                  <div>
+                    <button onClick={() => setIsCoursesOpen(!isCoursesOpen)} className="w-full text-left text-gray-700 hover:text-blue-600 px-3 py-2 rounded-md text-base font-medium flex items-center justify-between" aria-label="Toggle courses submenu">
+                      <span>Courses</span>
+                      <ChevronDown className={`h-5 w-5 ${isCoursesOpen ? 'rotate-180' : ''}`} />
+                    </button>
+                    {isCoursesOpen && (
+                      <div className="pl-4">
+                        <Link href="/recorded-courses" className="block text-gray-700 hover:text-blue-600 px-3 py-2 rounded-md text-base font-medium" onClick={() => { setIsMenuOpen(false); setIsCoursesOpen(false); }}>Recorded Courses</Link>
+                      </div>
+                    )}
+                  </div>
+                )
+              ) : (
+                // guest: simple Courses link only (no chevron/dropdown)
+                <Link href="/courses" className="text-gray-700 hover:text-blue-600 block px-3 py-2 rounded-md text-base font-medium" onClick={() => setIsMenuOpen(false)}>Courses</Link>
+              )}
+              {navigation.filter(i => i.name !== 'Dashboard').map((item) => (
                 <Link
                   key={item.name}
                   href={item.href}

@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { prisma } from '@/lib/db'
 import { verifyToken } from '@/lib/auth'
+import jwt from 'jsonwebtoken'
 import { Prisma } from '@prisma/client'
 
 export async function GET(request: NextRequest) {
@@ -68,6 +69,14 @@ export async function GET(request: NextRequest) {
           isPublished: true
         }
       },
+      recordedCourses: {
+        select: {
+          id: true,
+          price: true,
+          discountPercent: true,
+          isPublished: true,
+        }
+      },
       _count: {
         select: {
           enrollments: true
@@ -133,6 +142,19 @@ export async function POST(request: NextRequest) {
     console.log('POST /api/courses - Starting request')
     const token = request.cookies.get('auth-token')?.value
     console.log('Auth token present:', !!token)
+    // Debugging helpers: log presence of critical env vars and a decoded token payload (non-verified)
+    try {
+      console.log('ENV: DATABASE_URL present=', !!process.env.DATABASE_URL, 'JWT_SECRET present=', !!process.env.JWT_SECRET)
+      if (token) {
+        // Don't log the full token; log a truncated version and the decoded payload
+        const short = token.length > 20 ? `${token.slice(0, 10)}...${token.slice(-6)}` : token
+        console.log('Token (truncated):', short)
+        const decoded = jwt.decode(token)
+        console.log('Token decoded (unverified):', decoded)
+      }
+    } catch (logErr) {
+      console.warn('Failed to log debug token info:', logErr)
+    }
 
     if (!token) {
       console.log('No auth token found')
