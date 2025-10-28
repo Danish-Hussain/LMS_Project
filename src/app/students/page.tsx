@@ -64,7 +64,7 @@ export default function StudentsPage() {
     )
   }
 
-  const isAdmin = user.role === 'ADMIN' || user.role === 'INSTRUCTOR'
+  const isAdmin = user.role === 'ADMIN'
 
   if (!isAdmin) {
     return (
