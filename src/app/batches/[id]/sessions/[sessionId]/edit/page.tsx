@@ -10,8 +10,8 @@ export default function EditSessionPage() {
   const { user, loading } = useAuth()
   const params = useParams()
   const router = useRouter()
-  const batchId = params.id as string
-  const sessionId = params.sessionId as string
+  const batchId = params?.id ?? ''
+  const sessionId = params?.sessionId ?? ''
 
   type FormShape = {
     title: string

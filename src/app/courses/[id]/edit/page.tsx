@@ -9,7 +9,7 @@ import Link from 'next/link'
 export default function EditCoursePage() {
   const { user, loading } = useAuth()
   const params = useParams()
-  const courseId = params.id as string
+  const courseId = params?.id ?? ''
   const router = useRouter()
 
   const [formData, setFormData] = useState({
