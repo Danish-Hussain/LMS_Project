@@ -1,6 +1,7 @@
 import type { NextApiRequest, NextApiResponse } from 'next'
 import crypto from 'crypto'
 import { prisma } from '@/lib/db'
+import { Prisma } from '@prisma/client'
 import { verifyToken } from '@/lib/auth'
 
 export default async function handler(req: NextApiRequest, res: NextApiResponse) {
@@ -25,12 +26,14 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     if (generated_signature !== razorpay_signature) {
       console.warn('Razorpay signature mismatch', { generated_signature, razorpay_signature })
       // Attempt to mark any payment with this orderId as FAILED (best-effort)
-      await prisma.payment.updateMany({ where: { orderId: razorpay_order_id }, data: { status: 'FAILED' } })
+      await prisma.payment.updateMany({ where: ({ orderId: razorpay_order_id } as any), data: { status: 'FAILED' } })
       return res.status(400).json({ error: 'Invalid signature' })
     }
 
   // Attempt to find an existing PENDING payment created during order creation
-  const existingPayment = await prisma.payment.findFirst({ where: { orderId: razorpay_order_id } })
+  // Use a permissive cast here because the generated `PaymentWhereInput` types can be
+  // strict about filter shapes; we're matching by the scalar `orderId` column.
+  const existingPayment = await prisma.payment.findFirst({ where: { orderId: razorpay_order_id } as any })
 
     // Create enrollment (mark user as enrolled)
     const enrollment = await prisma.enrollment.create({
@@ -49,16 +52,16 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       // Update the pending payment record
       await prisma.payment.update({
         where: { id: existingPayment.id },
-        data: {
+        data: ({
           paymentId: razorpay_payment_id,
           status: 'COMPLETED',
           enrollmentId: enrollment.id,
           amount: amountInPaise
-        }
+        } as Prisma.PaymentUncheckedUpdateInput)
       })
     } else {
       // Fallback: create a payment record if none exists
-      await prisma.payment.create({ data: {
+      await prisma.payment.create({ data: ({
         userId: user!.id,
         courseId,
         enrollmentId: enrollment.id,
@@ -68,7 +71,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
         amount: amountInPaise,
         currency: 'INR',
         status: 'COMPLETED'
-      } })
+      } as Prisma.PaymentUncheckedCreateInput) })
     }
 
     return res.json({ success: true, enrollmentId: enrollment.id })

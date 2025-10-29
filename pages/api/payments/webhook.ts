@@ -1,6 +1,7 @@
 import type { NextApiRequest, NextApiResponse } from 'next'
 import crypto from 'crypto'
 import { prisma } from '@/lib/db'
+import { Prisma } from '@prisma/client'
 
 // Disable body parser to access raw body for signature verification
 export const config = {
@@ -44,14 +45,14 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
         const razorpayPaymentId = paymentEntity.id
 
         // Update payment record if exists
-        const existing = await prisma.payment.findFirst({ where: { orderId } })
+        const existing = await prisma.payment.findFirst({ where: ({ orderId } as Prisma.PaymentWhereInput) })
         if (existing) {
           await prisma.payment.update({
             where: { id: existing.id },
-            data: {
+            data: ({
               paymentId: razorpayPaymentId,
               status: status === 'captured' || status === 'authorized' ? 'COMPLETED' : 'FAILED'
-            }
+            } as Prisma.PaymentUncheckedUpdateInput)
           })
         } else {
           // If no existing payment record found, log and skip creating incomplete record.

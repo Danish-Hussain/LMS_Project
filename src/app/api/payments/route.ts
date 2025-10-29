@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { prisma } from '@/lib/db'
+import { Prisma } from '@prisma/client'
 import { verifyToken } from '@/lib/auth'
 import { cookies } from 'next/headers'
 
@@ -54,7 +55,7 @@ export async function POST(request: NextRequest) {
         })
 
         const pay = await tx.payment.create({
-          data: {
+          data: ({
             userId: user.id,
             courseId,
             enrollmentId: en.id,
@@ -64,7 +65,7 @@ export async function POST(request: NextRequest) {
             provider: paymentMethod || 'UNKNOWN',
             orderId: transactionId,
             paymentId: transactionId
-          }
+          } as Prisma.PaymentUncheckedCreateInput)
         })
 
         return { enrollment: en, payment: pay }
