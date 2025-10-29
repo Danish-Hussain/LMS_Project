@@ -32,6 +32,7 @@
     "react": "^19.1.0",
     "react-dom": "^19.1.0",
     "prisma": "^6.17.1",
+    "razorpay": "^2.2.0",
     "react-player": "^3.3.3"
   },
   "devDependencies": {

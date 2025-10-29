@@ -11,7 +11,7 @@ export default function CreateSessionPage() {
   const { user, loading } = useAuth()
   const params = useParams()
   const router = useRouter()
-  const batchId = params.id as string
+  const batchId = params?.id ?? ''
   
   type FormShape = {
     title: string

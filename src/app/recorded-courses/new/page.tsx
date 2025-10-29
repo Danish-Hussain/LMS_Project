@@ -14,7 +14,7 @@ function CreateRecordedCourseContent() {
   const { user, loading } = useAuth()
   const { error: toastError, success: toastSuccess } = useToast()
 
-  const courseId = searchParams.get('courseId')
+  const courseId = searchParams?.get('courseId') ?? ''
   const [formData, setFormData] = useState({
     price: '',
     actualPrice: '',

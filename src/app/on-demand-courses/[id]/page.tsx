@@ -33,7 +33,7 @@ export default function OnDemandCourseDetailPage() {
   const { user } = useAuth()
   const toast = useToast()
   
-  const courseId = params.id as string
+  const courseId = params?.id ?? ''
   const [course, setCourse] = useState<RecordedCourse | null>(null)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)

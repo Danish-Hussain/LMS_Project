@@ -48,7 +48,7 @@ export default function EditRecordedCoursePage() {
   const router = useRouter();
   const { user } = useAuth();
   const toast = useToast();
-  const recordedCourseId = params.id as string;
+  const recordedCourseId = params?.id ?? '';
 
   const [course, setCourse] = useState<RecordedCourse | null>(null);
   const [courseId, setCourseId] = useState<string>('');

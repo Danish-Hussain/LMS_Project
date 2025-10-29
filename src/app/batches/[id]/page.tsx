@@ -40,7 +40,7 @@ interface Batch {
 export default function BatchDetailPage() {
   const { user, loading } = useAuth()
   const params = useParams()
-  const batchId = params.id as string
+  const batchId = params?.id ?? ''
   
   const [batch, setBatch] = useState<Batch | null>(null)
   const [isLoading, setIsLoading] = useState(true)

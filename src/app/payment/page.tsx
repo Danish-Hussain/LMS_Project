@@ -91,6 +91,7 @@ export default function PaymentPage() {
         headers: {
           'Content-Type': 'application/json'
         },
+        credentials: 'include',
         body: JSON.stringify({
           courseId,
           batchId,
@@ -104,11 +105,16 @@ export default function PaymentPage() {
         // Redirect to course page after successful payment
         router.push(`/courses/${courseId}`)
       } else {
-        toastError('Payment failed. Please try again.')
+        let errMsg = 'Payment failed. Please try again.'
+        try {
+          const body = await response.json()
+          if (body?.error) errMsg = body.error
+        } catch (_) {}
+        toastError(errMsg)
       }
     } catch (error) {
       console.error('Payment error:', error)
-      toastError('Payment failed. Please try again.')
+      toastError((error as any)?.message || 'Payment failed. Please try again.')
     } finally {
       setIsProcessing(false)
     }

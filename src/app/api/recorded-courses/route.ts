@@ -24,7 +24,7 @@ export async function POST(request: NextRequest) {
       // Try reading Course title if needed
       if (!parent) {
         try {
-          const course = await (prisma as any).course.findUnique({ where: { id: courseId }, select: { title: true } })
+          const course = await prisma.course.findUnique({ where: { id: courseId }, select: { title: true } })
           if (course?.title) finalName = `${course.title} — On‑demand`
         } catch (_) {
           // swallow; fallback below

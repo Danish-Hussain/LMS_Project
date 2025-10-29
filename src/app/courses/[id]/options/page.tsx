@@ -20,7 +20,7 @@ export default function CourseOptionsPage() {
   const { user, loading } = useAuth()
   const toast = useToast()
   
-  const courseId = params.id as string
+   const courseId = params?.id ?? ''
   const [course, setCourse] = useState<Course | null>(null)
   const [isLoading, setIsLoading] = useState(true)
 

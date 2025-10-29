@@ -183,19 +183,22 @@ model Progress {
 }
 
 model Payment {
-  id           String        @id @default(cuid())
-  amount       Float
-  currency     String        @default("USD")
-  status       PaymentStatus @default(PENDING)
-  method       String?
+  id           String    @id @default(cuid())
   userId       String
   courseId     String
-  enrollmentId String
-  createdAt    DateTime      @default(now())
-  updatedAt    DateTime      @updatedAt
-  enrollment   Enrollment    @relation(fields: [enrollmentId], references: [id], onDelete: Cascade)
-  course       Course        @relation(fields: [courseId], references: [id], onDelete: Cascade)
-  user         User          @relation(fields: [userId], references: [id], onDelete: Cascade)
+  enrollmentId String?
+  provider     String    @default("Razorpay")
+  orderId      String
+  paymentId    String?
+  amount       Int
+  currency     String    @default("INR")
+  status       PaymentStatus    @default(PENDING)
+  createdAt    DateTime  @default(now())
+  updatedAt    DateTime  @updatedAt
+
+  user        User       @relation(fields: [userId], references: [id])
+  course      Course     @relation(fields: [courseId], references: [id])
+  enrollment  Enrollment? @relation(fields: [enrollmentId], references: [id])
 
   @@map("payments")
 }

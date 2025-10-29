@@ -58,7 +58,7 @@ export async function POST(request: NextRequest) {
     }
 
     // Check if already enrolled
-  const existingEnrollment = await (prisma as any).recordedCourseEnrollment.findUnique({
+  const existingEnrollment = await prisma.recordedCourseEnrollment.findUnique({
       where: {
         userId_recordedCourseId: {
           userId: user.id,
@@ -75,7 +75,7 @@ export async function POST(request: NextRequest) {
     }
 
     // Create enrollment
-  const enrollment = await (prisma as any).recordedCourseEnrollment.create({
+  const enrollment = await prisma.recordedCourseEnrollment.create({
       data: {
         userId: user.id,
         recordedCourseId,

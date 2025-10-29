@@ -88,10 +88,12 @@ function CourseContent({
   const [expandedSections, setExpandedSections] = useState<Set<string>>(new Set())
   const [recordedCourses, setRecordedCourses] = useState<any[]>([])
   const [loadingRecordedCourses, setLoadingRecordedCourses] = useState(false)
-  const [previewSections, setPreviewSections] = useState<Array<{ id: string; title: string; order: number; sessions?: Array<{ id: string; title: string; order: number; sectionId?: string | null; videoUrl?: string | null; isPreview?: boolean }> }>>([])
-  const [loadingPreview, setLoadingPreview] = useState(false)
+  const params = useParams()
+  const courseId = params?.id ?? ''
   // Tracks whether preview endpoint returned via fallback (no explicit preview sessions marked)
   const [previewUsedFallback, setPreviewUsedFallback] = useState(false)
+  const [previewSections, setPreviewSections] = useState<Array<{ id: string; title: string; order: number; sessions?: Array<{ id: string; title: string; order: number; sectionId?: string | null; videoUrl?: string | null; isPreview?: boolean }>}>>([])
+  const [loadingPreview, setLoadingPreview] = useState(false)
   const isAdmin = user.role === 'ADMIN' || user.role === 'INSTRUCTOR'
   const hasRecordedCourseEnrollment = enrolledRecordedCourseIds && enrolledRecordedCourseIds.length > 0
   const [descExpanded, setDescExpanded] = useState(false)
@@ -161,7 +163,7 @@ function CourseContent({
   // Helpers for enrollment panel
   const previewSectionsCount = useMemo(() => (previewSections?.length || 0), [previewSections])
   const previewSessionsCount = useMemo(
-    () => (previewSections?.reduce((sum, s) => sum + ((hasSessionsArray(s) ? s.sessions.length : 0)), 0) || 0),
+    () => (previewSections?.reduce((sum: number, s: any) => sum + ((hasSessionsArray(s) ? s.sessions.length : 0)), 0) || 0),
     [previewSections]
   )
   // Format price based on detected currency (default USD)
@@ -1204,7 +1206,7 @@ export default function CourseDetailPage() {
   const toast = useToast()
   const params = useParams()
   const router = useRouter()
-  const courseId = params.id as string
+  const courseId = params?.id ?? ''
   const [course, setCourse] = useState<Course | null>(null)
   const [selectedSession, setSelectedSession] = useState<Session | null>(null)
   const [isLoading, setIsLoading] = useState(true)

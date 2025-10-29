@@ -391,7 +391,7 @@ export async function GET(req: NextRequest, context: HandlerContext<{ id: string
     const enrolledBatchIds = enrollments.map(e => e.batchId).filter((id): id is string => id !== null)
 
     // Get recorded course enrollments
-    const recordedCourseEnrollments: any = await (prisma as any).recordedCourseEnrollment.findMany({
+    const recordedCourseEnrollments: any = await prisma.recordedCourseEnrollment.findMany({
       where: {
         userId: user.id,
         recordedCourse: {
