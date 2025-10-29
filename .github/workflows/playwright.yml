@@ -56,6 +56,8 @@ jobs:
           npx prisma db push --accept-data-loss
           # run seed script if any (ignore failures)
           npm run seed || true
+      - name: Generate .js.d.ts stubs for Next validator
+        run: node scripts/generate-js-dts.js
       - name: Install Playwright browsers
         run: npx playwright install --with-deps
       - name: Prepare auth storage
