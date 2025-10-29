@@ -18,6 +18,15 @@ declare module "../../src/**/page.js" {
 }
 
 declare module "../../src/**/route.js" {
+  // Next app route modules export named handlers (GET, POST, etc.). Provide them
+  // so the generated validator's structural check succeeds.
+  export const GET: any
+  export const POST: any
+  export const PUT: any
+  export const PATCH: any
+  export const DELETE: any
+  export const HEAD: any
+  export const OPTIONS: any
   const _default: any
   export default _default
 }
