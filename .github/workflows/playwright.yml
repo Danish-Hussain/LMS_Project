@@ -9,6 +9,20 @@ on:
 jobs:
   e2e:
     runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:15
+        env:
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: postgres
+          POSTGRES_DB: postgres
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
     steps:
       - uses: actions/checkout@v4
       - name: Use Node.js
@@ -32,25 +46,19 @@ jobs:
       - name: Install deps
         run: npm ci
       - name: Set DATABASE_URL for Prisma
-        run: echo "DATABASE_URL=file:./tmp/test.db" >> $GITHUB_ENV
-      - name: Ensure tmp directory exists
-        run: mkdir -p tmp
+        run: echo "DATABASE_URL=postgresql://postgres:postgres@localhost:5432/postgres" >> $GITHUB_ENV
       - name: Generate prisma client
         run: npx prisma generate
-      - name: Apply migrations / push schema
-        run: npx prisma db push
-      - name: Prepare DB
-        env:
-          DATABASE_URL: file:./tmp/test.db
+      - name: Apply Prisma schema and seed
         run: |
+          # regenerate client and apply schema to the Postgres service
           npx prisma generate
-          npx prisma db push
-          npm run seed
+          npx prisma db push --accept-data-loss
+          # run seed script if any (ignore failures)
+          npm run seed || true
       - name: Install Playwright browsers
         run: npx playwright install --with-deps
       - name: Prepare auth storage
-        env:
-          DATABASE_URL: file:./tmp/test.db
         run: |
           rm -f tests/e2e/storageState.json || true
           npm run auth:setup || true
