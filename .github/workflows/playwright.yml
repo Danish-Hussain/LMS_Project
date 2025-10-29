@@ -45,8 +45,14 @@ jobs:
             ${{ runner.os }}-playwright-browsers
       - name: Install deps
         run: npm ci
-      - name: Set DATABASE_URL for Prisma
-        run: echo "DATABASE_URL=postgresql://postgres:postgres@localhost:5432/postgres" >> $GITHUB_ENV
+      - name: Set database env vars for Prisma and Postgres client tools
+        run: |
+          echo "DATABASE_URL=postgresql://postgres:postgres@localhost:5432/postgres" >> $GITHUB_ENV
+          echo "PGUSER=postgres" >> $GITHUB_ENV
+          echo "PGPASSWORD=postgres" >> $GITHUB_ENV
+          echo "PGHOST=localhost" >> $GITHUB_ENV
+          echo "PGPORT=5432" >> $GITHUB_ENV
+          echo "PGDATABASE=postgres" >> $GITHUB_ENV
       - name: Generate prisma client
         run: npx prisma generate
       - name: Apply Prisma schema and seed
@@ -65,6 +71,9 @@ jobs:
 
       - name: Build production server
         run: npm run build
+
+      - name: Generate .js.d.ts stubs for Next validator
+        run: node scripts/generate-js-dts.js
 
       - name: Start production server on 3003 (background)
         run: |
