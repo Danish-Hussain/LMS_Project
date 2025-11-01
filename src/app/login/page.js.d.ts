@@ -1,1 +1,1 @@
-// placeholder to satisfy type validator; intentionally no exports
+// removed: keeping this file empty during transition; intentionally no exports
