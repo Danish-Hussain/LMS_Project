@@ -1,3 +1,2 @@
 // Auto-generated stub for ../../src/app/batches/[id]/sessions/page.js
-const _default: any
-export default _default
+// neutralized: remove default export to avoid App Router page shadowing

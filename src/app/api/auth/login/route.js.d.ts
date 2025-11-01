@@ -1,9 +1,2 @@
-// Auto-generated stub for ../../src/app/api/auth/login/route.js
-export const GET: any
-export const POST: any
-export const PUT: any
-export const PATCH: any
-export const DELETE: any
-export const HEAD: any
-export const OPTIONS: any
-export default undefined as any
+// Neutralized stub: intentionally no exports to avoid interfering with App Router discovery
+
