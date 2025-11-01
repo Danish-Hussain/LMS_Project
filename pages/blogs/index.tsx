@@ -2,6 +2,7 @@
 
 import Link from 'next/link'
 import { useEffect, useState } from 'react'
+import { useAuth } from '@/contexts/AuthContext'
 
 type Blog = {
 	id: string
@@ -14,6 +15,8 @@ type Blog = {
 }
 
 export default function BlogsPage() {
+	const { user } = useAuth()
+	const isPrivileged = !!user && (user.role === 'ADMIN' || user.role === 'INSTRUCTOR')
 	const [blogs, setBlogs] = useState<Blog[]>([])
 	const [loading, setLoading] = useState(true)
 
@@ -37,7 +40,9 @@ export default function BlogsPage() {
 		<div className="max-w-5xl mx-auto p-6">
 			<div className="flex items-center justify-between mb-4">
 				<h1 className="text-2xl font-bold">Blogs</h1>
-				<Link href="/blogs/new" className="px-3 py-1.5 rounded bg-blue-600 text-white">New</Link>
+				{isPrivileged && (
+					<Link href="/blogs/new" className="px-3 py-1.5 rounded bg-blue-600 text-white">New</Link>
+				)}
 			</div>
 			{blogs.length === 0 ? (
 				<div className="text-gray-600">No blogs yet.</div>

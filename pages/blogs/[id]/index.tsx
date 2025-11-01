@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from 'react'
 import Link from 'next/link'
+import { useAuth } from '@/contexts/AuthContext'
 
 function toEmbedUrl(url: string) {
 	if (!url) return ''
@@ -28,6 +29,8 @@ function toEmbedUrl(url: string) {
 type Block = { id: string; type: string; data: any }
 
 export default function BlogViewPage() {
+    const { user } = useAuth()
+    const isPrivileged = !!user && (user.role === 'ADMIN' || user.role === 'INSTRUCTOR')
 	const [blog, setBlog] = useState<any | null>(null)
 	const [loading, setLoading] = useState(true)
 
@@ -74,7 +77,9 @@ export default function BlogViewPage() {
 
 	return (
 		<div className="max-w-4xl mx-auto p-6">
-			<div className="mb-3"><Link href={`/blogs/${blog.id}/edit`} className="text-sm text-blue-600 hover:underline">Edit</Link></div>
+			{isPrivileged && (
+				<div className="mb-3"><Link href={`/blogs/${blog.id}/edit`} className="text-sm text-blue-600 hover:underline">Edit</Link></div>
+			)}
 			{blog.coverImage && <img src={blog.coverImage} alt="cover" className="w-full h-64 object-cover rounded mb-6" />}
 			<h1 className="text-3xl font-bold mb-2">{blog.title}</h1>
 			<div className="text-sm text-gray-500 mb-6">{blog.topic} · {blog.createdAt ? new Date(blog.createdAt).toLocaleDateString() : ''}</div>
