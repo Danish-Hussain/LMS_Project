@@ -1,0 +1,13 @@
+# Explicit Netlify configuration so the platform uses our build script.
+# Goal: avoid Turbopack server chunk mismatches by building with webpack and
+# publishing the Next output. The Netlify Next Runtime will detect Next.js and
+# bundle functions accordingly.
+
+[build]
+  command = "npm run build:netlify"
+  publish = ".next"
+
+[build.environment]
+  NEXT_TELEMETRY_DISABLED = "1"
+  # Force webpack by not using Turbopack flags (handled in package.json)
+  # You can add other envs here if needed (e.g., DATABASE_URL in Netlify UI)
