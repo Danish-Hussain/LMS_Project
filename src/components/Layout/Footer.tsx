@@ -11,6 +11,7 @@ export default function Footer() {
             © {new Date().getFullYear()} {COMPANY}. All rights reserved.
           </div>
           <nav className="flex flex-wrap items-center gap-x-5 gap-y-2 text-sm">
+            <Link href="/contact" className="hover:underline" style={{ color: 'var(--session-text)' }}>Contact Us</Link>
             <Link href="/legal/terms" className="hover:underline" style={{ color: 'var(--session-text)' }}>Terms & Conditions</Link>
             <Link href="/legal/privacy" className="hover:underline" style={{ color: 'var(--session-text)' }}>Privacy Policy</Link>
             <Link href="/legal/shipping" className="hover:underline" style={{ color: 'var(--session-text)' }}>Shipping & Delivery</Link>
