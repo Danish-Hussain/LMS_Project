@@ -3,6 +3,7 @@ import { Inter } from 'next/font/google'
 import './globals.css'
 
 import ClientProviders from './ClientProviders'
+import Footer from '@/components/Layout/Footer'
 import PWARegister from './PWARegister'
 
 const inter = Inter({ subsets: ['latin'] })
@@ -45,6 +46,7 @@ export default function RootLayout({
           <main className="flex-1 w-full max-w-[1920px] mx-auto px-4 sm:px-6">
             {children}
           </main>
+          <Footer />
         </ClientProviders>
       </body>
     </html>
