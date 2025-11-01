@@ -1,6 +1,6 @@
 import Link from 'next/link'
 
-const COMPANY = process.env.NEXT_PUBLIC_COMPANY_NAME || 'Our Company'
+const COMPANY = process.env.NEXT_PUBLIC_COMPANY_NAME || 'SAP Integration Expert'
 
 export default function Footer() {
   return (
