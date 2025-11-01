@@ -1,6 +1,7 @@
 import type { NextApiRequest, NextApiResponse } from 'next'
 import fs from 'fs/promises'
 import path from 'path'
+import { verifyToken } from '@/lib/auth'
 
 const DATA_PATH = path.join(process.cwd(), 'data', 'blogs.json')
 
@@ -24,6 +25,12 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     if (req.method !== 'POST') {
       res.setHeader('Allow', ['POST'])
       return res.status(405).json({ error: 'Method Not Allowed' })
+    }
+
+    const token = req.cookies['auth-token']
+    const authUser = token ? await verifyToken(token) : null
+    if (!authUser || (authUser.role !== 'ADMIN' && authUser.role !== 'INSTRUCTOR')) {
+      return res.status(403).json({ error: 'Forbidden' })
     }
 
     const { id } = req.query

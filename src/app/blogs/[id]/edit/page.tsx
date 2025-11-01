@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from 'react'
 import { useRouter, useParams } from 'next/navigation'
+import { useAuth } from '@/contexts/AuthContext'
 
 type Block = {
   id: string
@@ -13,6 +14,7 @@ export default function BlogEditorPage() {
   const params = useParams() as { id: string }
   const id = params?.id
   const router = useRouter()
+  const { user, loading: authLoading } = useAuth()
 
   const [loading, setLoading] = useState(true)
   const [title, setTitle] = useState('')
@@ -22,6 +24,11 @@ export default function BlogEditorPage() {
   const [preview, setPreview] = useState(false)
 
   useEffect(() => {
+    // If user is a student, redirect to view page
+    if (!authLoading && user && user.role === 'STUDENT' && id) {
+      try { router.replace(`/blogs/${id}`) } catch {}
+      return
+    }
     if (!id) return
     (async () => {
       setLoading(true)
@@ -181,7 +188,8 @@ export default function BlogEditorPage() {
     }
   }
 
-  if (loading) return <div className="p-8">Loading editor…</div>
+  if (authLoading || loading) return <div className="p-8">Loading editor…</div>
+  if (user && user.role === 'STUDENT') return null
 
   return (
     <div className="max-w-6xl mx-auto p-6">
