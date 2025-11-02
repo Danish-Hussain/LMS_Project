@@ -39,8 +39,8 @@ export default function RootLayout({
   children: React.ReactNode
 }) {
   return (
-    <html lang="en">
-      <body className={inter.className} suppressHydrationWarning={true} style={{ background: 'var(--background)', color: 'var(--foreground)' }}>
+    <html lang="en" className="h-full">
+      <body className={`${inter.className} min-h-screen flex flex-col`} suppressHydrationWarning={true} style={{ background: 'var(--background)', color: 'var(--foreground)' }}>
         <ClientProviders>
           <PWARegister />
           <main className="flex-1 w-full max-w-[1920px] mx-auto px-4 sm:px-6">

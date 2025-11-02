@@ -480,7 +480,7 @@ export async function PUT(request: NextRequest, context: HandlerContext<{ id: st
       discountPercent?: number | string | null
     }
 
-    const { title, description, thumbnail, isPublished } = body
+  const { title, description, thumbnail, isPublished } = body
     const price = body.price !== undefined && body.price !== null && body.price !== ''
       ? Number(body.price)
       : undefined
@@ -534,12 +534,19 @@ export async function PUT(request: NextRequest, context: HandlerContext<{ id: st
       )
     }
 
+    // Normalize thumbnail to strip a leading "/public" if present
+    const normalizedThumbnail = typeof thumbnail === 'string' && thumbnail.trim().length > 0
+      ? thumbnail.trim().replace(/^\/public\//, '/')
+      : thumbnail === ''
+        ? null
+        : thumbnail
+
     const updatedCourse = await prisma.course.update({
       where: { id: courseId },
       data: {
         title,
         description,
-        thumbnail,
+        thumbnail: normalizedThumbnail as any,
         isPublished,
         ...(price !== undefined ? { price } : {}),
         ...(discountPercent !== undefined ? { discountPercent } : {}),

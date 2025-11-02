@@ -330,10 +330,13 @@ export async function POST(request: NextRequest) {
     }
 
     // Prepare course data with validated fields
+    const normalizedThumb = (typeof thumbnail === 'string' && thumbnail.trim().length > 0)
+      ? thumbnail.trim().replace(/^\/public\//, '/')
+      : null
     const courseData = {
       title: trimmedTitle,
   description: (typeof description === 'string' && description.trim().length > 0) ? description.trim() : null,
-  thumbnail: (typeof thumbnail === 'string' && thumbnail.trim().length > 0) ? thumbnail.trim() : null,
+  thumbnail: normalizedThumb,
       price: validatedPrice,
       isPublished: Boolean(isPublished),
       ...(validatedDiscount !== undefined ? { discountPercent: validatedDiscount } : {}),
