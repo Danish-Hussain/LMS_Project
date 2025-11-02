@@ -26,11 +26,25 @@ export async function POST(request: NextRequest) {
     
     // Set HTTP-only cookie
     const cookieStore = await cookies()
+    const reqHost = request.headers.get('host') || ''
+    const envDomain = process.env.COOKIE_DOMAIN || process.env.NEXT_PUBLIC_COOKIE_DOMAIN
+    const deriveDomain = () => {
+      if (envDomain) return envDomain
+      if (!reqHost || reqHost.includes('localhost')) return undefined
+      const host = reqHost.split(':')[0]
+      const parts = host.split('.')
+      if (parts.length >= 2) {
+        const base = parts.slice(-2).join('.')
+        return `.${base}`
+      }
+      return undefined
+    }
     cookieStore.set('auth-token', token, {
       httpOnly: true,
       secure: process.env.NODE_ENV === 'production',
       sameSite: 'lax',
-      maxAge: 7 * 24 * 60 * 60 // 7 days
+      maxAge: 7 * 24 * 60 * 60, // 7 days
+      ...(process.env.NODE_ENV === 'production' && deriveDomain() ? { domain: deriveDomain() } : {})
     })
 
     return NextResponse.json({
