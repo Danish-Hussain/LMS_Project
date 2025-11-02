@@ -7,6 +7,7 @@ import Image from 'next/image'
 import { useParams, useRouter } from 'next/navigation'
 import Link from 'next/link'
 import { ArrowLeft, Play, CheckCircle, Circle, Clock, Users, BookOpen, Layers, X, CalendarDays } from 'lucide-react'
+import RazorpayButton from '@/components/payments/RazorpayButton'
 import VideoPlayer from '@/components/VideoPlayer'
 import VimeoPlayer from '@/components/VimeoPlayer'
 import useToast from '@/hooks/useToast'
@@ -871,21 +872,34 @@ function CourseContent({
                               )
                             })()}
                           </div>
-                          <button
-                            onClick={() => { if (isGuest) { openLoginPrompt(); } else { handleEnroll(batch.id) } }}
-                            disabled={enrolledBatchIds.includes(batch.id)}
-                            className={`mt-4 md:mt-5 w-full px-4 ${course.batches.length === 1 ? 'py-3 text-base' : 'py-2 text-sm'} rounded-lg font-semibold transition-colors shadow-sm focus:outline-none focus:ring-2 focus:ring-offset-0 ${
-                              enrolledBatchIds.includes(batch.id)
-                                ? 'bg-gray-300 cursor-not-allowed text-gray-700 focus:ring-gray-300'
-                                : 'bg-blue-600 hover:bg-blue-700 text-white focus:ring-blue-500'
-                            }`}
-                          >
-                            {enrolledBatchIds.includes(batch.id)
-                              ? 'Already Enrolled'
-                              : course.price && course.price > 0
-                                ? `Enroll - ${computePriceParts(course.price, (course as any).discountPercent).label}`
-                                : 'Enroll Free'}
-                          </button>
+                          {enrolledBatchIds.includes(batch.id) ? (
+                            <button
+                              disabled
+                              className={`mt-4 md:mt-5 w-full px-4 ${course.batches.length === 1 ? 'py-3 text-base' : 'py-2 text-sm'} rounded-lg font-semibold transition-colors shadow-sm bg-gray-300 cursor-not-allowed text-gray-700`}
+                            >
+                              Already Enrolled
+                            </button>
+                          ) : course.price && course.price > 0 ? (
+                            <div className="mt-4 md:mt-5 w-full">
+                              {isGuest ? (
+                                <button
+                                  onClick={openLoginPrompt}
+                                  className={`w-full px-4 ${course.batches.length === 1 ? 'py-3 text-base' : 'py-2 text-sm'} rounded-lg font-semibold transition-colors shadow-sm bg-blue-600 hover:bg-blue-700 text-white`}
+                                >
+                                  Enroll
+                                </button>
+                              ) : (
+                                <RazorpayButton courseId={course.id} courseTitle={course.title} batchId={batch.id} />
+                              )}
+                            </div>
+                          ) : (
+                            <button
+                              onClick={() => { if (isGuest) { openLoginPrompt(); } else { handleEnroll(batch.id) } }}
+                              className={`mt-4 md:mt-5 w-full px-4 ${course.batches.length === 1 ? 'py-3 text-base' : 'py-2 text-sm'} rounded-lg font-semibold transition-colors shadow-sm bg-green-600 hover:bg-green-700 text-white`}
+                            >
+                              Enroll Free
+                            </button>
+                          )}
                         </div>
                       ))}
                     </div>

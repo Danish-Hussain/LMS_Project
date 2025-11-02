@@ -17,8 +17,8 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       return res.status(401).json({ error: 'Invalid token' })
     }
 
-    const { courseId } = req.body
-    if (!courseId) return res.status(400).json({ error: 'courseId is required' })
+  const { courseId, batchId } = req.body
+  if (!courseId) return res.status(400).json({ error: 'courseId is required' })
 
     const course = await prisma.course.findUnique({ where: { id: courseId }, select: { id: true, title: true, price: true } })
     if (!course) return res.status(404).json({ error: 'Course not found' })
@@ -31,10 +31,21 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       key_secret: process.env.RAZORPAY_KEY_SECRET || ''
     })
 
+    // Build a short, unique receipt id (Razorpay limit: max 40 chars)
+    const receiptParts = [
+      'r',
+      Date.now().toString(36),
+      String(course.id).slice(0, 6),
+      String(user!.id).slice(0, 6)
+    ]
+    if (batchId) receiptParts.push(String(batchId).slice(0, 6))
+    let receipt = receiptParts.join('_')
+    if (receipt.length > 40) receipt = receipt.slice(0, 40)
+
     const options = {
       amount,
       currency: 'INR',
-      receipt: `rcpt_${Date.now()}_${course.id}_${user!.id}`,
+      receipt,
       payment_capture: 1
     }
 
