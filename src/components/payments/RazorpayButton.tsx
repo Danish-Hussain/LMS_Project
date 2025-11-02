@@ -29,7 +29,11 @@ export default function RazorpayButton({ courseId, courseTitle, amount, batchId 
         body: JSON.stringify({ courseId, batchId })
       })
       const data = await resp.json()
-      if (!resp.ok) throw new Error(data?.error || 'Failed to create order')
+      if (!resp.ok) {
+        const code = encodeURIComponent(data?.error || 'create-order-failed')
+        window.location.href = `/payment/failed?code=${code}`
+        return
+      }
 
       await loadScript('https://checkout.razorpay.com/v1/checkout.js')
 
@@ -59,7 +63,8 @@ export default function RazorpayButton({ courseId, courseTitle, amount, batchId 
             window.location.href = '/payment/success'
           } else {
             console.error('Payment verification failed', verifyJson)
-            window.location.href = '/payment/failed'
+            const code = encodeURIComponent(verifyJson?.error || 'verify-failed')
+            window.location.href = `/payment/failed?code=${code}`
           }
         },
         prefill: {},
@@ -68,9 +73,10 @@ export default function RazorpayButton({ courseId, courseTitle, amount, batchId 
 
       const rzp = new (window as any).Razorpay(options)
       rzp.open()
-    } catch (err) {
+    } catch (err: any) {
       console.error('Enrollment error', err)
-      window.location.href = '/payment/failed'
+      const code = encodeURIComponent(err?.message || 'enroll-error')
+      window.location.href = `/payment/failed?code=${code}`
     }
   }
 
