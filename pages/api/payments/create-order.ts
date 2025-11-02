@@ -26,9 +26,16 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     const price = typeof course.price === 'number' ? course.price : 0
     const amount = Math.round(price * 100) // amount in paise
 
+    const keyId = process.env.RAZORPAY_KEY_ID || ''
+    const keySecret = process.env.RAZORPAY_KEY_SECRET || ''
+    if (!keyId || !keySecret) {
+      console.error('Razorpay env missing in server: RAZORPAY_KEY_ID or RAZORPAY_KEY_SECRET not set')
+      return res.status(500).json({ error: 'Payment processor not configured' })
+    }
+
     const razorpay = new Razorpay({
-      key_id: process.env.RAZORPAY_KEY_ID || '',
-      key_secret: process.env.RAZORPAY_KEY_SECRET || ''
+      key_id: keyId,
+      key_secret: keySecret
     })
 
     // Build a short, unique receipt id (Razorpay limit: max 40 chars)
@@ -70,7 +77,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
   }
 
   // Return order id and key to client
-  return res.json({ orderId: order.id, keyId: process.env.RAZORPAY_KEY_ID, amount })
+  return res.json({ orderId: order.id, keyId, amount })
   } catch (error) {
     console.error('create-order error', error)
     return res.status(500).json({ error: 'Internal server error' })

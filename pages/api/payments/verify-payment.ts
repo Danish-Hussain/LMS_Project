@@ -21,6 +21,10 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
   if (!razorpay_order_id || !razorpay_payment_id || !razorpay_signature || !courseId) return res.status(400).json({ error: 'Missing parameters' })
 
     const secret = process.env.RAZORPAY_KEY_SECRET || ''
+    if (!secret) {
+      console.error('Razorpay secret missing in server environment: RAZORPAY_KEY_SECRET')
+      return res.status(500).json({ error: 'Payment processor not configured' })
+    }
     const generated_signature = crypto.createHmac('sha256', secret).update(`${razorpay_order_id}|${razorpay_payment_id}`).digest('hex')
 
     if (generated_signature !== razorpay_signature) {
