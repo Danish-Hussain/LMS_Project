@@ -17,7 +17,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       return res.status(401).json({ error: 'Invalid token' })
     }
 
-  const { razorpay_order_id, razorpay_payment_id, razorpay_signature, courseId } = req.body
+  const { razorpay_order_id, razorpay_payment_id, razorpay_signature, courseId, batchId } = req.body
   if (!razorpay_order_id || !razorpay_payment_id || !razorpay_signature || !courseId) return res.status(400).json({ error: 'Missing parameters' })
 
     const secret = process.env.RAZORPAY_KEY_SECRET || ''
@@ -40,6 +40,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       data: {
         userId: user!.id,
         courseId,
+        batchId: batchId || undefined,
         status: 'APPROVED'
       }
     })
