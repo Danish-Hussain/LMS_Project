@@ -11,6 +11,7 @@ interface Course {
   title: string
   description: string | null
   thumbnail: string | null
+  image?: string | null
   price: number | null
   discountPercent?: number | null
   isPublished: boolean
@@ -165,7 +166,7 @@ export default function CoursesPage() {
                 <div key={course.id} className="rounded-lg shadow-md overflow-hidden hover:shadow-lg transition-all flex flex-col h-full" style={{ background: 'var(--background)' }}>
                   <Link href={`/courses/${course.id}`} className="block group focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-500">
                     <div className="h-48 md:h-56 w-full overflow-hidden bg-gray-50">
-                      <CourseThumbnail thumbnail={course.thumbnail} title={course.title} />
+                      <CourseThumbnail image={(course as any).image ?? course.thumbnail} thumbnail={course.thumbnail} title={course.title} />
                     </div>
                   </Link>
 

@@ -6,7 +6,7 @@ import dynamic from 'next/dynamic'
 import Image from 'next/image'
 import { useParams, useRouter } from 'next/navigation'
 import Link from 'next/link'
-import { ArrowLeft, Play, CheckCircle, Circle, Clock, Users, BookOpen, Layers, X, CalendarDays } from 'lucide-react'
+import { ArrowLeft, Play, CheckCircle, Circle, Clock, Users, BookOpen, Layers, X, CalendarDays, Pencil } from 'lucide-react'
 import RazorpayButton from '@/components/payments/RazorpayButton'
 import VideoPlayer from '@/components/VideoPlayer'
 import VimeoPlayer from '@/components/VimeoPlayer'
@@ -82,6 +82,8 @@ function CourseContent({
   enrolledRecordedCourseIds,
   openLoginPrompt
 }: CourseContentProps) {
+  const router = useRouter()
+  const toast = useToast()
   const isGuest = !user?.id
   const [sections, setSections] = useState<{ id: string; title: string; order: number; description?: string | null }[]>([])
   const enrolledBatchId = enrolledBatchIds && enrolledBatchIds.length > 0 ? enrolledBatchIds[0] : null
@@ -91,6 +93,7 @@ function CourseContent({
   const [loadingRecordedCourses, setLoadingRecordedCourses] = useState(false)
   const params = useParams()
   const courseId = params?.id ?? ''
+  const [deleteOpen, setDeleteOpen] = useState(false)
   // Tracks whether preview endpoint returned via fallback (no explicit preview sessions marked)
   const [previewUsedFallback, setPreviewUsedFallback] = useState(false)
   const [previewSections, setPreviewSections] = useState<Array<{ id: string; title: string; order: number; sessions?: Array<{ id: string; title: string; order: number; sectionId?: string | null; videoUrl?: string | null; isPreview?: boolean }>}>>([])
@@ -400,32 +403,57 @@ function CourseContent({
       {(!canAccess || isAdmin) && (
         <div className="max-w-[1920px] mx-auto px-4 sm:px-6 pt-6">
           <div className="rounded-lg shadow-md p-6 mb-6" style={{ background: 'var(--section-bg)', border: '1px solid var(--section-border)' }}>
-            <h1 className="text-2xl sm:text-3xl font-bold mb-2" style={{ color: 'var(--foreground)' }}>{course.title}</h1>
-            {course.description && (
-              <>
-                <p
-                  className="text-sm sm:text-base mb-2"
-                  style={{
-                    color: 'var(--session-text)',
-                    display: descExpanded ? undefined : '-webkit-box',
-                    WebkitLineClamp: descExpanded ? (undefined as any) : 3,
-                    WebkitBoxOrient: descExpanded ? (undefined as any) : 'vertical',
-                    overflow: descExpanded ? undefined : 'hidden'
-                  }}
-                >
-                  {shortDescription}
-                </p>
-                {course.description.length > 220 && (
-                  <button
-                    type="button"
-                    className="text-blue-600 hover:text-blue-700 text-sm font-semibold mb-2"
-                    onClick={() => setDescExpanded((v) => !v)}
+            <div className="flex items-start justify-between gap-4">
+              <div className="min-w-0">
+                <h1 className="text-2xl sm:text-3xl font-bold mb-2 break-words" style={{ color: 'var(--foreground)' }}>{course.title}</h1>
+                {course.description && (
+                  <>
+                    <p
+                      className="text-sm sm:text-base mb-2"
+                      style={{
+                        color: 'var(--session-text)',
+                        display: descExpanded ? undefined : '-webkit-box',
+                        WebkitLineClamp: descExpanded ? (undefined as any) : 3,
+                        WebkitBoxOrient: descExpanded ? (undefined as any) : 'vertical',
+                        overflow: descExpanded ? undefined : 'hidden'
+                      }}
+                    >
+                      {shortDescription}
+                    </p>
+                    {course.description.length > 220 && (
+                      <button
+                        type="button"
+                        className="text-blue-600 hover:text-blue-700 text-sm font-semibold mb-2"
+                        onClick={() => setDescExpanded((v) => !v)}
+                      >
+                        {descExpanded ? 'Show less' : 'Read more'}
+                      </button>
+                    )}
+                  </>
+                )}
+              </div>
+              <div className="flex items-center gap-2">
+                {(user && (user.role === 'ADMIN' || user.role === 'INSTRUCTOR')) && (
+                  <Link
+                    href={`/courses/${course.id}/edit`}
+                    className="shrink-0 inline-flex items-center gap-2 px-3 py-2 rounded-lg border hover:bg-blue-600 hover:text-white transition"
+                    style={{ borderColor: 'var(--section-border)', color: 'var(--foreground)' }}
                   >
-                    {descExpanded ? 'Show less' : 'Read more'}
+                    <Pencil className="h-4 w-4" />
+                    <span className="hidden sm:inline font-semibold">Edit</span>
+                  </Link>
+                )}
+                {user && user.role === 'ADMIN' && (
+                  <button
+                    onClick={() => setDeleteOpen(true)}
+                    className="shrink-0 inline-flex items-center gap-2 px-3 py-2 rounded-lg border text-red-600 hover:text-white hover:bg-red-600 transition"
+                    style={{ borderColor: 'var(--section-border)' }}
+                  >
+                    Delete
                   </button>
                 )}
-              </>
-            )}
+              </div>
+            </div>
             {/* Sections/sessions counts and "What you'll learn" intentionally removed for a cleaner header */}
           </div>
         </div>
@@ -754,13 +782,7 @@ function CourseContent({
                 >
                   <div className="relative w-full group" style={{ paddingTop: '56.25%' }}>
                     <div className="absolute inset-0 rounded-md overflow-hidden border" style={{ borderColor: 'var(--section-border)' }}>
-                      {course.thumbnail ? (
-                        <Image src={course.thumbnail} alt={`${course.title} thumbnail`} fill className="object-cover" unoptimized />
-                      ) : (
-                        <div className="w-full h-full flex items-center justify-center" style={{ background: 'var(--background)', color: 'var(--session-subtext)' }}>
-                          <span className="text-sm">{previewVideoUrl ? 'Preview available' : 'Preview video not available'}</span>
-                        </div>
-                      )}
+                      <Image src={course.thumbnail || '/uploads/CPI_Thumnail.png'} alt={`${course.title} thumbnail`} fill className="object-cover" unoptimized />
                       {/* Overlay */}
                         <div className={`absolute inset-0 flex items-center justify-center transition-colors ${firstPreviewVimeo ? 'bg-black/30 opacity-100 group-hover:bg-black/50' : 'bg-black/10'}`}>
                         <div className="flex items-center gap-2 px-3 py-1.5 rounded-full" style={{ background: firstPreviewVimeo ? 'rgba(0,0,0,0.6)' : 'rgba(0,0,0,0.25)' }}>
@@ -1211,6 +1233,30 @@ function CourseContent({
         </div>
         )}
       </div>
+      {/* Confirm course deletion */}
+      <ConfirmDialog
+        open={deleteOpen}
+        title="Delete Course"
+        message="Are you sure you want to permanently delete this course? This action cannot be undone."
+        confirmLabel="Delete"
+        onCancel={() => setDeleteOpen(false)}
+        onConfirm={async () => {
+          try {
+            const res = await fetch(`/api/courses/${courseId}`, { method: 'DELETE', credentials: 'include' })
+            if (res.ok) {
+              toast.success?.('Course deleted')
+              router.push('/courses')
+            } else {
+              const data = await res.json().catch(() => null)
+              toast.error?.(data?.error || 'Failed to delete course')
+            }
+          } catch (err: any) {
+            toast.error?.(err?.message || 'Failed to delete course')
+          } finally {
+            setDeleteOpen(false)
+          }
+        }}
+      />
     </div>
   )
 }

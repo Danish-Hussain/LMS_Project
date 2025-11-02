@@ -20,59 +20,7 @@ export default function CreateCoursePage() {
   })
   const [isSubmitting, setIsSubmitting] = useState(false)
   const [error, setError] = useState('')
-  const [isUploading, setIsUploading] = useState(false)
-  const [uploadError, setUploadError] = useState('')
-  const [isDragging, setIsDragging] = useState(false)
-
-  const allowedTypes = ['image/png', 'image/jpeg', 'image/webp']
-  const maxBytes = 5 * 1024 * 1024 // 5MB
-
-  const handleFileUpload = async (file: File) => {
-    setUploadError('')
-    if (!file) return
-    if (!allowedTypes.includes(file.type)) {
-      setUploadError('Only PNG, JPG, or WebP images are allowed')
-      return
-    }
-    if (file.size > maxBytes) {
-      setUploadError('File is too large (max 5MB)')
-      return
-    }
-    try {
-      setIsUploading(true)
-      // Use FileReader to avoid spreading large Uint8Arrays into fromCharCode, which can overflow the stack
-      const base64 = await new Promise<string>((resolve, reject) => {
-        const reader = new FileReader()
-        reader.onload = () => {
-          try {
-            const result = reader.result as string
-            const commaIndex = result.indexOf(',')
-            resolve(commaIndex >= 0 ? result.slice(commaIndex + 1) : result)
-          } catch (err) {
-            reject(err)
-          }
-        }
-        reader.onerror = () => reject(reader.error)
-        reader.readAsDataURL(file)
-      })
-      const res = await fetch('/api/upload', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        credentials: 'same-origin',
-        body: JSON.stringify({ filename: file.name, contentBase64: base64 })
-      })
-      const data = await res.json().catch(() => null)
-      if (!res.ok || !data?.url) {
-        throw new Error(data?.error || 'Upload failed')
-      }
-      setFormData((prev) => ({ ...prev, thumbnail: data.url }))
-    } catch (err: any) {
-      console.error('Upload failed', err)
-      setUploadError(err?.message || 'Upload failed')
-    } finally {
-      setIsUploading(false)
-    }
-  }
+  // switched from drag/drop upload to URL input that points to /public (e.g., /courses/apim.png)
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
     setFormData({
@@ -188,7 +136,7 @@ export default function CreateCoursePage() {
         body: JSON.stringify({
           title: formData.title,
           description: formData.description,
-          thumbnail: formData.thumbnail,
+          thumbnail: (formData.thumbnail && formData.thumbnail.trim()) || '/uploads/CPI_Thumnail.png',
           price: finalPrice,
           discountPercent: discountNum
         })
@@ -360,51 +308,55 @@ export default function CreateCoursePage() {
               </div>
 
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">Thumbnail (PNG/JPG/WebP)</label>
-                {/* Drag & Drop area */}
-                <div
-                  className={`border-2 border-dashed rounded-md p-4 text-center ${isDragging ? 'border-blue-400 bg-blue-50' : 'border-gray-300'}`}
-                  onDragOver={(e) => { e.preventDefault(); setIsDragging(true) }}
-                  onDragLeave={() => setIsDragging(false)}
-                  onDrop={(e) => {
-                    e.preventDefault();
-                    setIsDragging(false)
-                    const file = e.dataTransfer.files?.[0]
-                    if (file) { void handleFileUpload(file) }
-                  }}
-                >
-                  <p className="text-xs text-gray-600">Drag & drop an image here, or click to choose</p>
+                <label htmlFor="thumbnail" className="block text-sm font-medium text-gray-700 mb-2">Course Image (URL under /public)</label>
+                <div className="flex gap-2">
                   <input
-                    type="file"
-                    accept="image/png,image/jpeg,image/webp"
-                    onChange={async (e) => {
-                      const inputEl = e.currentTarget as HTMLInputElement
-                      const file = inputEl?.files?.[0]
-                      if (file) {
-                        await handleFileUpload(file)
-                        // Clear file input to allow re-selecting the same file if needed
-                        if (inputEl) inputEl.value = ''
+                    type="text"
+                    id="thumbnail"
+                    name="thumbnail"
+                    value={formData.thumbnail}
+                    onChange={handleChange}
+                    placeholder="e.g., /courses/apim.png"
+                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-blue-500 focus:border-blue-500"
+                  />
+                  <button
+                    type="button"
+                    onClick={async () => {
+                      try {
+                        const res = await fetch('/api/public-images')
+                        if (res.ok) {
+                          const data = await res.json()
+                          const images: { path: string }[] = (data.images || [])
+                          if (images.length > 0) {
+                            // Simple picker: choose the first for now via prompt; keep UI minimal
+                            const choice = window.prompt('Paste or pick an image path from the list:\n' + images.map((i: any) => i.path).join('\n'), images[0].path)
+                            if (choice) {
+                              // Normalize away leading /public if present
+                              const normPath = String(choice).trim().replace(/^\/public\//, '/')
+                              setFormData(prev => ({ ...prev, thumbnail: normPath }))
+                            }
+                          } else {
+                            alert('No images found in /public/uploads or /public/courses')
+                          }
+                        } else {
+                          alert('Failed to load images')
+                        }
+                      } catch (e) {
+                        console.error(e)
+                        alert('Failed to load images')
                       }
                     }}
-                    className="mt-2 block w-full text-sm text-gray-700 file:mr-3 file:py-2 file:px-3 file:rounded-md file:border file:border-gray-300 file:text-sm file:bg-white file:hover:bg-gray-50"
-                  />
-                  <p className="text-[11px] text-gray-500 mt-2">Max size 5MB. Supported: PNG, JPG, WebP.</p>
-                  {isUploading && (
-                    <div className="text-[11px] text-gray-500 mt-1">Uploading…</div>
-                  )}
-                  {uploadError && (
-                    <div className="text-xs text-red-600 mt-1">{uploadError}</div>
-                  )}
+                    className="px-3 py-2 border border-gray-300 rounded-md hover:bg-gray-50"
+                  >Browse</button>
                 </div>
+                <p className="text-xs text-gray-500 mt-1">Store your image in <code>/public/courses</code> or <code>/public/uploads</code> and reference it as <strong>/courses/filename.png</strong> or <strong>/uploads/filename.png</strong>. Do not include <code>/public</code> in the URL.</p>
                 {formData.thumbnail && (
                   <div className="mt-2">
                     <img
                       src={formData.thumbnail}
-                      alt="Thumbnail preview"
+                      alt="Preview"
                       className="w-32 h-24 object-cover rounded-md border"
-                      onError={(e) => {
-                        e.currentTarget.style.display = 'none'
-                      }}
+                      onError={(e) => { (e.currentTarget as HTMLImageElement).style.display = 'none' }}
                     />
                   </div>
                 )}

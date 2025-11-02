@@ -5,6 +5,7 @@ import { useAuth } from '@/contexts/AuthContext'
 import { useRouter } from 'next/navigation'
 import Link from 'next/link'
 import { ArrowLeft, CreditCard, CheckCircle, Lock } from 'lucide-react'
+import Image from 'next/image'
 import useToast from '@/hooks/useToast'
 
 interface Course {
@@ -184,17 +185,14 @@ export default function PaymentPage() {
             <h2 className="text-xl font-semibold text-gray-900 mb-4">Order Summary</h2>
             
             <div className="flex items-start space-x-4 mb-6">
-              {course.thumbnail ? (
-                <img
-                  src={course.thumbnail}
+              <div className="relative w-24 h-20 rounded overflow-hidden bg-gray-50 flex-shrink-0">
+                <Image
+                  src={course.thumbnail || '/uploads/CPI_Thumnail.png'}
                   alt={course.title}
-                  className="w-16 h-16 object-cover rounded-lg"
+                  fill
+                  className="object-cover"
                 />
-              ) : (
-                <div className="w-16 h-16 bg-gray-200 rounded-lg flex items-center justify-center">
-                  <span className="text-gray-400 text-sm">No Image</span>
-                </div>
-              )}
+              </div>
               <div className="flex-1">
                 <h3 className="font-semibold text-gray-900">{course.title}</h3>
                 <p className="text-sm text-gray-600">Batch: {batch.name}</p>

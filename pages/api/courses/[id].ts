@@ -168,10 +168,102 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     }
   }
 
-  if (req.method === 'PUT' || req.method === 'DELETE') {
-    return res.status(501).json({ error: 'Not implemented in Pages API. Use App Router API.' })
+  if (req.method === 'PUT') {
+    try {
+      const token = req.cookies['auth-token']
+      if (!token) return res.status(401).json({ error: 'Not authenticated' })
+      const user = await verifyToken(token).catch(() => null) as any
+      if (!user || !['ADMIN', 'INSTRUCTOR'].includes(user.role)) {
+        return res.status(403).json({ error: 'Unauthorized' })
+      }
+
+      const course = await prisma.course.findUnique({ where: { id } })
+      if (!course) return res.status(404).json({ error: 'Course not found' })
+      if (user.role !== 'ADMIN' && course.creatorId !== user.id) {
+        return res.status(403).json({ error: 'Unauthorized' })
+      }
+
+      const body = (req.body || {}) as {
+        title?: string
+        description?: string
+        thumbnail?: string | null
+        isPublished?: boolean
+        price?: number | string | null
+        discountPercent?: number | string | null
+      }
+
+      // Validate thumbnail when provided
+      if (body.thumbnail !== undefined && body.thumbnail !== null) {
+        if (typeof body.thumbnail !== 'string') {
+          return res.status(400).json({ error: 'Thumbnail must be a URL string' })
+        }
+        const thumb = body.thumbnail.trim()
+        if (thumb.length > 0) {
+          const isAppRelative = thumb.startsWith('/')
+          if (!isAppRelative) {
+            try {
+              const parsed = new URL(thumb)
+              if (parsed.protocol !== 'http:' && parsed.protocol !== 'https:') throw new Error('invalid protocol')
+            } catch {
+              return res.status(400).json({ error: 'Thumbnail must be a valid URL starting with http:// or https:// or an app relative path like /uploads/…' })
+            }
+          }
+        }
+      }
+
+      const price = body.price !== undefined && body.price !== null && body.price !== '' ? Number(body.price) : undefined
+      const discountPercent = body.discountPercent !== undefined && body.discountPercent !== null && body.discountPercent !== ''
+        ? Math.max(0, Math.min(100, Number(body.discountPercent)))
+        : undefined
+
+      const updated = await prisma.course.update({
+        where: { id },
+        data: {
+          title: body.title,
+          description: body.description,
+          thumbnail: body.thumbnail,
+          isPublished: body.isPublished,
+          ...(price !== undefined ? { price } : {}),
+          ...(discountPercent !== undefined ? { discountPercent } : {}),
+        },
+        include: {
+          creator: { select: { name: true } },
+          sessions: true,
+          _count: { select: { enrollments: true } },
+        },
+      })
+
+      return res.status(200).json(updated)
+    } catch (error) {
+      console.error('Pages API courses/:id PUT error:', error)
+      return res.status(500).json({ error: 'Internal server error' })
+    }
   }
 
-  res.setHeader('Allow', 'GET')
+  if (req.method === 'DELETE') {
+    try {
+      const token = req.cookies['auth-token']
+      if (!token) return res.status(401).json({ error: 'Not authenticated' })
+      const user = await verifyToken(token).catch(() => null) as any
+      if (!user || !['ADMIN', 'INSTRUCTOR'].includes(user.role)) {
+        return res.status(403).json({ error: 'Unauthorized' })
+      }
+
+      const course = await prisma.course.findUnique({ where: { id } })
+      if (!course) return res.status(404).json({ error: 'Course not found' })
+      if (user.role !== 'ADMIN' && course.creatorId !== user.id) {
+        return res.status(403).json({ error: 'Unauthorized' })
+      }
+
+      await prisma.course.delete({ where: { id } })
+      return res.status(200).json({ success: true, message: 'Course deleted successfully' })
+    } catch (error) {
+      console.error('Pages API courses/:id DELETE error:', error)
+      return res.status(500).json({ error: 'Internal server error' })
+    }
+  }
+
+  res.setHeader('Allow', 'GET, PUT, DELETE')
+
   return res.status(405).json({ error: 'Method Not Allowed' })
 }

@@ -65,7 +65,7 @@ export default function DashboardContent() {
   const isGuest = !user
 
   return (
-  <div className="min-h-screen" style={{ background: 'var(--background)' }}>
+  <div className="pb-10" style={{ background: 'var(--background)' }}>
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
         {/* Header */}
   <div className="mb-6">
@@ -247,7 +247,7 @@ export default function DashboardContent() {
         </div>
 
         {/* Banners */}
-        <div className="mt-8">
+        <div className="mt-6 mb-2">
           <BannerCarousel />
         </div>
         {/* Login prompt for guests clicking View Progress */}

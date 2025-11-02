@@ -4,8 +4,9 @@ import { useEffect, useState } from 'react'
 import { useParams, useRouter } from 'next/navigation'
 import Link from 'next/link'
 import { useAuth } from '@/contexts/AuthContext'
-import { Video, Users, ArrowLeft, BookOpen } from 'lucide-react'
+import { Video, Users, ArrowLeft, BookOpen, Trash2, Pencil } from 'lucide-react'
 import useToast from '@/hooks/useToast'
+import ConfirmDialog from '@/components/ui/ConfirmDialog'
 
 interface Course {
   id: string
@@ -23,6 +24,7 @@ export default function CourseOptionsPage() {
    const courseId = params?.id ?? ''
   const [course, setCourse] = useState<Course | null>(null)
   const [isLoading, setIsLoading] = useState(true)
+  const [confirmOpen, setConfirmOpen] = useState(false)
 
   useEffect(() => {
     const fetchCourse = async () => {
@@ -116,13 +118,39 @@ export default function CourseOptionsPage() {
             Back to Courses
           </Link>
 
-          <div>
-            <h1 className="text-4xl font-bold mb-2" style={{ color: 'var(--foreground)' }}>
-              {course.title}
-            </h1>
-            <p className="text-lg" style={{ color: 'var(--session-subtext)' }}>
-              {course.description}
-            </p>
+          <div className="flex items-start justify-between gap-4">
+            <div className="min-w-0">
+              <h1 className="text-4xl font-bold mb-2 break-words" style={{ color: 'var(--foreground)' }}>
+                {course.title}
+              </h1>
+              <p className="text-lg" style={{ color: 'var(--session-subtext)' }}>
+                {course.description}
+              </p>
+            </div>
+            <div className="flex items-center gap-2">
+              {(user && (user.role === 'ADMIN' || user.role === 'INSTRUCTOR')) && (
+                <Link
+                  href={`/courses/${courseId}/edit`}
+                  className="shrink-0 inline-flex items-center gap-2 px-3 py-2 rounded-lg border hover:bg-blue-600 hover:text-white transition"
+                  style={{ borderColor: 'var(--section-border)', color: 'var(--foreground)' }}
+                >
+                  <Pencil className="h-4 w-4" />
+                  <span className="hidden sm:inline font-semibold">Edit</span>
+                </Link>
+              )}
+              {user && user.role === 'ADMIN' && (
+                <button
+                  onClick={() => setConfirmOpen(true)}
+                  className="shrink-0 inline-flex items-center gap-2 px-3 py-2 rounded-lg border text-red-600 hover:text-white hover:bg-red-600 transition"
+                  style={{ borderColor: 'var(--section-border)' }}
+                  aria-label="Delete course"
+                  title="Delete course"
+                >
+                  <Trash2 className="h-4 w-4" />
+                  <span className="hidden sm:inline font-semibold">Delete</span>
+                </button>
+              )}
+            </div>
           </div>
         </div>
 
@@ -238,6 +266,29 @@ export default function CourseOptionsPage() {
           </Link>
         </div>
       </div>
+      <ConfirmDialog
+        open={confirmOpen}
+        title="Delete Course"
+        message="Are you sure you want to permanently delete this course? This action cannot be undone."
+        confirmLabel="Delete"
+        onCancel={() => setConfirmOpen(false)}
+        onConfirm={async () => {
+          try {
+            const res = await fetch(`/api/courses/${courseId}`, { method: 'DELETE', credentials: 'include' })
+            if (res.ok) {
+              toast.success?.('Course deleted')
+              router.push('/courses')
+            } else {
+              const data = await res.json().catch(() => null)
+              toast.error?.(data?.error || 'Failed to delete course')
+            }
+          } catch (err: any) {
+            toast.error?.(err?.message || 'Failed to delete course')
+          } finally {
+            setConfirmOpen(false)
+          }
+        }}
+      />
     </div>
   )
 }
