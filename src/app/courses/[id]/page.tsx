@@ -11,6 +11,7 @@ import RazorpayButton from '@/components/payments/RazorpayButton'
 import VideoPlayer from '@/components/VideoPlayer'
 import VimeoPlayer from '@/components/VimeoPlayer'
 import useToast from '@/hooks/useToast'
+import { formatINR } from '@/lib/currency'
 import ConfirmDialog from '@/components/ui/ConfirmDialog'
 
 interface Session {
@@ -103,10 +104,7 @@ function CourseContent({
   const [descExpanded, setDescExpanded] = useState(false)
   const [showPreviewModal, setShowPreviewModal] = useState(false)
   const [selectedPreview, setSelectedPreview] = useState<{ id: string; title: string; videoUrl: string } | null>(null)
-  // Pricing: localize USD price to INR for users in India
-  const [currency, setCurrency] = useState<'USD' | 'INR'>('USD')
-  const [usdToInr, setUsdToInr] = useState<number | null>(null)
-  const [loadingPricing, setLoadingPricing] = useState(false)
+  // Pricing standardized to INR
 
   // Lightweight trailer player (CSR only)
   const ReactPlayer = useMemo(() => dynamic(() => import('react-player'), { ssr: false }), [])
@@ -173,16 +171,7 @@ function CourseContent({
   // Format price based on detected currency (default USD)
   const formatLocalizedPrice = (p?: number | null) => {
     if (!p || p <= 0) return 'Free'
-    if (currency === 'INR') {
-      const rate = usdToInr || 83 // sensible fallback
-      const inr = p * rate
-      try {
-        return new Intl.NumberFormat('en-IN', { style: 'currency', currency: 'INR', maximumFractionDigits: 0 }).format(inr)
-      } catch {
-        return `₹${Math.round(inr).toLocaleString('en-IN')}`
-      }
-    }
-    try { return new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD' }).format(p) } catch { return `$${p}` }
+    return formatINR(p)
   }
 
   // fetch sections for the enrolled batch when available
@@ -228,39 +217,7 @@ function CourseContent({
     fetchRecordedCourseSections()
   }, [hasRecordedCourseEnrollment, enrolledRecordedCourseIds])
 
-  // Detect user location and exchange rate (client-side)
-  useEffect(() => {
-    const detectPricing = async () => {
-      try {
-        setLoadingPricing(true)
-        const geoRes = await fetch('https://ipapi.co/json/')
-        if (geoRes.ok) {
-          const geo = await geoRes.json().catch(() => null)
-          if (geo && (geo.country_code === 'IN' || geo.country === 'India')) {
-            setCurrency('INR')
-            // Fetch USD->INR rate only if we need INR
-            try {
-              const rateRes = await fetch('https://api.exchangerate.host/latest?base=USD&symbols=INR')
-              if (rateRes.ok) {
-                const data = await rateRes.json().catch(() => null)
-                const r = data?.rates?.INR
-                if (typeof r === 'number' && r > 0) setUsdToInr(r)
-              }
-            } catch (_) {
-              // ignore, fallback in formatter
-            }
-          } else {
-            setCurrency('USD')
-          }
-        }
-      } catch (_) {
-        // Ignore errors; default USD
-      } finally {
-        setLoadingPricing(false)
-      }
-    }
-    detectPricing()
-  }, [])
+  // No currency detection needed; prices stored and shown in INR
 
   // Fetch recorded courses for this course
   useEffect(() => {
@@ -540,7 +497,7 @@ function CourseContent({
                       <p className="text-xs text-gray-600 line-clamp-2 mt-1">{course.description || 'No description'}</p>
                       <div className="flex items-center justify-between mt-3">
                         <span className="text-sm font-semibold text-blue-600">
-                          {course.price > 0 ? `$${course.price.toFixed(2)}` : 'Free'}
+                          {course.price > 0 ? formatINR(course.price) : 'Free'}
                         </span>
                         <span className={`text-xs px-2 py-1 rounded-full ${course.isPublished ? 'bg-green-100 text-green-800' : 'bg-yellow-100 text-yellow-800'}`}>
                           {course.isPublished ? 'Published' : 'Draft'}

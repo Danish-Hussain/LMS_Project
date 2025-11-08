@@ -7,6 +7,7 @@ import Link from 'next/link'
 import { ArrowLeft, CreditCard, CheckCircle, Lock } from 'lucide-react'
 import Image from 'next/image'
 import useToast from '@/hooks/useToast'
+import { formatINR } from '@/lib/currency'
 
 interface Course {
   id: string
@@ -207,7 +208,7 @@ export default function PaymentPage() {
               <div className="flex justify-between items-center">
                 <span className="text-lg font-semibold text-gray-900">Total</span>
                 <span className="text-2xl font-bold text-blue-600">
-                  ${course.price || 0}
+                  {formatINR(course.price || 0)}
                 </span>
               </div>
             </div>
@@ -329,7 +330,7 @@ export default function PaymentPage() {
                 ) : (
                   <>
                     <CheckCircle className="h-5 w-5 mr-2" />
-                    Complete Payment - ${course.price || 0}
+                    Complete Payment - {formatINR(course.price || 0)}
                   </>
                 )}
               </button>

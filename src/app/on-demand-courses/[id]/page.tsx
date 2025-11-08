@@ -6,6 +6,7 @@ import Link from 'next/link'
 import { useAuth } from '../../../contexts/AuthContext'
 import { ArrowLeft, Play, Download, BookOpen, Clock, User } from 'lucide-react'
 import useToast from '../../../hooks/useToast'
+import { formatINR } from '@/lib/currency'
 
 interface RecordedCourse {
   id: string
@@ -173,7 +174,7 @@ export default function OnDemandCourseDetailPage() {
             </div>
             <div>
               <span className="inline-block px-3 py-1 bg-green-100 text-green-800 rounded-full text-sm font-medium">
-                {course.price > 0 ? `$${course.price.toFixed(2)}` : 'Free'}
+                {course.price > 0 ? formatINR(course.price) : 'Free'}
               </span>
             </div>
           </div>
@@ -214,7 +215,7 @@ export default function OnDemandCourseDetailPage() {
                   Price
                 </div>
                 <div className="font-semibold" style={{ color: '#2563eb' }}>
-                  {course.price > 0 ? `$${course.price.toFixed(2)}` : 'Free'}
+                  {course.price > 0 ? formatINR(course.price) : 'Free'}
                 </div>
               </div>
               <div>

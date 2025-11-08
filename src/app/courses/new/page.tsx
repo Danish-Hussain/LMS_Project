@@ -4,7 +4,8 @@ import { useState } from 'react'
 import { useAuth } from '@/contexts/AuthContext'
 import { useRouter } from 'next/navigation'
 import Link from 'next/link'
-import { ArrowLeft, Save, Eye } from 'lucide-react'
+import { ArrowLeft, Save } from 'lucide-react'
+import { formatINR } from '@/lib/currency'
 
 export default function CreateCoursePage() {
   const { user, loading } = useAuth()
@@ -13,8 +14,6 @@ export default function CreateCoursePage() {
     title: '',
     description: '',
     thumbnail: '',
-    // price is the final (discounted) price; we derive it from actualPrice & discountPercent
-    price: '',
     actualPrice: '',
     discountPercent: ''
   })
@@ -87,21 +86,7 @@ export default function CreateCoursePage() {
         }
       }
 
-      if (formData.price) {
-        const price = parseFloat(formData.price)
-        if (isNaN(price)) {
-          setError('Price must be a valid number')
-          return
-        }
-        if (price < 0) {
-          setError('Price cannot be negative')
-          return
-        }
-        if (price > 999999.99) {
-          setError('Price is too high')
-          return
-        }
-      }
+      // Final price field removed from UI; computed automatically during submission
 
       // No URL validation needed: thumbnail is set via PNG upload (optional)
 
@@ -119,12 +104,12 @@ export default function CreateCoursePage() {
         isAuthenticated: !!user 
       })
 
-      // Compute final price from actual + discount if provided
+      // Compute final price from actual + discount (discount defaults to 0)
       const actualPriceNum = formData.actualPrice ? parseFloat(formData.actualPrice) : null
-      const discountNum = formData.discountPercent ? Math.max(0, Math.min(100, parseFloat(formData.discountPercent))) : null
-      const finalPrice = (actualPriceNum != null && discountNum != null)
+      const discountNum = formData.discountPercent ? Math.max(0, Math.min(100, parseFloat(formData.discountPercent))) : 0
+      const finalPrice = (actualPriceNum != null)
         ? Math.round((actualPriceNum * (1 - discountNum / 100)) * 100) / 100
-        : (formData.price ? parseFloat(formData.price) : null)
+        : null
 
       const response = await fetch('/api/courses', {
         method: 'POST',
@@ -309,7 +294,7 @@ export default function CreateCoursePage() {
 
               <div>
                 <label htmlFor="thumbnail" className="block text-sm font-medium text-gray-700 mb-2">Course Image (URL under /public)</label>
-                <div className="flex gap-2">
+                <div>
                   <input
                     type="text"
                     id="thumbnail"
@@ -319,35 +304,6 @@ export default function CreateCoursePage() {
                     placeholder="e.g., /courses/apim.png"
                     className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-blue-500 focus:border-blue-500"
                   />
-                  <button
-                    type="button"
-                    onClick={async () => {
-                      try {
-                        const res = await fetch('/api/public-images')
-                        if (res.ok) {
-                          const data = await res.json()
-                          const images: { path: string }[] = (data.images || [])
-                          if (images.length > 0) {
-                            // Simple picker: choose the first for now via prompt; keep UI minimal
-                            const choice = window.prompt('Paste or pick an image path from the list:\n' + images.map((i: any) => i.path).join('\n'), images[0].path)
-                            if (choice) {
-                              // Normalize away leading /public if present
-                              const normPath = String(choice).trim().replace(/^\/public\//, '/')
-                              setFormData(prev => ({ ...prev, thumbnail: normPath }))
-                            }
-                          } else {
-                            alert('No images found in /public/uploads or /public/courses')
-                          }
-                        } else {
-                          alert('Failed to load images')
-                        }
-                      } catch (e) {
-                        console.error(e)
-                        alert('Failed to load images')
-                      }
-                    }}
-                    className="px-3 py-2 border border-gray-300 rounded-md hover:bg-gray-50"
-                  >Browse</button>
                 </div>
                 <p className="text-xs text-gray-500 mt-1">Store your image in <code>/public/courses</code> or <code>/public/uploads</code> and reference it as <strong>/courses/filename.png</strong> or <strong>/uploads/filename.png</strong>. Do not include <code>/public</code> in the URL.</p>
                 {formData.thumbnail && (
@@ -366,7 +322,7 @@ export default function CreateCoursePage() {
               <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                 <div>
                   <label htmlFor="actualPrice" className="block text-sm font-medium text-gray-700 mb-2">
-                    Actual Price (USD)
+                    Actual Price (INR)
                   </label>
                   <input
                     type="number"
@@ -375,7 +331,7 @@ export default function CreateCoursePage() {
                     value={formData.actualPrice}
                     onChange={handleChange}
                     className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-blue-500 focus:border-blue-500"
-                    placeholder="e.g., 59.99"
+                    placeholder="e.g., 4999"
                     min="0"
                     step="0.01"
                   />
@@ -397,24 +353,29 @@ export default function CreateCoursePage() {
                     step="1"
                   />
                 </div>
-                <div>
-                  <label htmlFor="price" className="block text-sm font-medium text-gray-700 mb-2">
-                    Final Price (USD)
-                  </label>
-                  <input
-                    type="number"
-                    id="price"
-                    name="price"
-                    value={formData.price}
-                    onChange={handleChange}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-blue-500 focus:border-blue-500"
-                    placeholder="Auto if actual+discount provided"
-                    min="0"
-                    step="0.01"
-                  />
-                  <p className="text-xs text-gray-500 mt-1">If you enter Actual Price and Discount, Final Price is calculated automatically on save.</p>
-                </div>
+                {/* Final Price field removed: it will be calculated automatically from Actual Price and Discount */}
               </div>
+
+              {/* Final price live preview */}
+              {(() => {
+                const ap = parseFloat(formData.actualPrice)
+                const hasAp = !isNaN(ap)
+                const dpRaw = parseFloat(formData.discountPercent)
+                const dp = isNaN(dpRaw) ? 0 : Math.min(100, Math.max(0, dpRaw))
+                const fp = hasAp ? Math.round(ap * (1 - dp / 100) * 100) / 100 : null
+                return (
+                  <div className="text-sm">
+                    {hasAp ? (
+                      <span className="inline-flex items-center gap-1 rounded-full bg-green-50 text-green-700 ring-1 ring-inset ring-green-200 px-3 py-1">
+                        <span className="font-medium">Final price will be:</span>
+                        <span className="font-semibold">{formatINR(fp ?? 0)}</span>
+                      </span>
+                    ) : (
+                      <span className="text-gray-500">Enter Actual Price to see the final price preview.</span>
+                    )}
+                  </div>
+                )
+              })()}
             </div>
 
             <div className="flex justify-end space-x-4 mt-8">

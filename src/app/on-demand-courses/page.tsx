@@ -4,6 +4,7 @@ import { useEffect, useState } from 'react';
 import Link from 'next/link';
 import { useAuth } from '@/contexts/AuthContext';
 import { useToast } from '@/hooks/useToast';
+import { formatINR } from '@/lib/currency';
 import {
   Plus,
   Video,
@@ -43,9 +44,7 @@ export default function OnDemandCoursesPage() {
   // Lightweight filters
   const [search, setSearch] = useState('');
   const [statusFilter, setStatusFilter] = useState<'all' | 'published' | 'draft'>('all');
-  // Localized pricing
-  const [currency, setCurrency] = useState<'USD' | 'INR'>('USD');
-  const [usdToInr, setUsdToInr] = useState<number | null>(null);
+  // Pricing standardized to INR across the app
 
   const isAdmin = user?.role === 'ADMIN' || user?.role === 'INSTRUCTOR';
 
@@ -74,38 +73,11 @@ export default function OnDemandCoursesPage() {
     fetchCourses();
   }, []);
 
-  // Detect location and setup currency
-  useEffect(() => {
-    const detect = async () => {
-      try {
-        const geoRes = await fetch('https://ipapi.co/json/');
-        if (geoRes.ok) {
-          const geo = await geoRes.json().catch(() => null);
-          if (geo && (geo.country_code === 'IN' || geo.country === 'India')) {
-            setCurrency('INR');
-            try {
-              const rRes = await fetch('https://api.exchangerate.host/latest?base=USD&symbols=INR');
-              if (rRes.ok) {
-                const data = await rRes.json().catch(() => null);
-                const r = data?.rates?.INR;
-                if (typeof r === 'number' && r > 0) setUsdToInr(r);
-              }
-            } catch {}
-          }
-        }
-      } catch {}
-    };
-    detect();
-  }, []);
+  // No currency detection needed
 
   const formatLocalizedPrice = (p?: number | null) => {
     if (!p || p <= 0) return 'Free';
-    if (currency === 'INR') {
-      const rate = usdToInr || 83;
-      const inr = p * rate;
-      try { return new Intl.NumberFormat('en-IN', { style: 'currency', currency: 'INR', maximumFractionDigits: 0 }).format(inr); } catch { return `₹${Math.round(inr).toLocaleString('en-IN')}`; }
-    }
-    try { return new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD' }).format(p); } catch { return `$${p}`; }
+    return formatINR(p);
   };
 
   const computePriceParts = (usd?: number | null, d?: number | null) => {
@@ -368,9 +340,8 @@ export default function OnDemandCoursesPage() {
                     {isAdmin ? (
                       <div className="flex items-end justify-between gap-3">
                         <div className="group">
-                          <label className="block text-xs mb-1" style={{ color: 'var(--session-subtext)' }}>Price (USD)</label>
-                          <div className="relative">
-                            <span className="pointer-events-none absolute left-2 top-2 text-gray-500">$</span>
+                          <label className="block text-xs mb-1" style={{ color: 'var(--session-subtext)' }}>Price (INR)</label>
+                          <div>
                             <input
                               type="number"
                               step="0.01"
@@ -378,7 +349,7 @@ export default function OnDemandCoursesPage() {
                               inputMode="decimal"
                               value={priceEdits[course.id] ?? String(course.price)}
                               onChange={(e) => handlePriceChange(course.id, e.target.value)}
-                              className="w-36 pl-6 pr-3 py-2 border rounded-md text-sm"
+                              className="w-36 px-3 py-2 border rounded-md text-sm"
                               style={{ borderColor: 'var(--section-border)', background: 'var(--background)', color: 'var(--foreground)' }}
                               aria-label="Course price"
                             />
