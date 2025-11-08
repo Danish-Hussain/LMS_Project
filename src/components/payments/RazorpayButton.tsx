@@ -1,6 +1,7 @@
 "use client"
 
 import React from 'react'
+import { formatINR } from '@/lib/currency'
 
 type Props = {
   courseId: string
@@ -82,7 +83,7 @@ export default function RazorpayButton({ courseId, courseTitle, amount, batchId 
 
   return (
     <button onClick={handleEnroll} className="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-md text-sm font-semibold flex items-center w-full justify-center">
-      Enroll{amount ? ` - ₹${amount.toLocaleString()}` : ''}
+      Enroll{typeof amount === 'number' ? ` - ${formatINR(amount)}` : ''}
     </button>
   )
 }

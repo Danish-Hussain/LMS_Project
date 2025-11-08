@@ -5,6 +5,7 @@ import { useEffect, useState } from 'react'
 import Link from 'next/link'
 import { BookOpen, Plus, Play, Clock } from 'lucide-react'
 import CourseThumbnail from '@/components/CourseThumbnail'
+import { formatINR } from '@/lib/currency'
 
 interface Course {
   id: string
@@ -40,35 +41,11 @@ export default function CoursesPage() {
   const [courses, setCourses] = useState<Course[]>([])
   const [isLoading, setIsLoading] = useState(true)
 
-  // pricing localization (best-effort)
-  const [currency, setCurrency] = useState<'USD' | 'INR'>('USD')
-  const [usdToInr, setUsdToInr] = useState<number | null>(null)
+  // pricing: standardized to INR across the app
 
   useEffect(() => {
     fetchCourses()
-    ;(async () => {
-      try {
-        const geoRes = await fetch('https://ipapi.co/json/')
-        if (geoRes.ok) {
-          const geo = await geoRes.json().catch(() => null)
-          if (geo && (geo.country_code === 'IN' || geo.country === 'India')) {
-            setCurrency('INR')
-            try {
-              const rateRes = await fetch('https://api.exchangerate.host/latest?base=USD&symbols=INR')
-              if (rateRes.ok) {
-                const data = await rateRes.json().catch(() => null)
-                const r = data?.rates?.INR
-                if (typeof r === 'number' && r > 0) setUsdToInr(r)
-              }
-            } catch (e) {
-              /* ignore */
-            }
-          }
-        }
-      } catch (e) {
-        /* ignore */
-      }
-    })()
+    // currency detection removed; prices are stored and shown in INR
   }, [])
 
   const fetchCourses = async () => {
@@ -87,20 +64,7 @@ export default function CoursesPage() {
 
   const formatLocalizedPrice = (p?: number | null) => {
     if (!p || p <= 0) return 'Free'
-    if (currency === 'INR') {
-      const rate = usdToInr || 83
-      const inr = p * rate
-      try {
-        return new Intl.NumberFormat('en-IN', { style: 'currency', currency: 'INR', maximumFractionDigits: 0 }).format(inr)
-      } catch {
-        return `₹${Math.round(inr).toLocaleString('en-IN')}`
-      }
-    }
-    try {
-      return new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD' }).format(p)
-    } catch {
-      return `$${p}`
-    }
+    return formatINR(p)
   }
 
   const computePriceParts = (usd?: number | null, d?: number | null) => {

@@ -21,9 +21,6 @@ export default function EditCoursePage() {
     isPublished: false
   })
   const [isSubmitting, setIsSubmitting] = useState(false)
-  const [pickerOpen, setPickerOpen] = useState(false)
-  const [pickerLoading, setPickerLoading] = useState(false)
-  const [pickerImages, setPickerImages] = useState<{ path: string }[]>([])
   const { info: toastInfo, error: toastError, success: toastSuccess } = useToast()
 
   useEffect(() => {
@@ -95,30 +92,7 @@ export default function EditCoursePage() {
     }
   }
 
-  const openPicker = async () => {
-    try {
-      setPickerOpen(true)
-      setPickerLoading(true)
-      const res = await fetch('/api/public-images')
-      if (res.ok) {
-        const data = await res.json()
-        setPickerImages((data.images || []).map((i: any) => ({ path: i.path })))
-      } else {
-        const data = await res.json().catch(() => ({}))
-        toastError(data.error || 'Failed to load images')
-      }
-    } catch (e) {
-      console.error(e)
-      toastError('Failed to load images')
-    } finally {
-      setPickerLoading(false)
-    }
-  }
-
-  const selectImage = (p: string) => {
-    setFormData(prev => ({ ...prev, thumbnail: p }))
-    setPickerOpen(false)
-  }
+  // Thumbnail browse/picker removed per requirements; paste or type the public path manually.
 
   if (loading) return <div className="min-h-screen flex items-center justify-center">Loading...</div>
   if (!user || (user.role !== 'ADMIN' && user.role !== 'INSTRUCTOR')) {
@@ -150,43 +124,12 @@ export default function EditCoursePage() {
 
           <div className="mb-4">
             <label className="block text-sm font-medium mb-2">Thumbnail URL</label>
-            <div className="flex gap-2">
-              <input name="thumbnail" value={formData.thumbnail} onChange={handleChange} className="w-full px-3 py-2 border rounded-md" />
-              <button type="button" onClick={openPicker} className="px-3 py-2 border rounded-md hover:bg-gray-50">Browse</button>
-            </div>
+            <input name="thumbnail" value={formData.thumbnail} onChange={handleChange} className="w-full px-3 py-2 border rounded-md" />
             <p className="text-xs text-gray-500 mt-1">Images in <code>/public</code> are served from the root. Use paths like <strong>/uploads/APIM_Thumnail.png</strong> (do not include <code>/public</code>).</p>
-            {pickerOpen && (
-              <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40">
-                <div className="bg-white rounded-lg shadow-lg w-full max-w-xl max-h-[70vh] flex flex-col">
-                  <div className="p-4 border-b flex items-center justify-between">
-                    <h3 className="font-semibold">Select an image</h3>
-                    <button type="button" className="text-sm" onClick={() => setPickerOpen(false)}>Close</button>
-                  </div>
-                  <div className="p-4 overflow-auto">
-                    {pickerLoading ? (
-                      <div className="text-center text-gray-500">Loading…</div>
-                    ) : pickerImages.length === 0 ? (
-                      <div className="text-center text-gray-500">No images found in /public/uploads or /public/courses</div>
-                    ) : (
-                      <ul className="space-y-2">
-                        {pickerImages.map(img => (
-                          <li key={img.path} className="flex items-center gap-3 p-2 border rounded hover:bg-gray-50">
-                            {/* eslint-disable-next-line @next/next/no-img-element */}
-                            <img src={img.path} alt={img.path} className="w-16 h-12 object-cover rounded border" />
-                            <div className="flex-1 text-sm truncate">{img.path}</div>
-                            <button type="button" onClick={() => selectImage(img.path)} className="px-2 py-1 text-sm border rounded">Use</button>
-                          </li>
-                        ))}
-                      </ul>
-                    )}
-                  </div>
-                </div>
-              </div>
-            )}
           </div>
 
           <div className="mb-4">
-            <label className="block text-sm font-medium mb-2">Price</label>
+            <label className="block text-sm font-medium mb-2">Price (INR)</label>
             <input name="price" value={formData.price} onChange={handleChange} className="w-full px-3 py-2 border rounded-md" />
           </div>
 

@@ -2,57 +2,51 @@
 
 import { useState, useEffect, Suspense } from 'react'
 import Link from 'next/link'
-import { useParams, useRouter, useSearchParams } from 'next/navigation'
+import { useRouter, useSearchParams } from 'next/navigation'
 import { ArrowLeft } from 'lucide-react'
 import { useAuth } from '@/contexts/AuthContext'
 import useToast from '@/hooks/useToast'
+import { formatINR } from '@/lib/currency'
 
 function CreateRecordedCourseContent() {
   const router = useRouter()
-  const params = useParams()
   const searchParams = useSearchParams()
   const { user, loading } = useAuth()
   const { error: toastError, success: toastSuccess } = useToast()
 
   const courseId = searchParams?.get('courseId') ?? ''
+  const [courses, setCourses] = useState<Array<{ id: string; title: string }>>([])
+  const [coursesLoading, setCoursesLoading] = useState(true)
+  const [selectedCourseId, setSelectedCourseId] = useState<string>(courseId)
   const [formData, setFormData] = useState({
-    price: '',
     actualPrice: '',
     discountPercent: '',
   })
   const [isSubmitting, setIsSubmitting] = useState(false)
   const [formError, setFormError] = useState('')
-  const [courseName, setCourseName] = useState<string>('')
-  const [courseLoading, setCourseLoading] = useState(true)
+  
 
-  // Fetch course name
+  // Fetch available courses for dropdown (admin: all, instructor: own, public: published)
   useEffect(() => {
-    const fetchCourseName = async () => {
-      if (!courseId) {
-        setCourseLoading(false)
-        return
-      }
-
+    const fetchCourses = async () => {
       try {
-        const response = await fetch(`/api/courses/${courseId}`, {
-          credentials: 'same-origin'
-        })
-        if (response.ok) {
-          const data = await response.json()
-          setCourseName(data.course?.title || courseId)
+        setCoursesLoading(true)
+        const res = await fetch('/api/courses', { credentials: 'same-origin' })
+        if (res.ok) {
+          const data = await res.json()
+          setCourses(Array.isArray(data) ? data.map((c: any) => ({ id: c.id, title: c.title })) : [])
         } else {
-          setCourseName(courseId)
+          setCourses([])
         }
-      } catch (err) {
-        console.error('Failed to fetch course name:', err)
-        setCourseName(courseId)
+      } catch (e) {
+        console.error('Failed to load courses list:', e)
+        setCourses([])
       } finally {
-        setCourseLoading(false)
+        setCoursesLoading(false)
       }
     }
-
-    fetchCourseName()
-  }, [courseId])
+    fetchCourses()
+  }, [])
 
   // Check if user is admin/instructor
   const isAdmin = user?.role === 'ADMIN' || user?.role === 'INSTRUCTOR'
@@ -89,18 +83,18 @@ function CreateRecordedCourseContent() {
     setFormError('')
 
     // Validation
-    if (!courseId) {
-      setFormError('Course ID is missing')
+    if (!selectedCourseId) {
+      setFormError('Please select a course')
       return
     }
 
     try {
       setIsSubmitting(true)
 
-      // Compute final price: prefer actualPrice & discount if provided
-      const ap = formData.actualPrice ? parseFloat(formData.actualPrice) : null
-      const dp = formData.discountPercent ? Math.max(0, Math.min(100, parseFloat(formData.discountPercent))) : null
-      const finalPrice = (ap != null && dp != null) ? Math.round((ap * (1 - dp / 100)) * 100) / 100 : (formData.price ? parseFloat(formData.price) : 0)
+  // Compute final price from actual price and discount (discount defaults to 0)
+  const ap = formData.actualPrice ? parseFloat(formData.actualPrice) : null
+  const dp = formData.discountPercent ? Math.max(0, Math.min(100, parseFloat(formData.discountPercent))) : 0
+  const finalPrice = (ap != null) ? Math.round((ap * (1 - dp / 100)) * 100) / 100 : 0
 
       const response = await fetch('/api/recorded-courses', {
         method: 'POST',
@@ -108,7 +102,7 @@ function CreateRecordedCourseContent() {
           'Content-Type': 'application/json',
         },
         body: JSON.stringify({
-          courseId,
+          courseId: selectedCourseId,
           price: finalPrice,
           discountPercent: dp != null ? dp : undefined,
         }),
@@ -125,7 +119,7 @@ function CreateRecordedCourseContent() {
 
       // Redirect back to course page
       setTimeout(() => {
-        router.push(`/courses/${courseId}`)
+        router.push(`/courses/${selectedCourseId}`)
       }, 1000)
     } catch (err) {
       const message = err instanceof Error ? err.message : 'An error occurred'
@@ -141,7 +135,7 @@ function CreateRecordedCourseContent() {
       <div className="max-w-2xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
         {/* Header */}
         <div className="mb-8">
-          <Link href={`/courses/${courseId}`} className="inline-flex items-center text-gray-600 hover:text-gray-900 mb-4">
+          <Link href={selectedCourseId ? `/courses/${selectedCourseId}` : '/courses'} className="inline-flex items-center text-gray-600 hover:text-gray-900 mb-4">
             <ArrowLeft className="h-5 w-5 mr-2" />
             Back to Course
           </Link>
@@ -159,14 +153,23 @@ function CreateRecordedCourseContent() {
           )}
 
           <form onSubmit={handleSubmit} className="space-y-6">
-            {/* Course Selection (Display only) */}
+            {/* Course Selection */}
             <div>
-              <label className="block text-sm font-medium text-gray-900 mb-2">
+              <label htmlFor="courseSelect" className="block text-sm font-medium text-gray-900 mb-2">
                 Course
               </label>
-              <div className="px-4 py-2 bg-gray-50 border border-gray-300 rounded-lg text-gray-700">
-                {courseLoading ? 'Loading...' : (courseName || courseId)}
-              </div>
+              <select
+                id="courseSelect"
+                value={selectedCourseId}
+                onChange={(e) => setSelectedCourseId(e.target.value)}
+                className="w-full px-3 py-2 border border-gray-300 rounded-lg bg-white focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none"
+                disabled={isSubmitting || coursesLoading}
+              >
+                <option value="" disabled>{coursesLoading ? 'Loading courses…' : 'Select a course'}</option>
+                {courses.map(c => (
+                  <option key={c.id} value={c.id}>{c.title}</option>
+                ))}
+              </select>
               <p className="mt-1 text-sm text-gray-500">The parent course for this self-paced offering</p>
             </div>
 
@@ -175,16 +178,16 @@ function CreateRecordedCourseContent() {
             {/* Pricing */}
             <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
               <div>
-                <label htmlFor="actualPrice" className="block text-sm font-medium text-gray-900 mb-2">Actual Price (USD)</label>
+                <label htmlFor="actualPrice" className="block text-sm font-medium text-gray-900 mb-2">Actual Price (INR)</label>
                 <div className="relative">
-                  <span className="absolute left-4 top-2 text-gray-500">$</span>
+                  <span className="absolute left-4 top-2 text-gray-500">₹</span>
                   <input
                     type="number"
                     id="actualPrice"
                     name="actualPrice"
                     value={formData.actualPrice}
                     onChange={handleChange}
-                    placeholder="0.00"
+                    placeholder="0"
                     min="0"
                     step="0.01"
                     className="w-full pl-8 pr-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none transition"
@@ -208,32 +211,35 @@ function CreateRecordedCourseContent() {
                   disabled={isSubmitting}
                 />
               </div>
-              <div>
-                <label htmlFor="price" className="block text-sm font-medium text-gray-900 mb-2">Final Price (USD)</label>
-                <div className="relative">
-                  <span className="absolute left-4 top-2 text-gray-500">$</span>
-                  <input
-                    type="number"
-                    id="price"
-                    name="price"
-                    value={formData.price}
-                    onChange={handleChange}
-                    placeholder="0.00"
-                    min="0"
-                    step="0.01"
-                    className="w-full pl-8 pr-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none transition"
-                    disabled={isSubmitting}
-                  />
-                </div>
-                <p className="mt-1 text-sm text-gray-500">If you fill Actual + Discount, Final Price is auto-calculated on save.</p>
-              </div>
+              {/* Final Price field removed. */}
             </div>
+
+            {/* Final price live preview */}
+            {(() => {
+              const apNum = parseFloat(formData.actualPrice)
+              const hasAp = !isNaN(apNum)
+              const dpRaw = parseFloat(formData.discountPercent)
+              const dpNum = isNaN(dpRaw) ? 0 : Math.min(100, Math.max(0, dpRaw))
+              const fp = hasAp ? Math.round(apNum * (1 - dpNum / 100) * 100) / 100 : null
+              return (
+                <div className="text-sm">
+                  {hasAp ? (
+                    <span className="inline-flex items-center gap-1 rounded-full bg-green-50 text-green-700 ring-1 ring-inset ring-green-200 px-3 py-1">
+                      <span className="font-medium">Final price will be:</span>
+                      <span className="font-semibold">{formatINR(fp ?? 0)}</span>
+                    </span>
+                  ) : (
+                    <span className="text-gray-500">Enter Actual Price to see the final price preview.</span>
+                  )}
+                </div>
+              )
+            })()}
 
             {/* Buttons */}
             <div className="flex gap-4 pt-6 border-t border-gray-200">
               <button
                 type="button"
-                onClick={() => router.push(`/courses/${courseId}`)}
+                onClick={() => router.push(selectedCourseId ? `/courses/${selectedCourseId}` : '/courses')}
                 disabled={isSubmitting}
                 className="px-6 py-2 border border-gray-300 rounded-lg font-semibold text-gray-700 hover:bg-gray-50 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
               >

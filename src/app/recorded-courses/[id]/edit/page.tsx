@@ -4,6 +4,7 @@ import { useEffect, useMemo, useState } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import { useAuth } from '@/contexts/AuthContext';
 import { useToast } from '@/hooks/useToast';
+import { formatINR } from '@/lib/currency';
 import {
   ChevronDown,
   Plus,
@@ -114,41 +115,10 @@ export default function EditRecordedCoursePage() {
     fetchCourseAndSections();
   }, [recordedCourseId, user, router]);
 
-  // Localized pricing preview (same logic as listing page)
-  const [currency, setCurrency] = useState<'USD' | 'INR'>('USD');
-  const [usdToInr, setUsdToInr] = useState<number | null>(null);
-
-  useEffect(() => {
-    const detect = async () => {
-      try {
-        const geoRes = await fetch('https://ipapi.co/json/');
-        if (geoRes.ok) {
-          const geo = await geoRes.json().catch(() => null);
-          if (geo && (geo.country_code === 'IN' || geo.country === 'India')) {
-            setCurrency('INR');
-            try {
-              const rRes = await fetch('https://api.exchangerate.host/latest?base=USD&symbols=INR');
-              if (rRes.ok) {
-                const data = await rRes.json().catch(() => null);
-                const r = data?.rates?.INR;
-                if (typeof r === 'number' && r > 0) setUsdToInr(r);
-              }
-            } catch {}
-          }
-        }
-      } catch {}
-    };
-    detect();
-  }, []);
-
+  // INR-only formatting
   const formatLocalizedPrice = (p?: number | null) => {
     if (!p || p <= 0) return 'Free';
-    if (currency === 'INR') {
-      const rate = usdToInr || 83;
-      const inr = p * rate;
-      try { return new Intl.NumberFormat('en-IN', { style: 'currency', currency: 'INR', maximumFractionDigits: 0 }).format(inr); } catch { return `₹${Math.round(inr).toLocaleString('en-IN')}`; }
-    }
-    try { return new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD' }).format(p); } catch { return `$${p}`; }
+    return formatINR(p);
   };
 
   const computePriceParts = (usd?: number | null, d?: number | null) => {
@@ -400,7 +370,7 @@ export default function EditRecordedCoursePage() {
             <h3 className="font-semibold text-foreground mb-3">Pricing</h3>
             <div className="space-y-3">
               <label className="block text-sm text-gray-400">
-                Price (USD)
+                Price (INR)
                 <input
                   type="number"
                   step="0.01"

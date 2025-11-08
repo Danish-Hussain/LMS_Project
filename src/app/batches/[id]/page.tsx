@@ -7,6 +7,7 @@ import Link from 'next/link'
 import ConfirmDialog from '@/components/ui/ConfirmDialog'
 import { ArrowLeft, Users, Calendar, Plus, Edit, Trash2 } from 'lucide-react'
 import { SessionListItem } from '@/components/SessionListItem'
+import { formatINR } from '@/lib/currency'
 
 interface Session {
   id: string
@@ -317,7 +318,7 @@ export default function BatchDetailPage() {
                 <div>
                   <label className="text-sm font-medium text-gray-600">Price</label>
                   <p className="mt-1 text-sm text-gray-900">
-                    {batch.course.price ? `$${batch.course.price}` : 'Free'}
+                    {batch.course.price ? formatINR(batch.course.price) : 'Free'}
                   </p>
                 </div>
 

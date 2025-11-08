@@ -53,7 +53,8 @@ export default function CreateSessionPage() {
         return
       }
 
-      const response = await fetch(`/api/batches/${batchId}/sessions`, {
+      // Create via the generic sessions endpoint
+      const response = await fetch(`/api/sessions`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json'

@@ -1,7 +1,7 @@
-'use client'
+"use client"
 
 import { useAuth } from '@/contexts/AuthContext'
-import { useEffect, useState, use } from 'react'
+import { useEffect, useState } from 'react'
 import { useParams, useRouter, useSearchParams } from 'next/navigation'
 import Link from 'next/link'
 import ConfirmDialog from '@/components/ui/ConfirmDialog'
@@ -44,10 +44,10 @@ interface Section {
   description?: string | null
 }
 
-export default function BatchSessionsPage({ params }: { params: Promise<{ id: string }> }) {
+export default function BatchSessionsPage() {
   const { user, loading } = useAuth()
-  const resolvedParams = use(params)
-  const batchId = resolvedParams.id
+  const params = useParams()
+  const batchId = (params?.id as string) || ''
   const router = useRouter()
   
   const [sessions, setSessions] = useState<Session[]>([])
@@ -85,7 +85,8 @@ export default function BatchSessionsPage({ params }: { params: Promise<{ id: st
       setSections(batchDetails.sections || [])
 
       // Fetch sessions (cookie will be sent automatically)
-      const sessionsResponse = await fetch(`/api/batches/${batchId}/sessions`, { credentials: 'same-origin' })
+  // Use the generic sessions endpoint filtered by batchId
+  const sessionsResponse = await fetch(`/api/sessions?batchId=${batchId}`, { credentials: 'same-origin' })
       if (!sessionsResponse.ok) {
         const text = await sessionsResponse.text().catch(() => '')
         console.error('Sessions fetch failed:', sessionsResponse.status, text)
