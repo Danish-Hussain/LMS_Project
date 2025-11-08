@@ -163,12 +163,26 @@ export default function BatchSessionsPage() {
     try {
       const target = sessions.find(s => s.id === sessionId)
       if (!target) return
-      const newOrder = direction === 'up' ? Math.max(1, target.order - 1) : target.order + 1
+      const sectionId = target.sectionId
+      // Work with sessions inside the same section for ordering purposes
+      const scoped = sessions
+        .filter(s => s.sectionId === sectionId)
+        .sort((a, b) => a.order - b.order)
+
+      const idx = scoped.findIndex(s => s.id === sessionId)
+      if (idx === -1) return
+
+      const neighborIndex = direction === 'up' ? idx - 1 : idx + 1
+      if (neighborIndex < 0 || neighborIndex >= scoped.length) return
+
+      const neighbor = scoped[neighborIndex]
+
+      // Ask server to set our order to neighbor's order; server swaps within scope
       const res = await fetch(`/api/sessions/${sessionId}`, {
         method: 'PUT',
         credentials: 'same-origin',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ order: newOrder })
+        body: JSON.stringify({ order: neighbor.order })
       })
       if (!res.ok) throw new Error('Failed to move')
       await fetchData()

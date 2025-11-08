@@ -24,8 +24,8 @@ export async function POST(request: NextRequest) {
       )
     }
 
-  const body = (await request.json()) as { title?: string; videoUrl?: string; order?: string | number | null; batchId?: string; startTime?: string | null; endTime?: string | null }
-  const { title, videoUrl, order, batchId, startTime, endTime } = body
+  const body = (await request.json()) as { title?: string; videoUrl?: string; order?: string | number | null; batchId?: string; sectionId?: string | null; startTime?: string | null; endTime?: string | null }
+  const { title, videoUrl, order, batchId, sectionId, startTime, endTime } = body
 
     if (!title || !videoUrl || !batchId) {
       return NextResponse.json(
@@ -47,17 +47,42 @@ export async function POST(request: NextRequest) {
       )
     }
 
-    const parsedOrder = typeof order === 'number' ? order : order ? parseInt(String(order)) : 1
+    // Validate optional sectionId (must belong to this batch if provided)
+    let validSectionId: string | null = null
+    if (sectionId) {
+      const section = await prisma.courseSection.findUnique({ where: { id: sectionId }, select: { id: true, batchId: true } })
+      if (!section) {
+        return NextResponse.json(
+          { error: 'Section not found' },
+          { status: 404 }
+        )
+      }
+      if (section.batchId !== batchId) {
+        return NextResponse.json(
+          { error: 'Section does not belong to the provided batch' },
+          { status: 400 }
+        )
+      }
+      validSectionId = section.id
+    }
+
+    // Determine order: use provided order or append to end within batch
+    let parsedOrder = typeof order === 'number' ? order : order ? parseInt(String(order)) : NaN
+    if (Number.isNaN(parsedOrder)) {
+      const last = await prisma.session.findFirst({ where: { batchId }, orderBy: { order: 'desc' }, select: { order: true } })
+      parsedOrder = (last?.order ?? 0) + 1
+    }
 
     const session = await prisma.session.create({
       data: {
         title,
         videoUrl,
-        order: Number.isNaN(parsedOrder) ? 1 : parsedOrder,
+        order: parsedOrder,
         startTime: startTime ? new Date(startTime) : null,
         endTime: endTime ? new Date(endTime) : null,
         courseId: batch.courseId,
-        batchId
+        batchId,
+        sectionId: validSectionId,
       }
     })
 
