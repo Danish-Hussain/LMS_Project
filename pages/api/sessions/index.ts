@@ -84,8 +84,8 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
         return res.status(403).json({ error: 'Unauthorized' })
       }
 
-      const body = typeof req.body === 'string' ? JSON.parse(req.body) : req.body
-      const { title, videoUrl, batchId, order, startTime, endTime } = body || {}
+  const body = typeof req.body === 'string' ? JSON.parse(req.body) : req.body
+  const { title, videoUrl, batchId, order, sectionId, startTime, endTime } = body || {}
 
       if (!title || !videoUrl || !batchId) {
         return res.status(400).json({ error: 'Title, video URL, and batch ID are required' })
@@ -94,17 +94,31 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       const batch = await prisma.batch.findUnique({ where: { id: batchId }, include: { course: true } })
       if (!batch) return res.status(404).json({ error: 'Batch not found' })
 
-      const parsedOrder = typeof order === 'number' ? order : order ? parseInt(String(order)) : 1
+      // Validate optional sectionId belongs to batch
+      let validSectionId: string | null = null
+      if (sectionId) {
+        const section = await prisma.courseSection.findUnique({ where: { id: sectionId }, select: { id: true, batchId: true } })
+        if (!section) return res.status(404).json({ error: 'Section not found' })
+        if (section.batchId !== batchId) return res.status(400).json({ error: 'Section does not belong to batch' })
+        validSectionId = section.id
+      }
+
+      let parsedOrder = typeof order === 'number' ? order : order ? parseInt(String(order)) : NaN
+      if (Number.isNaN(parsedOrder)) {
+        const last = await prisma.session.findFirst({ where: { batchId }, orderBy: { order: 'desc' }, select: { order: true } })
+        parsedOrder = (last?.order ?? 0) + 1
+      }
 
       const session = await prisma.session.create({
         data: {
           title,
           videoUrl,
-          order: Number.isNaN(parsedOrder) ? 1 : parsedOrder,
+          order: parsedOrder,
           startTime: startTime ? new Date(startTime) : null,
           endTime: endTime ? new Date(endTime) : null,
           courseId: batch.courseId,
           batchId,
+          sectionId: validSectionId,
         },
       })
 
@@ -113,6 +127,15 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       console.error('Pages API /api/sessions POST error:', e)
       return res.status(500).json({ error: 'Internal server error' })
     }
+  }
+
+  if (req.method === 'PUT') {
+    // Bulk / reorder updates not currently supported here
+    return res.status(400).json({ error: 'Use /api/sessions/{id} for updates' })
+  }
+
+  if (req.method === 'DELETE') {
+    return res.status(400).json({ error: 'Use /api/sessions/{id} for deletion' })
   }
 
   res.setHeader('Allow', 'GET, POST')
