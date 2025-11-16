@@ -262,6 +262,9 @@ export default function Navbar() {
                       style={{ background: 'var(--section-bg)', border: '1px solid var(--section-border)' }}
                     >
                       <Link href="/account" ref={firstMenuItemRef} role="menuitem" tabIndex={-1} className="block px-4 py-3 text-sm focus:outline-none transition-colors hover-bg-accent" style={{ color: 'var(--session-text)' }}>Account Details</Link>
+                      {user?.role === 'ADMIN' && (
+                        <Link href="/instructors" role="menuitem" tabIndex={-1} className="block px-4 py-3 text-sm focus:outline-none transition-colors hover-bg-accent" style={{ color: 'var(--session-text)' }}>Instructors</Link>
+                      )}
                       <Link href="/account/change-password" role="menuitem" tabIndex={-1} className="block px-4 py-3 text-sm focus:outline-none transition-colors hover-bg-accent" style={{ color: 'var(--session-text)' }}>Change Password</Link>
                       <div className="border-t" style={{ borderColor: 'var(--section-border)' }} />
                       <button onClick={handleLogout} role="menuitem" tabIndex={-1} className="w-full text-left px-4 py-3 text-sm text-red-600 focus:outline-none transition-colors hover-bg-accent">Log Out</button>
@@ -331,6 +334,9 @@ export default function Navbar() {
                     style={{ background: 'var(--section-bg)', border: '1px solid var(--section-border)' }}
                   >
                     <Link href="/account" ref={firstMenuItemRef} role="menuitem" tabIndex={-1} className="block px-4 py-3 text-sm focus:outline-none transition-colors hover-bg-accent" style={{ color: 'var(--session-text)' }}>Account Details</Link>
+                    {user?.role === 'ADMIN' && (
+                      <Link href="/instructors" role="menuitem" tabIndex={-1} className="block px-4 py-3 text-sm focus:outline-none transition-colors hover-bg-accent" style={{ color: 'var(--session-text)' }}>Instructors</Link>
+                    )}
                     <Link href="/account/change-password" role="menuitem" tabIndex={-1} className="block px-4 py-3 text-sm focus:outline-none transition-colors hover-bg-accent" style={{ color: 'var(--session-text)' }}>Change Password</Link>
                     <div className="border-t" style={{ borderColor: 'var(--section-border)' }} />
                     <button onClick={handleLogout} role="menuitem" tabIndex={-1} className="w-full text-left px-4 py-3 text-sm text-red-600 focus:outline-none transition-colors hover-bg-accent">Log Out</button>
@@ -418,6 +424,9 @@ export default function Navbar() {
                     </span>
                   </div>
                   <Link href="/account" className="text-gray-700 block px-3 py-2 rounded-md text-base font-medium w-full text-left" onClick={() => setIsMenuOpen(false)}>Account Details</Link>
+                  {user?.role === 'ADMIN' && (
+                    <Link href="/instructors" className="text-gray-700 block px-3 py-2 rounded-md text-base font-medium w-full text-left" onClick={() => setIsMenuOpen(false)}>Instructors</Link>
+                  )}
                   <Link href="/account/change-password" className="text-gray-700 block px-3 py-2 rounded-md text-base font-medium w-full text-left" onClick={() => setIsMenuOpen(false)}>Change Password</Link>
                   <button
                     onClick={handleLogout}

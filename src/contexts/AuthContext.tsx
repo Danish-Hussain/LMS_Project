@@ -17,7 +17,7 @@ interface AuthContextType {
   user: User | null
   loading: boolean
   login: (email: string, password: string) => Promise<boolean>
-  register: (email: string, password: string, name: string, role?: Role) => Promise<{ success: boolean; message?: string }>
+  register: (email: string, password: string, name: string, role?: Role, phoneNumber?: string) => Promise<{ success: boolean; message?: string }>
   logout: () => Promise<void>
 }
 // Add optional setter to update user from components
@@ -79,12 +79,12 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     }
   }
 
-  const register = async (email: string, password: string, name: string, role?: Role): Promise<{ success: boolean; message?: string }> => {
+  const register = async (email: string, password: string, name: string, role?: Role, phoneNumber?: string): Promise<{ success: boolean; message?: string }> => {
     try {
       const response = await fetch('/api/auth/register', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ email, password, name, role })
+        body: JSON.stringify({ email, password, name, role, phoneNumber })
       })
 
       const text = await response.text()

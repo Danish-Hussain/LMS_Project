@@ -6,7 +6,7 @@ generator client {
 }
 
 datasource db {
-  provider = "postgresql"
+  provider = "sqlite"
   url      = env("DATABASE_URL")
 }
 
@@ -17,6 +17,12 @@ model User {
   password       String
   tokenVersion   Int          @default(0)
   role           Role         @default(STUDENT)
+  phoneNumber    String?      @unique // E.164 formatted phone number (e.g. +919876543210)
+  specialization String?      // Primary area of teaching/expertise
+  bio            String?      // Public bio/summary
+  profileImage   String?      // URL to profile image stored in /public/uploads or external CDN
+  canCreateBlogs   Boolean      @default(false)
+  canCreateCourses Boolean      @default(false)
   createdAt      DateTime     @default(now())
   updatedAt      DateTime     @updatedAt
   enrollments    Enrollment[]

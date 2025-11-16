@@ -70,7 +70,8 @@ export async function createUser(
   email: string,
   password: string,
   name: string,
-  role: 'ADMIN' | 'INSTRUCTOR' | 'STUDENT' = 'STUDENT'
+  role: 'ADMIN' | 'INSTRUCTOR' | 'STUDENT' = 'STUDENT',
+  phoneNumber?: string
 ): Promise<AuthUser> {
   const hashedPassword = await hashPassword(password)
   
@@ -79,7 +80,8 @@ export async function createUser(
       email,
       password: hashedPassword,
       name,
-      role
+      role,
+      ...(phoneNumber ? { phoneNumber } : {})
     }
   })
 

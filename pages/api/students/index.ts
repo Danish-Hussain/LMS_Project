@@ -22,7 +22,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     const students = await prisma.user.findMany({
       where: { role: 'STUDENT' },
       include: {
-        _count: { select: { enrollments: true, progress: true } },
+        _count: { select: { enrollments: true, progress: true, recordedCourseEnrollments: true } },
         batches: { select: { id: true, name: true } },
       },
       orderBy: { createdAt: 'desc' },

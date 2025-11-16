@@ -6,8 +6,6 @@ import { useRouter } from 'next/navigation'
 import Link from 'next/link'
 import { Eye, EyeOff } from 'lucide-react'
 import Image from 'next/image'
-// Local Role type to match Prisma enum values
-type Role = 'ADMIN' | 'INSTRUCTOR' | 'STUDENT'
 
 export default function RegisterPage() {
   const [formData, setFormData] = useState<{
@@ -15,13 +13,15 @@ export default function RegisterPage() {
     email: string
     password: string
     confirmPassword: string
-    role: Role
+    phoneCountryCode: string
+    phone: string
   }>({
     name: '',
     email: '',
     password: '',
     confirmPassword: '',
-    role: 'STUDENT'
+    phoneCountryCode: '+91',
+    phone: ''
   })
   const [showPassword, setShowPassword] = useState(false)
   const [error, setError] = useState('')
@@ -35,6 +35,11 @@ export default function RegisterPage() {
       ...formData,
       [e.target.name]: e.target.value
     })
+  }
+
+  const handlePhoneChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const digits = e.target.value.replace(/\D/g, '')
+    setFormData(prev => ({ ...prev, phone: digits }))
   }
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -54,11 +59,13 @@ export default function RegisterPage() {
     setLoading(true)
 
     try {
+      const phoneNumber = formData.phone ? `${formData.phoneCountryCode}${formData.phone}` : undefined
       const result = await register(
         formData.email,
         formData.password,
         formData.name,
-        formData.role
+        'STUDENT',
+        phoneNumber
       )
       if (result.success) {
         router.push('/dashboard')
@@ -149,24 +156,55 @@ export default function RegisterPage() {
             </div>
 
             <div>
-              <label htmlFor="role" className="block text-sm font-medium mb-2" style={{ color: 'var(--foreground)' }}>
-                Account Type
+              <label className="block text-sm font-medium mb-2" style={{ color: 'var(--foreground)' }}>
+                Phone Number
               </label>
-              <select
-                id="role"
-                name="role"
-                value={formData.role}
-                onChange={handleChange}
-                className="appearance-none block w-full px-4 py-3 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all sm:text-sm"
-                style={{ 
-                  background: 'var(--background)', 
-                  borderColor: 'var(--section-border)', 
-                  color: 'var(--foreground)' 
-                }}
-              >
-                  <option value="STUDENT">Student</option>
-                  <option value="INSTRUCTOR">Instructor</option>
+              <div className="flex gap-2">
+                <select
+                  name="phoneCountryCode"
+                  value={formData.phoneCountryCode}
+                  onChange={handleChange}
+                  className="w-32 appearance-none block px-3 py-3 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all sm:text-sm"
+                  style={{ 
+                    background: 'var(--background)', 
+                    borderColor: 'var(--section-border)', 
+                    color: 'var(--foreground)'
+                  }}
+                >
+                  <option value="+91">🇮🇳 +91</option>
+                  <option value="+1">🇺🇸 +1</option>
+                  <option value="+44">🇬🇧 +44</option>
+                  <option value="+61">🇦🇺 +61</option>
+                  <option value="+971">🇦🇪 +971</option>
+                  <option value="+94">🇱🇰 +94</option>
+                  <option value="+880">🇧🇩 +880</option>
+                  <option value="+49">🇩🇪 +49</option>
+                  <option value="+33">🇫🇷 +33</option>
+                  <option value="+62">🇮🇩 +62</option>
+                  <option value="+63">🇵🇭 +63</option>
+                  <option value="+966">🇸🇦 +966</option>
+                  <option value="+55">🇧🇷 +55</option>
+                  <option value="+27">🇿🇦 +27</option>
                 </select>
+                <input
+                  name="phone"
+                  type="tel"
+                  inputMode="numeric"
+                  pattern="[0-9]{7,15}"
+                  placeholder="Phone number"
+                  value={formData.phone}
+                  onChange={handlePhoneChange}
+                  className="flex-1 appearance-none block w-full px-4 py-3 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all sm:text-sm"
+                  style={{ 
+                    background: 'var(--background)', 
+                    borderColor: 'var(--section-border)', 
+                    color: 'var(--foreground)'
+                  }}
+                />
+              </div>
+              <p className="mt-1 text-xs" style={{ color: 'var(--session-subtext)' }}>
+                Optional. We'll use this for account recovery and notifications.
+              </p>
             </div>
 
             <div>
