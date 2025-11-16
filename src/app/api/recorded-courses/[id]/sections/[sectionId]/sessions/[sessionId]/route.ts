@@ -28,11 +28,13 @@ export async function PATCH(
 ) {
   try {
     const { sessionId } = await params
-    const body = await req.json().catch(() => ({})) as { isPreview?: boolean; isPublished?: boolean }
+    const body = await req.json().catch(() => ({})) as { isPreview?: boolean; isPublished?: boolean; title?: string; videoUrl?: string }
 
     const data: any = {}
     if (typeof body.isPreview === 'boolean') data.isPreview = body.isPreview
     if (typeof body.isPublished === 'boolean') data.isPublished = body.isPublished
+    if (typeof body.title === 'string') data.title = body.title
+    if (typeof body.videoUrl === 'string') data.videoUrl = body.videoUrl
     if (Object.keys(data).length === 0) {
       return NextResponse.json({ error: 'No fields to update' }, { status: 400 })
     }

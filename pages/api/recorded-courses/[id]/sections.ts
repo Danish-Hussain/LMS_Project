@@ -9,7 +9,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     try {
       const previewOnly = req.query.preview === 'true'
       const sectionsRaw = await prisma.courseSection.findMany({
-        where: { courseId: id },
+        where: { courseId: id, batchId: null },
         include: { sessions: { orderBy: { order: 'asc' } } },
         orderBy: { order: 'asc' },
       })
@@ -33,6 +33,31 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     }
   }
 
-  res.setHeader('Allow', 'GET')
+  if (req.method === 'POST') {
+    try {
+      const { title, description, order } = req.body || {}
+      if (!title || typeof title !== 'string') {
+        return res.status(400).json({ error: 'Title is required' })
+      }
+
+      const section = await prisma.courseSection.create({
+        data: {
+          title,
+          description,
+          order: order || 1,
+          courseId: id,
+          batchId: null,
+        },
+        include: { sessions: true }
+      })
+
+      return res.status(201).json(section)
+    } catch (e) {
+      console.error('Pages API recorded-courses/:id/sections POST error:', e)
+      return res.status(500).json({ error: 'Failed to create section' })
+    }
+  }
+
+  res.setHeader('Allow', 'GET, POST')
   return res.status(405).json({ error: 'Method Not Allowed' })
 }

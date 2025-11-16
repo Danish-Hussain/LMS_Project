@@ -24,6 +24,7 @@ export async function GET(request: NextRequest) {
 
     const batches = await prisma.batch.findMany({
       include: {
+        course: { select: { title: true } },
         _count: {
           select: {
             students: true,
@@ -88,6 +89,7 @@ export async function POST(request: NextRequest) {
         }
       },
       include: {
+        course: { select: { title: true } },
         _count: {
           select: {
             students: true,
