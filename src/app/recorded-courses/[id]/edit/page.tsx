@@ -4,7 +4,6 @@ import { useEffect, useMemo, useState } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import { useAuth } from '@/contexts/AuthContext';
 import { useToast } from '@/hooks/useToast';
-import { formatINR } from '@/lib/currency';
 import {
   ChevronDown,
   Plus,
@@ -16,6 +15,10 @@ import {
   BookOpen,
   PlayCircle,
   BadgeCheck,
+  Eye,
+  EyeOff,
+  ArrowUp,
+  ArrowDown,
 } from 'lucide-react';
 
 interface Session {
@@ -24,6 +27,7 @@ interface Session {
   videoUrl: string;
   order: number;
   isPreview?: boolean;
+  isPublished?: boolean;
 }
 
 interface Section {
@@ -56,13 +60,11 @@ export default function EditRecordedCoursePage() {
   const [sections, setSections] = useState<Section[]>([]);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
-  const [pricingSaving, setPricingSaving] = useState(false);
-  const [pricingSavedMsg, setPricingSavedMsg] = useState<string | null>(null);
+  
   const [previewInFlight, setPreviewInFlight] = useState<Set<string>>(new Set());
+  const [actionInFlight, setActionInFlight] = useState<Set<string>>(new Set());
   const [expandedSectionId, setExpandedSectionId] = useState<string | null>(null);
-  // Track initial pricing to show Save only when changed
-  const [initialPrice, setInitialPrice] = useState<number | null>(null);
-  const [initialDiscount, setInitialDiscount] = useState<number | null>(null);
+  
 
   // New section form state
   const [newSectionTitle, setNewSectionTitle] = useState('');
@@ -80,6 +82,8 @@ export default function EditRecordedCoursePage() {
   // Edit modes
   const [editingSection, setEditingSection] = useState<string | null>(null);
   const [editingSectionData, setEditingSectionData] = useState({ title: '', description: '' });
+  const [editingSessionId, setEditingSessionId] = useState<string | null>(null);
+  const [editingSessionData, setEditingSessionData] = useState<{ title: string; videoUrl: string; isPreview: boolean; isPublished: boolean }>({ title: '', videoUrl: '', isPreview: false, isPublished: false });
 
   const fetchCourseAndSections = async () => {
     try {
@@ -87,10 +91,8 @@ export default function EditRecordedCoursePage() {
       // Fetch recorded course
       const courseRes = await fetch(`/api/recorded-courses/${recordedCourseId}`);
       if (!courseRes.ok) throw new Error('Failed to fetch course');
-    const courseData = await courseRes.json();
-    setCourse(courseData);
-    setInitialPrice(courseData.price ?? 0);
-    setInitialDiscount(courseData.discountPercent ?? 0);
+  const courseData = await courseRes.json();
+  setCourse(courseData);
       setCourseId(courseData.courseId);
 
       // Fetch sections using the actual courseId from the recorded course
@@ -115,30 +117,7 @@ export default function EditRecordedCoursePage() {
     fetchCourseAndSections();
   }, [recordedCourseId, user, router]);
 
-  // INR-only formatting
-  const formatLocalizedPrice = (p?: number | null) => {
-    if (!p || p <= 0) return 'Free';
-    return formatINR(p);
-  };
-
-  const computePriceParts = (usd?: number | null, d?: number | null) => {
-    const price = typeof usd === 'number' ? usd : null;
-    const pct = typeof d === 'number' ? Math.max(0, Math.min(100, d)) : 0;
-    if (!price || price <= 0) return { label: 'Free', original: null as string | null, percent: 0 };
-    const label = formatLocalizedPrice(price);
-    if (!pct) return { label, original: null as string | null, percent: 0 };
-    const original = formatLocalizedPrice(price / (1 - pct / 100));
-    return { label, original, percent: Math.round(pct) };
-  };
-
-  const isPricingDirty = useMemo(() => {
-    if (!course) return false;
-    const price = Math.round((course.price ?? 0) * 100) / 100;
-    const disc = Math.round((course.discountPercent ?? 0) * 100) / 100;
-    const iPrice = Math.round((initialPrice ?? 0) * 100) / 100;
-    const iDisc = Math.round((initialDiscount ?? 0) * 100) / 100;
-    return price !== iPrice || disc !== iDisc;
-  }, [course, initialPrice, initialDiscount]);
+  
 
   // Add new section
   const handleAddSection = async (e: React.FormEvent) => {
@@ -254,10 +233,8 @@ export default function EditRecordedCoursePage() {
 
     try {
       setSaving(true);
-      const response = await fetch(
-        `/api/recorded-courses/${courseId}/sections/${sectionId}/sessions/${sessionId}`,
-        { method: 'DELETE' }
-      );
+      // Use generic sessions endpoint to avoid router coupling
+      const response = await fetch(`/api/sessions/${sessionId}` as string, { method: 'DELETE' });
 
       if (!response.ok) throw new Error('Failed to delete session');
       setSections(
@@ -284,14 +261,12 @@ export default function EditRecordedCoursePage() {
   ) => {
     try {
       setPreviewInFlight((prev) => new Set(prev).add(sessionId));
-      const response = await fetch(
-        `/api/recorded-courses/${courseId}/sections/${sectionId}/sessions/${sessionId}`,
-        {
-          method: 'PATCH',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ isPreview: !current }),
-        }
-      );
+      // Update via nested route (supports preview) for parity with recorded flows
+      const response = await fetch(`/api/recorded-courses/${courseId}/sections/${sectionId}/sessions/${sessionId}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ isPreview: !current }),
+      });
 
       if (!response.ok) throw new Error('Failed to update preview flag');
       const updated = (await response.json()) as { id: string; isPreview?: boolean };
@@ -318,6 +293,126 @@ export default function EditRecordedCoursePage() {
         next.delete(sessionId);
         return next;
       });
+    }
+  };
+
+  // Toggle publish/unpublish for a session
+  const handleTogglePublish = async (
+    sectionId: string,
+    sessionId: string,
+    current: boolean
+  ) => {
+    try {
+      setActionInFlight((prev) => new Set(prev).add(sessionId));
+      const response = await fetch(`/api/recorded-courses/${courseId}/sections/${sectionId}/sessions/${sessionId}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ isPublished: !current }),
+      });
+      if (!response.ok) throw new Error('Failed to toggle publish');
+      const updated = (await response.json()) as { id: string; isPublished?: boolean };
+      setSections((prev) => prev.map((s) => (
+        s.id === sectionId
+          ? { ...s, sessions: s.sessions.map((sess) => sess.id === sessionId ? { ...sess, isPublished: !!updated.isPublished } : sess) }
+          : s
+      )));
+      toast.success(updated.isPublished ? 'Session published' : 'Session unpublished');
+    } catch (err) {
+      console.error('Toggle publish failed', err);
+      toast.error('Failed to change publish state');
+    } finally {
+      setActionInFlight((prev) => { const n = new Set(prev); n.delete(sessionId); return n; });
+    }
+  };
+
+  // Move session within its section (up/down)
+  const handleMoveSession = async (
+    sectionId: string,
+    sessionId: string,
+    direction: 'up' | 'down'
+  ) => {
+    try {
+      const section = sections.find((s) => s.id === sectionId);
+      if (!section) return;
+      const ordered = [...section.sessions].sort((a, b) => a.order - b.order);
+      const idx = ordered.findIndex((s) => s.id === sessionId);
+      if (idx === -1) return;
+      const targetIdx = direction === 'up' ? idx - 1 : idx + 1;
+      if (targetIdx < 0 || targetIdx >= ordered.length) return; // no-op
+
+      const moving = ordered[idx];
+      const target = ordered[targetIdx];
+      const targetOrder = target.order;
+
+      setActionInFlight((prev) => new Set(prev).add(sessionId));
+      // Single call swap via generic sessions endpoint (server handles swap)
+      const res = await fetch(`/api/sessions/${sessionId}`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ order: targetOrder }),
+      });
+      if (!res.ok) throw new Error('Failed to reorder');
+
+      // Optimistically swap in UI
+      setSections((prev) => prev.map((s) => {
+        if (s.id !== sectionId) return s;
+        const list = [...s.sessions].sort((a, b) => a.order - b.order);
+        const i = list.findIndex((x) => x.id === sessionId);
+        const j = i + (direction === 'up' ? -1 : 1);
+        if (i < 0 || j < 0 || j >= list.length) return s;
+        const tmp = list[i].order;
+        list[i].order = list[j].order;
+        list[j].order = tmp;
+        // return with updated orders
+        return { ...s, sessions: list };
+      }));
+    } catch (err) {
+      console.error('Reorder failed', err);
+      toast.error('Failed to move session');
+    } finally {
+      setActionInFlight((prev) => { const n = new Set(prev); n.delete(sessionId); return n; });
+    }
+  };
+
+  // Start editing a session inline
+  const startEditSession = (session: Session) => {
+    setEditingSessionId(session.id);
+    setEditingSessionData({ title: session.title, videoUrl: session.videoUrl, isPreview: !!session.isPreview, isPublished: !!session.isPublished });
+  };
+
+  const cancelEditSession = () => {
+    setEditingSessionId(null);
+    setEditingSessionData({ title: '', videoUrl: '', isPreview: false, isPublished: false });
+  };
+
+  const saveEditSession = async (sectionId: string, sessionId: string) => {
+    try {
+      setSaving(true);
+      // Use nested recorded-courses route so we can update preview/publish and basic fields together
+      const res = await fetch(`/api/recorded-courses/${courseId}/sections/${sectionId}/sessions/${sessionId}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          title: editingSessionData.title,
+          videoUrl: editingSessionData.videoUrl,
+          isPreview: editingSessionData.isPreview,
+          isPublished: editingSessionData.isPublished,
+        }),
+      });
+      if (!res.ok) throw new Error('Failed to save session');
+      const updated = await res.json();
+      setSections((prev) => prev.map((s) => (
+        s.id === sectionId
+          ? { ...s, sessions: s.sessions.map((sess) => sess.id === sessionId ? { ...sess, title: updated.title, videoUrl: updated.videoUrl, isPreview: updated.isPreview, isPublished: updated.isPublished } : sess) }
+          : s
+      )));
+      toast.success('Session updated');
+      cancelEditSession();
+    } catch (e) {
+      console.error('Edit session failed', e);
+      toast.error('Failed to update session');
+    } finally {
+      setSaving(false);
     }
   };
 
@@ -364,98 +459,7 @@ export default function EditRecordedCoursePage() {
           ) : null}
         </div>
 
-        {/* Pricing Panel */}
-        <div className="mb-8 grid grid-cols-1 md:grid-cols-2 gap-4">
-          <div className="p-4 rounded-lg" style={{ background: 'var(--section-bg)', border: '1px solid var(--section-border)' }}>
-            <h3 className="font-semibold text-foreground mb-3">Pricing</h3>
-            <div className="space-y-3">
-              <label className="block text-sm text-gray-400">
-                Price (INR)
-                <input
-                  type="number"
-                  step="0.01"
-                  value={course.price}
-                  onChange={(e) => setCourse((prev) => (prev ? { ...prev, price: Number(e.target.value) } as any : prev))}
-                  className="mt-1 w-full px-3 py-2 rounded text-foreground"
-                  style={{ background: 'var(--background)', border: '1px solid var(--section-border)' }}
-                />
-              </label>
-              <label className="block text-sm text-gray-400">
-                Discount (%)
-                <input
-                  type="number"
-                  min={0}
-                  max={100}
-                  value={course.discountPercent ?? 0}
-                  onChange={(e) =>
-                    setCourse((prev) =>
-                      prev
-                        ? {
-                            ...prev,
-                            discountPercent: Math.max(0, Math.min(100, Number(e.target.value))),
-                          } as any
-                        : prev
-                    )
-                  }
-                  className="mt-1 w-full px-3 py-2 rounded text-foreground"
-                  style={{ background: 'var(--background)', border: '1px solid var(--section-border)' }}
-                />
-              </label>
-              {/* Student-view localized preview */}
-              <div className="text-xs" style={{ color: 'var(--session-subtext)' }}>
-                {(() => {
-                  const parts = computePriceParts(course.price ?? 0, course.discountPercent ?? 0);
-                  return (
-                    <div>
-                      Student view: <span className="font-medium text-foreground">{parts.label}</span>
-                      {parts.original && (
-                        <>
-                          {' '}
-                          <span className="line-through">{parts.original}</span>{' '}
-                          <span className="text-green-700">{parts.percent}% off</span>
-                        </>
-                      )}
-                    </div>
-                  );
-                })()}
-              </div>
-              <div className="flex justify-end">
-                <button
-                  onClick={async () => {
-                    try {
-                      setPricingSaving(true);
-                      const res = await fetch(`/api/recorded-courses/${recordedCourseId}`, {
-                        method: 'PUT',
-                        headers: { 'Content-Type': 'application/json' },
-                        body: JSON.stringify({ price: course.price, discountPercent: course.discountPercent }),
-                      });
-                      if (!res.ok) throw new Error('Failed to save pricing');
-                      const updated = await res.json();
-                      setCourse((prev) => (prev ? { ...prev, price: updated.price, discountPercent: updated.discountPercent } as any : prev));
-                      setInitialPrice(updated.price ?? 0);
-                      setInitialDiscount(updated.discountPercent ?? 0);
-                      toast.success('Pricing updated');
-                      setPricingSavedMsg('Saved');
-                      setTimeout(() => setPricingSavedMsg(null), 2000);
-                    } catch (err) {
-                      console.error(err);
-                      toast.error('Failed to update pricing');
-                    } finally {
-                      setPricingSaving(false);
-                    }
-                  }}
-                  disabled={pricingSaving || !isPricingDirty}
-                  className="px-4 py-2 bg-purple-500 text-white rounded hover:bg-purple-600 disabled:opacity-50"
-                >
-                  {pricingSaving ? 'Saving…' : 'Save Pricing'}
-                </button>
-              </div>
-              {pricingSavedMsg && (
-                <div className="text-right text-xs text-green-700">✓ {pricingSavedMsg}</div>
-              )}
-            </div>
-          </div>
-        </div>
+        {/* Pricing panel removed; pricing is managed on the On-demand Courses page */}
 
         {/* Sections Container */}
         <div className="space-y-4 mb-8">
@@ -531,52 +535,138 @@ export default function EditRecordedCoursePage() {
                               <div className="flex items-center gap-3 flex-1">
                                 <PlayCircle className="w-5 h-5 text-purple-400" />
                                 <div className="flex-1">
-                                  <p className="font-medium text-foreground text-sm">
-                                    {session.order}. {session.title}
-                                    {session.isPreview ? (
-                                      <span className="ml-2 align-middle inline-block text-[10px] px-2 py-0.5 rounded-full bg-blue-100 text-blue-700">
-                                        Preview
-                                      </span>
-                                    ) : null}
-                                  </p>
-                                  <p className="text-xs truncate" style={{ color: 'var(--session-subtext)' }}>
-                                    {session.videoUrl}
-                                  </p>
+                                  {editingSessionId === session.id ? (
+                                    <div className="flex flex-col gap-2">
+                                      <input
+                                        className="px-2 py-1 rounded border text-sm"
+                                        value={editingSessionData.title}
+                                        onChange={(e) => setEditingSessionData((d) => ({ ...d, title: e.target.value }))}
+                                        placeholder="Session title"
+                                      />
+                                      <input
+                                        className="px-2 py-1 rounded border text-xs"
+                                        value={editingSessionData.videoUrl}
+                                        onChange={(e) => setEditingSessionData((d) => ({ ...d, videoUrl: e.target.value }))}
+                                        placeholder="Video URL"
+                                      />
+                                      <div className="flex items-center gap-4 text-xs" style={{ color: 'var(--session-subtext)' }}>
+                                        <label className="inline-flex items-center gap-2 cursor-pointer">
+                                          <input
+                                            type="checkbox"
+                                            checked={!!editingSessionData.isPreview}
+                                            onChange={(e) => setEditingSessionData((d) => ({ ...d, isPreview: e.target.checked }))}
+                                          />
+                                          <span>Make this session a free preview</span>
+                                        </label>
+                                        <label className="inline-flex items-center gap-2 cursor-pointer">
+                                          <input
+                                            type="checkbox"
+                                            checked={!!editingSessionData.isPublished}
+                                            onChange={(e) => setEditingSessionData((d) => ({ ...d, isPublished: e.target.checked }))}
+                                          />
+                                          <span>{editingSessionData.isPublished ? 'Published' : 'Draft'}</span>
+                                        </label>
+                                      </div>
+                                    </div>
+                                  ) : (
+                                    <>
+                                      <p className="font-medium text-foreground text-sm">
+                                        {session.order}. {session.title}
+                                        {session.isPreview ? (
+                                          <span className="ml-2 align-middle inline-block text-[10px] px-2 py-0.5 rounded-full bg-blue-100 text-blue-700">
+                                            Preview
+                                          </span>
+                                        ) : null}
+                                      </p>
+                                      <p className="text-xs truncate" style={{ color: 'var(--session-subtext)' }}>
+                                        {session.videoUrl}
+                                      </p>
+                                    </>
+                                  )}
                                 </div>
                               </div>
 
                               <div className="flex items-center gap-2">
-                                <button
-                                  onClick={(e) => {
-                                    e.preventDefault();
-                                    e.stopPropagation();
-                                    if (!previewInFlight.has(session.id)) {
-                                      handleTogglePreview(section.id, session.id, !!session.isPreview);
-                                    }
-                                  }}
-                                  title={session.isPreview ? 'Remove preview' : 'Mark as preview'}
-                                  className={`p-2 rounded transition-colors ${
-                                    session.isPreview
-                                      ? 'text-blue-600 hover:bg-blue-500/10'
-                                      : 'text-gray-400 hover:bg-gray-500/10'
-                                  }`}
-                                  disabled={previewInFlight.has(session.id)}
-                                >
-                                  {previewInFlight.has(session.id) ? (
-                                    <span className="inline-block w-4 h-4 border-2 border-gray-300 rounded-full animate-spin" />
-                                  ) : (
-                                    <BadgeCheck className="w-4 h-4" />
-                                  )}
-                                </button>
-
-                                <button
-                                  onClick={() =>
-                                    handleDeleteSession(section.id, session.id)
-                                  }
-                                  className="p-2 text-red-500 hover:bg-red-500/10 rounded transition-colors"
-                                >
-                                  <Trash2 className="w-4 h-4" />
-                                </button>
+                                {editingSessionId === session.id ? (
+                                  <>
+                                    <button
+                                      onClick={(e) => { e.preventDefault(); e.stopPropagation(); saveEditSession(section.id, session.id); }}
+                                      className="p-2 text-green-600 hover:bg-green-500/10 rounded"
+                                      title="Save"
+                                      disabled={saving}
+                                    >
+                                      <Save className="w-4 h-4" />
+                                    </button>
+                                    <button
+                                      onClick={(e) => { e.preventDefault(); e.stopPropagation(); cancelEditSession(); }}
+                                      className="p-2 text-gray-500 hover:bg-gray-500/10 rounded"
+                                      title="Cancel"
+                                      disabled={saving}
+                                    >
+                                      <X className="w-4 h-4" />
+                                    </button>
+                                  </>
+                                ) : (
+                                  <>
+                                    <button
+                                      onClick={(e) => { e.preventDefault(); e.stopPropagation(); if (!previewInFlight.has(session.id)) handleTogglePreview(section.id, session.id, !!session.isPreview); }}
+                                      title={session.isPreview ? 'Remove preview' : 'Mark as preview'}
+                                      className={`p-2 rounded transition-colors ${session.isPreview ? 'text-blue-600 hover:bg-blue-500/10' : 'text-gray-400 hover:bg-gray-500/10'}`}
+                                      disabled={previewInFlight.has(session.id)}
+                                    >
+                                      {previewInFlight.has(session.id) ? (
+                                        <span className="inline-block w-4 h-4 border-2 border-gray-300 rounded-full animate-spin" />
+                                      ) : (
+                                        <BadgeCheck className="w-4 h-4" />
+                                      )}
+                                    </button>
+                                    <button
+                                      onClick={(e) => { e.preventDefault(); e.stopPropagation(); startEditSession(session); }}
+                                      className="p-2 text-gray-600 hover:bg-gray-500/10 rounded"
+                                      title="Edit"
+                                    >
+                                      <Edit2 className="w-4 h-4" />
+                                    </button>
+                                    <button
+                                      onClick={(e) => { e.preventDefault(); e.stopPropagation(); if (!actionInFlight.has(session.id)) handleTogglePublish(section.id, session.id, !!session.isPublished); }}
+                                      className="p-2 rounded transition-colors"
+                                      title={session.isPublished ? 'Unpublish' : 'Publish'}
+                                      disabled={actionInFlight.has(session.id)}
+                                      style={{ color: session.isPublished ? '#059669' : 'var(--session-subtext)' }}
+                                    >
+                                      {actionInFlight.has(session.id) ? (
+                                        <span className="inline-block w-4 h-4 border-2 border-gray-300 rounded-full animate-spin" />
+                                      ) : session.isPublished ? (
+                                        <Eye className="w-4 h-4" />
+                                      ) : (
+                                        <EyeOff className="w-4 h-4" />
+                                      )}
+                                    </button>
+                                    <button
+                                      onClick={(e) => { e.preventDefault(); e.stopPropagation(); if (!actionInFlight.has(session.id)) handleMoveSession(section.id, session.id, 'up'); }}
+                                      className="p-2 text-gray-600 hover:bg-gray-500/10 rounded"
+                                      title="Move up"
+                                      disabled={actionInFlight.has(session.id) || session.order === 1}
+                                    >
+                                      <ArrowUp className="w-4 h-4" />
+                                    </button>
+                                    <button
+                                      onClick={(e) => { e.preventDefault(); e.stopPropagation(); if (!actionInFlight.has(session.id)) handleMoveSession(section.id, session.id, 'down'); }}
+                                      className="p-2 text-gray-600 hover:bg-gray-500/10 rounded"
+                                      title="Move down"
+                                      disabled={actionInFlight.has(session.id) || session.order === (section.sessions?.length || 0)}
+                                    >
+                                      <ArrowDown className="w-4 h-4" />
+                                    </button>
+                                    <button
+                                      onClick={() => handleDeleteSession(section.id, session.id)}
+                                      className="p-2 text-red-500 hover:bg-red-500/10 rounded transition-colors"
+                                      title="Delete"
+                                    >
+                                      <Trash2 className="w-4 h-4" />
+                                    </button>
+                                  </>
+                                )}
                               </div>
                             </div>
                           ))}

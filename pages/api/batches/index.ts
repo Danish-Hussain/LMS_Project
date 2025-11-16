@@ -13,7 +13,10 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
   if (req.method === 'GET') {
     try {
       const batches = await prisma.batch.findMany({
-        include: { _count: { select: { students: true, enrollments: true } } },
+        include: { 
+          course: { select: { title: true } },
+          _count: { select: { students: true, enrollments: true } } 
+        },
         orderBy: { createdAt: 'desc' }
       })
       return res.status(200).json(batches)
@@ -36,7 +39,10 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
           ...(endDate ? { endDate: new Date(endDate) } : {}),
           course: { connect: { id: courseId } },
         },
-        include: { _count: { select: { students: true, enrollments: true } } }
+        include: { 
+          course: { select: { title: true } },
+          _count: { select: { students: true, enrollments: true } } 
+        }
       })
 
       return res.status(201).json(batch)

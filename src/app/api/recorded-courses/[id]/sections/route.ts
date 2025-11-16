@@ -14,6 +14,7 @@ export async function GET(
     const sectionsRaw = await prisma.courseSection.findMany({
       where: {
         courseId: courseId,
+        batchId: null, // exclude batch-specific sections
       },
       include: {
         sessions: {
@@ -66,6 +67,7 @@ export async function POST(
         description,
         order: order || 1,
         courseId,
+        batchId: null, // explicit to distinguish from batch sections
       },
       include: {
         sessions: true,

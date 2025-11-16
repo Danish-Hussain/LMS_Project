@@ -14,6 +14,7 @@ interface Batch {
   endDate: string | null
   isActive: boolean
   createdAt: string
+  course?: { title: string }
   _count: {
     students: number
     enrollments: number
@@ -144,6 +145,9 @@ export default function BatchesPage() {
                   <div className="flex items-start justify-between mb-4">
                     <div>
                       <h3 className="text-lg font-semibold text-gray-900">{batch.name}</h3>
+                      {batch.course?.title && (
+                        <p className="text-sm text-gray-500 mt-0.5">Course: {batch.course.title}</p>
+                      )}
                       {batch.description && (
                         <p className="text-gray-600 text-sm mt-1 line-clamp-2">
                           {batch.description}
@@ -151,12 +155,6 @@ export default function BatchesPage() {
                       )}
                     </div>
                     <div className="flex items-center space-x-2">
-                      <Link
-                        href={`/batches/${batch.id}/edit`}
-                        className="text-gray-400 hover:text-blue-600 transition-colors"
-                      >
-                        <Edit className="h-4 w-4" />
-                      </Link>
                       <button
                         onClick={() => setConfirmDeleteId(batch.id)}
                         className="text-gray-400 hover:text-red-600 transition-colors"
