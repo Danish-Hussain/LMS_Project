@@ -13,6 +13,7 @@ interface Student {
   _count: {
     enrollments: number
     progress: number
+    recordedCourseEnrollments?: number
   }
   batches: {
     id: string
@@ -106,9 +107,9 @@ export default function StudentsPage() {
                 <BookOpen className="h-6 w-6 text-green-600" />
               </div>
               <div className="ml-4">
-                <p className="text-sm font-medium text-gray-600">Active Enrollments</p>
+                <p className="text-sm font-medium text-gray-600">Recorded Courses</p>
                 <p className="text-2xl font-bold text-gray-900">
-                  {students.reduce((sum, student) => sum + student._count.enrollments, 0)}
+                  {students.reduce((sum, student) => sum + (student._count.recordedCourseEnrollments ?? 0), 0)}
                 </p>
               </div>
             </div>
@@ -171,7 +172,7 @@ export default function StudentsPage() {
                       Email
                     </th>
                     <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                      Enrollments
+                      Recorded Courses
                     </th>
                     <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                       Batches
@@ -208,7 +209,7 @@ export default function StudentsPage() {
                         </div>
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                        {student._count.enrollments}
+                        {student._count.recordedCourseEnrollments ?? 0}
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap">
                         <div className="flex flex-wrap gap-1">

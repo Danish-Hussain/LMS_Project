@@ -31,7 +31,8 @@ export async function GET(request: NextRequest) {
         _count: {
           select: {
             enrollments: true,
-            progress: true
+            progress: true,
+            recordedCourseEnrollments: true
           }
         },
         batches: {

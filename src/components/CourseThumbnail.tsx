@@ -20,11 +20,29 @@ export default function CourseThumbnail({
 }: CourseThumbnailProps) {
   const DEFAULT_SRC = '/uploads/CPI_Thumnail.png'
   const [errored, setErrored] = useState(false)
-  const [src, setSrc] = useState<string | null>((image || thumbnail || DEFAULT_SRC) ?? null)
+  const initial = (image || thumbnail || DEFAULT_SRC) ?? null
+  const sanitize = (val: string | null): string | null => {
+    if (!val) return null
+    // Allow local assets and uploads
+    if (val.startsWith('/') || val.startsWith('./')) return val
+    // Validate remote URL – reject obviously placeholder / invalid hosts like "https://a"
+    try {
+      const u = new URL(val)
+      const host = u.hostname.trim()
+      // host must contain at least one dot and be length >= 4 (e.g. a.co) to be considered real
+      if (host.length < 4 || !host.includes('.')) {
+        return DEFAULT_SRC
+      }
+      return val
+    } catch {
+      return DEFAULT_SRC
+    }
+  }
+  const [src, setSrc] = useState<string | null>(sanitize(initial))
 
   useEffect(() => {
     setErrored(false)
-    setSrc((image || thumbnail || DEFAULT_SRC) ?? null)
+    setSrc(sanitize((image || thumbnail || DEFAULT_SRC) ?? null))
   }, [image, thumbnail])
   return (
     <div className={`relative ${className}`}>

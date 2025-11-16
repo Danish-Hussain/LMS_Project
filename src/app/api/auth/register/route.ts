@@ -6,7 +6,7 @@ import { cookies } from 'next/headers'
 
 export async function POST(request: NextRequest) {
   try {
-    const { email, password, name, role } = await request.json()
+  const { email, password, name, role, phoneNumber } = await request.json()
 
     if (!email || !password || !name) {
       return NextResponse.json(
@@ -19,7 +19,8 @@ export async function POST(request: NextRequest) {
     const validRoles = ['ADMIN', 'INSTRUCTOR', 'STUDENT']
     const userRole = role && validRoles.includes(role) ? role : 'STUDENT'
 
-    const user = await createUser(email, password, name, userRole)
+  const normalizedPhone = typeof phoneNumber === 'string' && phoneNumber.trim() ? normalizeE164(phoneNumber) : undefined
+  const user = await createUser(email, password, name, userRole, normalizedPhone)
   // Newly created user should have tokenVersion on DB (default 0). Fetch to be explicit.
   const dbUser = await prisma.user.findUnique({ where: { id: user.id } })
   const token = generateToken(user, dbUser?.tokenVersion)
@@ -85,4 +86,16 @@ export async function POST(request: NextRequest) {
       { status: 500 }
     )
   }
+}
+
+// Basic E.164 normalization: ensure it starts with + and contains 7-15 digits total
+function normalizeE164(input: string): string | undefined {
+  let v = input.trim()
+  if (!v) return undefined
+  if (!v.startsWith('+')) v = '+' + v
+  // remove spaces, dashes, parentheses
+  v = v.replace(/[\s\-()]/g, '')
+  // simple validation: + followed by 7-15 digits
+  if (!/^\+[0-9]{7,15}$/.test(v)) return undefined
+  return v
 }
