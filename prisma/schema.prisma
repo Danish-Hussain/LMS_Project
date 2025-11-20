@@ -6,9 +6,8 @@ generator client {
 }
 
 datasource db {
-  // Switched from sqlite to postgresql to use Neon in production and unified dev/prod.
-  // Ensure .env / Netlify env variable DATABASE_URL holds a valid Postgres connection string.
-  provider = "postgresql"
+  // Use sqlite for local dev. Production (Netlify) will override with Postgres via env variable.
+  provider = "sqlite"
   url      = env("DATABASE_URL")
 }
 
