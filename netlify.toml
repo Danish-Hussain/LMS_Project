@@ -4,14 +4,15 @@
 # bundle functions accordingly.
 
 [build]
-  # Run prisma generate first so the Prisma Client is available, then run
-  # migrations and finally run the Next.js build. Ensure `DATABASE_URL` is
-  # set in Netlify's Environment variables (pointing to your Postgres DB).
-  # Example DATABASE_URL: postgres://user:password@host:5432/dbname
-  command = "npx prisma generate && npx prisma migrate deploy && npm run build"
+  # Use a dedicated npm script so the build command is reproducible and
+  # readable in Netlify's UI. This script will generate the Prisma client,
+  # deploy migrations, then run the stable Next.js build (webpack).
+  command = "npm run build:netlify:ci"
   publish = ".next"
 
 [build.environment]
   NEXT_TELEMETRY_DISABLED = "1"
+  # Ensure Turbopack is disabled during Netlify builds (extra safety).
+  NEXT_DISABLE_TURBOPACK = "1"
   # Force webpack by not using Turbopack flags (handled in package.json)
   # You can add other envs here if needed (e.g., DATABASE_URL in Netlify UI)
