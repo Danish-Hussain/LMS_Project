@@ -77,7 +77,7 @@ export default function Navbar() {
   }
 
   const navigation = [
-    { name: 'Dashboard', href: '/dashboard', icon: Home },
+    { name: 'My Progress', href: '/progress', icon: Home },
     // Courses dropdown will be rendered separately to allow sub-menu items
     { name: 'Blogs', href: '/blogs', icon: FileText },
     ...(user?.role === 'ADMIN' ? [
@@ -114,8 +114,8 @@ export default function Navbar() {
 
           {/* Desktop Navigation */}
           <div className="hidden md:flex items-center h-14 space-x-8">
-            {/* Dashboard first */}
-            <Link href="/dashboard" className="hover:text-blue-600 px-3 py-2 rounded-md text-sm font-medium transition-colors" style={{ color: 'var(--session-text)' }}>Dashboard</Link>
+            {/* My Progress first */}
+            <Link href="/progress" className="hover:text-blue-600 px-3 py-2 rounded-md text-sm font-medium transition-colors" style={{ color: 'var(--session-text)' }}>My Progress</Link>
 
             {/* Courses dropdown */}
             <div className="relative" ref={coursesRef}>
@@ -203,7 +203,7 @@ export default function Navbar() {
             </div>
 
             {/* Other nav items */}
-            {navigation.filter(i => i.name !== 'Dashboard').map((item) => (
+            {navigation.filter(i => i.name !== 'My Progress').map((item) => (
               <Link
                 key={item.name}
                 href={item.href}
@@ -357,7 +357,7 @@ export default function Navbar() {
         {isMenuOpen && (
           <div className="md:hidden">
             <div className="px-2 pt-2 pb-3 space-y-1 sm:px-3">
-              <Link href="/dashboard" className="text-gray-700 hover:text-blue-600 block px-3 py-2 rounded-md text-base font-medium" onClick={() => setIsMenuOpen(false)}>Dashboard</Link>
+              <Link href="/progress" className="text-gray-700 hover:text-blue-600 block px-3 py-2 rounded-md text-base font-medium" onClick={() => setIsMenuOpen(false)}>My Progress</Link>
 
               {/* Mobile Courses: match desktop behavior
                   - Admin/Instructor: label -> /courses, chevron toggles nested links (On-demand, Batches)
@@ -400,7 +400,7 @@ export default function Navbar() {
                 // guest: simple Courses link only (no chevron/dropdown)
                 <Link href="/courses" className="text-gray-700 hover:text-blue-600 block px-3 py-2 rounded-md text-base font-medium" onClick={() => setIsMenuOpen(false)}>Courses</Link>
               )}
-              {navigation.filter(i => i.name !== 'Dashboard').map((item) => (
+              {navigation.filter(i => i.name !== 'My Progress').map((item) => (
                 <Link
                   key={item.name}
                   href={item.href}

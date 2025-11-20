@@ -25,6 +25,11 @@ body {
   --session-text: #18181b;
   --session-subtext: #6b7280;
   --accent: #2563eb;
+  /* Stat card icon backgrounds */
+  --stat-blue-bg: rgba(37, 99, 235, 0.1);
+  --stat-green-bg: rgba(16, 185, 129, 0.1);
+  --stat-purple-bg: rgba(139, 92, 246, 0.1);
+  --stat-yellow-bg: rgba(245, 158, 11, 0.1);
   /* Brand palette */
   --brand-primary: #0B5EA8;   /* Dark brand blue (SAP) */
   --brand-secondary: #0B84D6; /* Lighter brand blue (Integration/Expert) */
@@ -45,6 +50,11 @@ html.dark {
   --session-text: #f3f4f6;
   --session-subtext: #a1a1aa;
   --accent: #60a5fa;
+  /* Stat card icon backgrounds for dark mode */
+  --stat-blue-bg: rgba(96, 165, 250, 0.15);
+  --stat-green-bg: rgba(52, 211, 153, 0.15);
+  --stat-purple-bg: rgba(167, 139, 250, 0.15);
+  --stat-yellow-bg: rgba(251, 191, 36, 0.15);
   /* Brand palette stays consistent in dark mode */
   --brand-primary: #0B5EA8;
   --brand-secondary: #0B84D6;
