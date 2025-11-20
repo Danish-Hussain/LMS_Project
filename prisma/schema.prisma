@@ -6,8 +6,11 @@ generator client {
 }
 
 datasource db {
-  // Use sqlite for local dev. Production (Netlify) will override with Postgres via env variable.
-  provider = "sqlite"
+  // Use PostgreSQL for production. For local development you can continue
+  // to use SQLite by setting a local DATABASE_URL, but on Netlify you should
+  // provide a full Postgres connection string in the DATABASE_URL env var.
+  // Example: postgres://user:pass@host:5432/dbname
+  provider = "postgresql"
   url      = env("DATABASE_URL")
 }
 

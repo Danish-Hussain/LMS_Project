@@ -4,7 +4,11 @@
 # bundle functions accordingly.
 
 [build]
-  command = "npm run build:netlify"
+  # Run prisma generate first so the Prisma Client is available, then run
+  # migrations and finally run the Next.js build. Ensure `DATABASE_URL` is
+  # set in Netlify's Environment variables (pointing to your Postgres DB).
+  # Example DATABASE_URL: postgres://user:password@host:5432/dbname
+  command = "npx prisma generate && npx prisma migrate deploy && npm run build"
   publish = ".next"
 
 [build.environment]
