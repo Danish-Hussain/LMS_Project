@@ -25,7 +25,7 @@ function renderPortableText(body: any[] | undefined) {
   })
 }
 
-export default async function PostPage({ params }: { params: { slug: string } }) {
+export default async function PostPage({ params }: any) {
   const post = await client.fetch(POST_QUERY, { slug: params.slug }, options)
   if (!post) return notFound()
 
