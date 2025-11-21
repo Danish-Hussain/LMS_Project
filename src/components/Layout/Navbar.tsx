@@ -103,8 +103,8 @@ export default function Navbar() {
       <div className="max-w-[1920px] w-full mx-auto px-4 sm:px-6 lg:px-8">
         <div className="flex flex-row items-center justify-between h-14">
           {/* Logo */}
-          <Link href="/" className="flex-shrink-0 flex items-center h-14" style={{ marginLeft: 0, paddingLeft: 0 }} aria-label="SAP Integration Expert Home">
-            <Wordmark className="self-center translate-y-[1px] h-9" />
+            <Link href="/" className="flex-shrink-0 flex items-center h-14" style={{ marginLeft: 0, paddingLeft: 0 }} aria-label="SAP Integration Expert Home">
+            <Wordmark className="self-center translate-y-[1px]" size={44} />
           </Link>
 
           {/* Desktop Navigation */}
