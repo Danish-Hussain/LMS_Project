@@ -24,6 +24,10 @@ export default async function IndexPage() {
       title: (post as any).title || '',
       slug: (post as any).slug || { current: '' },
       publishedAt: (post as any).publishedAt,
+      // Provide a deterministic, server-rendered formatted date string to
+      // avoid client/server locale mismatches during hydration. Use ISO
+      // date (YYYY-MM-DD) which is locale-neutral.
+      publishedAtFormatted: (post as any).publishedAt ? new Date((post as any).publishedAt).toISOString().slice(0, 10) : null,
       imageUrl,
       excerpt,
     }

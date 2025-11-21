@@ -84,7 +84,8 @@ export default function RegisterPage() {
       <div className="sm:mx-auto sm:w-full sm:max-w-md">
         <div className="flex justify-center">
           <div className="p-3 rounded-full" style={{ background: 'rgba(37, 99, 235, 0.1)' }}>
-            <Image src="/icon.png?v=4" alt="Brand icon" width={40} height={40} priority unoptimized />
+            {/* Use the favicon SVG for the small brand avatar */}
+            <Image src="/branding/favicon.svg" alt="Brand icon" width={40} height={40} priority unoptimized />
           </div>
         </div>
         <h2 className="mt-6 text-center text-3xl font-extrabold" style={{ color: 'var(--foreground)' }}>

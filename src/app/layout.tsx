@@ -18,10 +18,17 @@ export const metadata: Metadata = {
     statusBarStyle: 'default'
   },
   formatDetection: { telephone: false },
-  icons: {
-    icon: [{ url: '/icon.png?v=4' }],
-    shortcut: [{ url: '/icon.png?v=4' }],
-    apple: [{ url: '/apple-icon.png?v=4' }],
+    icons: {
+    // Use custom bundled SVG for canonical icon and include PNG fallbacks for compatibility
+    icon: [
+  { url: '/branding/favicon.svg', type: 'image/svg+xml' },
+      { url: '/icons/icon-512x512.png', type: 'image/png', sizes: '512x512' },
+      { url: '/icons/icon-192x192.png', type: 'image/png', sizes: '192x192' },
+      { url: '/icons/icon-192x192.png', type: 'image/png', sizes: '32x32' },
+      { url: '/icons/icon-192x192.png', type: 'image/png', sizes: '16x16' },
+    ],
+    shortcut: [{ url: '/icons/icon-192x192.png' }],
+    apple: [{ url: '/icons/icon-192x192.png' }],
   },
   manifest: '/site.webmanifest?v=4',
 }

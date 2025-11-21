@@ -98,7 +98,7 @@ export default function Navbar() {
   }, [])
 
   return (
-  <nav className="shadow-sm border-b" style={{ background: 'var(--background)', borderColor: 'var(--section-border)' }} suppressHydrationWarning>
+  <nav className="sticky top-0 z-50 shadow-sm border-b" style={{ background: 'var(--background)', borderColor: 'var(--section-border)' }} suppressHydrationWarning>
       <div className="max-w-[1920px] w-full mx-auto px-4 sm:px-6 lg:px-8">
         <div className="flex flex-row items-center justify-between h-14">
           {/* Logo */}
