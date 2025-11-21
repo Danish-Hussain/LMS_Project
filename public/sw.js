@@ -1,10 +1,12 @@
 // Basic PWA service worker for SAP Integration Expert
-const CACHE_NAME = 'sie-academy-v7';
+// Bump cache name when changing precached assets so clients pick up the new SW
+// Bump cache name when changing precached assets so clients pick up the new SW
+const CACHE_NAME = 'sie-academy-v9';
 const PRECACHE_URLS = [
   '/',
   '/offline.html',
-  '/icon.png?v=4',
-  '/apple-icon.png?v=4',
+    '/branding/favicon.svg',
+    '/icons/icon-192x192.png',
   '/favicon.ico',
   '/icons/icon-192x192.png',
   '/icons/icon-512x512.png',

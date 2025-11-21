@@ -7,6 +7,7 @@ type PostItem = {
   title: string
   slug: { current: string }
   publishedAt?: string
+  publishedAtFormatted?: string | null
   imageUrl?: string | null
   excerpt?: string
 }
@@ -90,7 +91,7 @@ export default function BlogGrid({ posts }: { posts: PostItem[] }) {
                   {post.title}
                 </h2>
                 <p className="text-sm text-gray-700 dark:text-gray-200 mb-3">{post.excerpt}</p>
-                <div className="text-xs text-gray-500 dark:text-gray-400">{post.publishedAt ? new Date(post.publishedAt).toLocaleDateString() : ''}</div>
+                <div className="text-xs text-gray-500 dark:text-gray-400">{post.publishedAtFormatted ?? (post.publishedAt ? new Date(post.publishedAt).toISOString().slice(0,10) : '')}</div>
               </div>
             </Link>
           </article>
