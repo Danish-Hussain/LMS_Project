@@ -5,6 +5,7 @@ import { useState, useRef, useEffect } from 'react'
 import { useDarkMode } from '@/contexts/DarkModeContext'
 import { Moon, Sun, ChevronDown } from 'lucide-react'
 import Link from 'next/link'
+import Wordmark from '@/components/Logo/Wordmark'
 import { Menu, X, BookOpen, Users, Home, Video, FileText } from 'lucide-react'
 import ContactModal from '@/components/ContactModal'
 
@@ -103,13 +104,7 @@ export default function Navbar() {
         <div className="flex flex-row items-center justify-between h-14">
           {/* Logo */}
           <Link href="/" className="flex-shrink-0 flex items-center h-14" style={{ marginLeft: 0, paddingLeft: 0 }} aria-label="SAP Integration Expert Home">
-            <svg width={320} height={36} viewBox="0 50 1100 160" preserveAspectRatio="xMinYMid meet" fill="none" xmlns="http://www.w3.org/2000/svg" role="img" aria-labelledby="title desc" className="self-center translate-y-[1px]" style={{ filter: 'drop-shadow(0 1px 4px rgba(0,0,0,0.1))', display: 'block' }}>
-              <title id="title">SAP Integration Expert — Wordmark</title>
-              <desc id="desc">SAP in brand blue; Integration Expert in black (light) or light (dark). Logo shown before the wordmark.</desc>
-              <defs></defs>
-              <text x={0} y={155} fontFamily="Inter, Segoe UI, Arial, sans-serif" fontSize={105} fontWeight={800} letterSpacing={1.5} style={{ fill: 'var(--brand-primary)' }}>SAP</text>
-              <text x={250} y={155} fontFamily="Inter, Segoe UI, Arial, sans-serif" fontSize={105} fontWeight={800} letterSpacing={1.5} style={{ fill: 'var(--brand-integration)', filter: 'drop-shadow(0 0 4px rgba(0,0,0,0.03))' }}>Integration Expert</text>
-            </svg>
+            <Wordmark className="self-center translate-y-[1px] h-9" />
           </Link>
 
           {/* Desktop Navigation */}
