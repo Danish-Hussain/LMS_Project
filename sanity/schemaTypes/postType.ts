@@ -32,7 +32,9 @@ export const postType = defineType({
       type: 'array',
       of: [{ type: 'string' }],
       options: {
-        layout: 'checkbox',
+        // Sanity array layouts support: 'tags' | 'grid' | 'list'. 'checkbox' is invalid.
+        // Use 'tags' to allow multiple selection with a tag-style UI.
+        layout: 'tags',
         list: [
           { title: 'CPI', value: 'CPI' },
           { title: 'APIM', value: 'APIM' },
