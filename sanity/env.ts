@@ -2,23 +2,30 @@
 // non-prefixed variable names if your deployment adds them that way (e.g.
 // SANITY_PROJECT_ID). This makes the project more tolerant to different
 // host UIs (Netlify, etc.) while still failing loudly when nothing is set.
-export const apiVersion =
+// Work in both local and Netlify:
+// - Accept either NEXT_PUBLIC_* or SANITY_* env vars
+// - In development, fall back to known-safe defaults (project xwf76fo4 / production)
+// - In production, require envs to be set (fail fast)
+
+const isProd = process.env.NODE_ENV === 'production'
+
+export const apiVersion: string =
   process.env.NEXT_PUBLIC_SANITY_API_VERSION || process.env.SANITY_API_VERSION || '2025-11-19'
 
-export const dataset = assertValue(
-  process.env.NEXT_PUBLIC_SANITY_DATASET ?? process.env.SANITY_DATASET,
-  'Missing environment variable: NEXT_PUBLIC_SANITY_DATASET or SANITY_DATASET'
-)
+const maybeDataset =
+  process.env.NEXT_PUBLIC_SANITY_DATASET ??
+  process.env.SANITY_DATASET ??
+  (isProd ? undefined : 'production')
 
-export const projectId = assertValue(
-  process.env.NEXT_PUBLIC_SANITY_PROJECT_ID ?? process.env.SANITY_PROJECT_ID,
-  'Missing environment variable: NEXT_PUBLIC_SANITY_PROJECT_ID or SANITY_PROJECT_ID'
-)
+const maybeProjectId =
+  process.env.NEXT_PUBLIC_SANITY_PROJECT_ID ??
+  process.env.SANITY_PROJECT_ID ??
+  (isProd ? undefined : 'xwf76fo4')
 
-function assertValue<T>(v: T | undefined, errorMessage: string): T {
-  if (v === undefined) {
-    throw new Error(errorMessage)
-  }
-
-  return v
+if (isProd) {
+  if (!maybeDataset) throw new Error('Missing environment variable: NEXT_PUBLIC_SANITY_DATASET or SANITY_DATASET')
+  if (!maybeProjectId) throw new Error('Missing environment variable: NEXT_PUBLIC_SANITY_PROJECT_ID or SANITY_PROJECT_ID')
 }
+
+export const dataset: string = maybeDataset as string
+export const projectId: string = maybeProjectId as string

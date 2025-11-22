@@ -15,8 +15,10 @@ import {structure} from './sanity/structure'
 
 export default defineConfig({
   basePath: '/studio',
-  projectId,
-  dataset,
+  // TypeScript may narrow these as possibly undefined depending on env inference.
+  // We validate in sanity/env.ts for production; safe to assert here.
+  projectId: projectId as string,
+  dataset: dataset as string,
   // Add and edit the content schema in the './sanity/schemaTypes' folder
   schema,
   plugins: [
