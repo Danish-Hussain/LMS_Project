@@ -29,18 +29,18 @@ export default async function PostPage({
       <Link href="/" className="hover:underline">
         ← Back to posts
       </Link>
+      <h1 className="text-4xl font-bold mt-2">{post.title}</h1>
+      <p className="text-sm text-gray-600 mb-4">{post.publishedAt ? new Date(post.publishedAt).toLocaleDateString() : ''}</p>
       {postImageUrl && (
         <img
           src={postImageUrl}
           alt={post.title}
-          className="aspect-video rounded-xl"
+          className="aspect-video rounded-xl mb-6"
           width="550"
           height="310"
         />
       )}
-      <h1 className="text-4xl font-bold mb-8">{post.title}</h1>
-      <div className="prose">
-        <p>Published: {new Date(post.publishedAt).toLocaleDateString()}</p>
+      <div className="prose prose-lg max-w-none">
         {Array.isArray(post.body) && <PortableText value={post.body} />}
       </div>
     </main>

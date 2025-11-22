@@ -27,6 +27,21 @@ export const postType = defineType({
       type: 'image',
     }),
     defineField({
+      name: 'topics',
+      title: 'Topics',
+      type: 'array',
+      of: [{ type: 'string' }],
+      options: {
+        layout: 'checkbox',
+        list: [
+          { title: 'CPI', value: 'CPI' },
+          { title: 'APIM', value: 'APIM' },
+          { title: 'Event Mesh', value: 'Event Mesh' },
+          { title: 'EDI', value: 'EDI' },
+        ],
+      },
+    }),
+    defineField({
       name: 'body',
       type: 'array',
       of: [{type: 'block'}],

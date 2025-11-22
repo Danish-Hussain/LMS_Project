@@ -69,7 +69,7 @@ export default function DashboardContent() {
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
         {/* Header */}
   <div className="mb-6">
-          <h1 className="text-3xl font-bold" style={{ color: 'var(--foreground)' }}>
+          <h1 className="text-2xl md:text-3xl font-bold" style={{ color: 'var(--foreground)' }}>
             {user ? `Welcome back, ${user.name}!` : 'Welcome'}
           </h1>
           <p className="mt-2" style={{ color: 'var(--session-subtext)' }}>
