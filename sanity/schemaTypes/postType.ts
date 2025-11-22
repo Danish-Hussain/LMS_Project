@@ -27,6 +27,23 @@ export const postType = defineType({
       type: 'image',
     }),
     defineField({
+      name: 'topics',
+      title: 'Topics',
+      type: 'array',
+      of: [{ type: 'string' }],
+      options: {
+        // Sanity array layouts support: 'tags' | 'grid' | 'list'. 'checkbox' is invalid.
+        // Use 'tags' to allow multiple selection with a tag-style UI.
+        layout: 'tags',
+        list: [
+          { title: 'CPI', value: 'CPI' },
+          { title: 'APIM', value: 'APIM' },
+          { title: 'Event Mesh', value: 'Event Mesh' },
+          { title: 'EDI', value: 'EDI' },
+        ],
+      },
+    }),
+    defineField({
       name: 'body',
       type: 'array',
       of: [{type: 'block'}],
