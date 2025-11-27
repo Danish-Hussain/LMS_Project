@@ -23,13 +23,20 @@ interface CourseProgress {
 export default function ProgressPage() {
   const { user, loading } = useAuth()
   const [courseProgress, setCourseProgress] = useState<CourseProgress[]>([])
+  // isLoading covers either initial auth resolution or progress fetch; starts true until auth finishes
   const [isLoading, setIsLoading] = useState(true)
 
+  // When auth finishes: if we have a user fetch progress; otherwise stop loading so sign-in prompt shows
   useEffect(() => {
-    if (user) {
-      fetchProgress()
+    if (!loading) {
+      if (user) {
+        setIsLoading(true)
+        fetchProgress()
+      } else {
+        setIsLoading(false)
+      }
     }
-  }, [user])
+  }, [loading, user])
 
   const fetchProgress = async () => {
     try {
@@ -104,8 +111,21 @@ export default function ProgressPage() {
     return (
       <div className="min-h-screen flex items-center justify-center" style={{ background: 'var(--background)' }}>
         <div className="text-center">
-          <h1 className="text-2xl font-bold mb-4" style={{ color: 'var(--foreground)' }}>Access Denied</h1>
-          <p className="mb-8" style={{ color: 'var(--session-subtext)' }}>Please log in to view your progress.</p>
+          <p className="text-lg mb-6" style={{ color: 'var(--foreground)' }}>Please sign in to view your progress.</p>
+          <div className="flex items-center justify-center gap-4">
+            <a
+              href="/login"
+              className="px-6 py-2 rounded-lg bg-blue-600 hover:bg-blue-700 text-white font-semibold transition-colors shadow-sm"
+            >
+              Login
+            </a>
+            <a
+              href="/register"
+              className="px-6 py-2 rounded-lg border border-blue-600 text-blue-600 hover:bg-blue-50 dark:hover:bg-blue-950/40 font-semibold transition-colors shadow-sm"
+            >
+              Register
+            </a>
+          </div>
         </div>
       </div>
     )
