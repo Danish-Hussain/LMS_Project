@@ -108,7 +108,7 @@ export default function CoursesPage() {
           <div className="text-center py-12">
             <BookOpen className="h-12 w-12 text-gray-400 mx-auto mb-4" />
             <h3 className="text-lg font-medium mb-2" style={{ color: 'var(--foreground)' }}>No courses found</h3>
-            <p style={{ color: 'var(--session-subtext)' }}>{isAdmin ? 'Create your first course to get started.' : 'No courses are available yet.'}</p>
+            <p style={{ color: 'var(--session-subtext)' }}>{isAdmin ? 'Create your first course to get started.' : 'Courses are on the way. Please check back soon!'}</p>
           </div>
         ) : (
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 auto-rows-fr">

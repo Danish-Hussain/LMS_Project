@@ -10,6 +10,7 @@ type PostItem = {
   publishedAtFormatted?: string | null
   imageUrl?: string | null
   excerpt?: string
+  topics?: string[]
 }
 
 export default function BlogGrid({ posts }: { posts: PostItem[] }) {
@@ -22,11 +23,11 @@ export default function BlogGrid({ posts }: { posts: PostItem[] }) {
   const filtered = useMemo(() => {
     const term = q.trim().toLowerCase()
 
-    return posts.filter((p) => {
+      return posts.filter((p) => {
       // Tag filter: if 'All' selected, pass; otherwise match post.tags if present or fallback to title/excerpt
       if (selectedTag !== 'All') {
-        const tags = (p as any).tags
-        const hasTag = Array.isArray(tags) ? tags.includes(selectedTag) : false
+        const topics = (p as any).topics || (p as any).tags
+        const hasTag = Array.isArray(topics) ? topics.includes(selectedTag) : false
         const fallback = ((p.title || '') + ' ' + (p.excerpt || '')).toLowerCase().includes(selectedTag.toLowerCase())
         if (!hasTag && !fallback) return false
       }
@@ -48,14 +49,14 @@ export default function BlogGrid({ posts }: { posts: PostItem[] }) {
 
   return (
     <div className="text-slate-900 dark:text-slate-100">
-      <header className="mb-8">
+  <header className="mb-4">
         <h1 className="text-3xl md:text-4xl font-extrabold tracking-tight bg-gradient-to-r from-indigo-400 via-sky-400 to-cyan-400 bg-clip-text text-transparent">
           Blogs
         </h1>
       </header>
 
-      <div className="mb-8 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
-        <div className="relative flex-1">
+      <div className="mb-4 flex flex-col sm:flex-row sm:items-center gap-3">
+        <div className="relative w-full sm:max-w-2xl sm:flex-shrink-0">
           <label htmlFor="blog-search" className="sr-only">Search posts</label>
           <svg aria-hidden className="pointer-events-none absolute left-3 top-2.5 h-5 w-5 text-gray-400 dark:text-gray-500" viewBox="0 0 20 20" fill="currentColor">
             <path fillRule="evenodd" d="M12.9 14.32a8 8 0 111.414-1.414l4.387 4.387a1 1 0 01-1.414 1.414l-4.387-4.387zM14 8a6 6 0 11-12 0 6 6 0 0112 0z" clipRule="evenodd" />
@@ -70,7 +71,7 @@ export default function BlogGrid({ posts }: { posts: PostItem[] }) {
           />
         </div>
 
-        <div className="flex items-center gap-2 overflow-x-auto py-1 sm:py-0">
+  <div className="flex items-center gap-2 py-1 sm:py-0 sm:ml-4 sm:justify-end sm:flex-shrink-0">
           {TAGS.map((tag) => (
             <button
               key={tag}

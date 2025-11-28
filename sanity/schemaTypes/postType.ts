@@ -30,10 +30,22 @@ export const postType = defineType({
       name: 'topics',
       title: 'Topics',
       type: 'array',
-      of: [{ type: 'string' }],
+      // Provide a controlled list so editors can pick from predefined topics when creating/publishing
+      of: [
+        {
+          type: 'string',
+          options: {
+            list: [
+              { title: 'CPI', value: 'CPI' },
+              { title: 'APIM', value: 'APIM' },
+              { title: 'Event Mesh', value: 'Event Mesh' },
+              { title: 'EDI', value: 'EDI' },
+            ],
+          },
+        },
+      ],
       options: {
-        // Sanity array layouts support: 'tags' | 'grid' | 'list'. 'checkbox' is invalid.
-        // Use 'tags' to allow multiple selection with a tag-style UI.
+        // Use 'tags' layout so selected topics appear as pills
         layout: 'tags',
       },
     }),
@@ -89,7 +101,46 @@ export const postType = defineType({
             { title: 'Quote', value: 'blockquote' },
           ],
         },
-        { type: 'code' },
+          // allow editors to insert images inline in the body multiple times
+          {
+            type: 'image',
+            title: 'Image',
+            options: { hotspot: true },
+            fields: [
+              {
+                name: 'alt',
+                type: 'string',
+                title: 'Alt text',
+                description: 'Alternative text for screen readers (important for accessibility)',
+                options: { isHighlighted: true },
+              },
+              {
+                name: 'caption',
+                type: 'string',
+                title: 'Caption',
+              },
+            ],
+          },
+        {
+          type: 'code',
+          options: {
+            // default language shown in the editor
+            language: 'javascript',
+            // present a list of selectable languages including XML and Groovy
+            languageAlternatives: [
+              { title: 'JavaScript', value: 'javascript' },
+              { title: 'TypeScript', value: 'typescript' },
+              { title: 'JSON', value: 'json' },
+              { title: 'Bash', value: 'bash' },
+              { title: 'Python', value: 'python' },
+              { title: 'XML', value: 'xml' },
+              { title: 'Groovy', value: 'groovy' },
+              { title: 'Other', value: 'text' },
+            ],
+            // optional: let editors toggle a filename field if desired
+            withFilename: false,
+          },
+        },
       ],
     }),
   ],
