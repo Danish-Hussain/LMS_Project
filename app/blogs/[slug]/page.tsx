@@ -1,10 +1,11 @@
 import { notFound } from 'next/navigation'
+import Link from 'next/link'
 import { client } from '@/sanity/client'
 import urlFor from '@/sanity/urlFor'
 import { PortableText } from 'next-sanity'
 import BackButton from '@/components/BackButton/BackButton'
 
-const POST_QUERY = `*[_type=='post' && slug.current == $slug][0]{_id, title, publishedAt, image, body}`
+const POST_QUERY = `*[_type=='post' && slug.current == $slug][0]{_id, title, publishedAt, image, body, views, topics}`
 const options = { next: { revalidate: 30 } }
 
 const portableTextComponents = {
@@ -35,7 +36,31 @@ const portableTextComponents = {
             })
             .filter(Boolean)
             .join('\n')
-          return formatted
+
+          // Collapse empty element pairs so empty tags render inline:
+          // <name>\n</name>  ->  <name></name>
+          const linesAfter = formatted.split('\n')
+          const collapsed: string[] = []
+          for (let i = 0; i < linesAfter.length; i++) {
+            const cur = linesAfter[i]
+            const next = linesAfter[i + 1]
+            if (next) {
+              const openMatch = cur.trim().match(/^<([A-Za-z0-9_:-]+)(\s[^>]*)?>$/)
+              const closeMatch = next.trim().match(/^<\/[A-Za-z0-9_:-]+>$/)
+              if (openMatch && closeMatch) {
+                // same tag name? ensure by comparing name in close
+                const closeNameMatch = next.trim().match(/^<\/(\w[A-Za-z0-9_:-]*)>$/)
+                if (closeNameMatch && closeNameMatch[1] === openMatch[1]) {
+                  const indent = (cur.match(/^\s*/)?.[0]) || ''
+                  collapsed.push(indent + cur.trim() + next.trim())
+                  i++ // skip next
+                  continue
+                }
+              }
+            }
+            collapsed.push(cur)
+          }
+          return collapsed.join('\n')
         }
 
         const pretty = lang === 'xml' ? formatXml(code) : code
@@ -167,23 +192,82 @@ export default async function PostPage({ params }: any) {
 
   const hero = (post as any).image ? urlFor((post as any).image).width(1200).height(600).fit('crop').url() : null
 
+  // Determine active topic keys from the checkbox-style topics object
+  const topicKeys: string[] = post?.topics && typeof post.topics === 'object'
+    ? Object.keys(post.topics).filter((k) => (post.topics as any)[k])
+    : []
+
+  // Fetch related posts (server-side) matching any of the same topic keys, exclude current post
+  let relatedPostsData: any[] = []
+  if (topicKeys.length > 0) {
+    const topicFilter = topicKeys.map((k) => `topics.${k} == true`).join(' || ')
+    const RELATED_QUERY = `*[_type=='post' && (${topicFilter}) && defined(slug.current) && _id != $id] | order(publishedAt desc)[0...4]{_id, title, slug, publishedAt, image, "excerptBlock": body[0], topics, views}`
+    const related = await client.fetch(RELATED_QUERY, { id: post._id }, options)
+    relatedPostsData = (related || []).map((r: any) => {
+      const b = r?.excerptBlock
+      const excerpt = b && b._type === 'block' && Array.isArray(b.children) ? (b.children || []).map((c: any) => c.text || '').join('').slice(0, 150) : ''
+      const imageUrl = r?.image ? urlFor(r.image).width(1200).height(720).fit('crop').url() : null
+      return {
+        _id: r._id,
+        title: r.title || '',
+        slug: r.slug || { current: '' },
+        publishedAt: r.publishedAt,
+        publishedAtFormatted: r.publishedAt ? new Date(r.publishedAt).toISOString().slice(0, 10) : null,
+        imageUrl,
+        excerpt,
+        topics: r.topics,
+        views: r.views ?? 0,
+      }
+    })
+  }
+
   return (
     <>
       <BackButton />
       <main className="max-w-3xl mx-auto p-8">
-      <h1 className="text-3xl font-bold mt-1">{post.title}</h1>
-      <div className="text-sm text-gray-600 mb-4">
-        {post.publishedAt ? new Date(post.publishedAt).toLocaleDateString() : ''}
-      </div>
-      {hero ? (
-        // eslint-disable-next-line @next/next/no-img-element
-        <img src={hero} alt={post.title ?? ''} className="w-full h-64 object-cover rounded-md mb-6" />
-      ) : null}
-      <article className="prose max-w-none">
-        {Array.isArray(post.body) && (
-          <PortableText value={post.body} components={portableTextComponents} />
+        <h1 className="text-3xl font-bold mt-1">{post.title}</h1>
+        <div className="text-sm text-gray-600 mb-4 flex items-center gap-3">
+          <div>{post.publishedAt ? new Date(post.publishedAt).toLocaleDateString() : ''}</div>
+          <div className="text-gray-500">•</div>
+          <div className="text-gray-600">{(post.views ?? 0).toLocaleString()} views</div>
+        </div>
+        {hero ? (
+          // eslint-disable-next-line @next/next/no-img-element
+          <img src={hero} alt={post.title ?? ''} className="w-full h-64 object-cover rounded-md mb-6" />
+        ) : null}
+
+        <article className="prose max-w-none">
+          {Array.isArray(post.body) && (
+            <PortableText value={post.body} components={portableTextComponents} />
+          )}
+        </article>
+
+        {relatedPostsData.length > 0 && (
+          <section className="mt-12">
+            {/* thin divider directly above the heading */}
+            <div className="border-t border-gray-200 dark:border-slate-700" />
+            <h3 className="text-2xl font-semibold mt-4 mb-4">Related posts</h3>
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
+              {relatedPostsData.map((r) => (
+                <article key={r._id} className="group rounded-lg border border-gray-200 dark:border-slate-700 bg-white/70 dark:bg-slate-800/60 overflow-hidden">
+                  <Link href={`/blogs/${r.slug.current}`} className="flex items-start gap-4 p-4">
+                    {r.imageUrl ? (
+                      // eslint-disable-next-line @next/next/no-img-element
+                      <img src={r.imageUrl} alt={r.title ?? ''} className="w-28 h-20 object-cover rounded-md flex-shrink-0" />
+                    ) : (
+                      <div className="w-28 h-20 bg-gray-200 dark:bg-slate-700 rounded-md flex-shrink-0" />
+                    )}
+                    <div className="flex-1">
+                      <h4 className="font-semibold text-sm mb-1 text-slate-900 dark:text-slate-100">{r.title}</h4>
+                      <p className="text-xs text-gray-600 dark:text-gray-300 line-clamp-3">{r.excerpt}</p>
+                      <div className="text-xs text-gray-500 mt-2">{r.publishedAtFormatted}</div>
+                    </div>
+                  </Link>
+                </article>
+              ))}
+            </div>
+          </section>
         )}
-      </article>
       </main>
     </>
   )

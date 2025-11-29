@@ -10,6 +10,7 @@ type PostItem = {
   publishedAtFormatted?: string | null
   imageUrl?: string | null
   excerpt?: string
+  views?: number
   // topics can be either an array of strings (legacy) or an object of booleans (new checkbox-style)
   topics?: string[] | Record<string, boolean>
 }
@@ -80,7 +81,7 @@ export default function BlogGrid({ posts }: { posts: PostItem[] }) {
             value={q}
             onChange={(e) => setQ(e.target.value)}
             placeholder="Search posts by title or content…"
-            className="w-full pl-10 pr-4 py-2 rounded-md border bg-white/60 dark:bg-slate-800/70 border-gray-200 dark:border-white/10 shadow-sm focus:outline-none focus:ring-2 focus:ring-sky-500 focus:border-sky-500 placeholder:text-gray-400 dark:placeholder:text-gray-500"
+            className="w-full pl-10 pr-4 py-2 rounded-md border bg-white/60 dark:bg-slate-800/60 border-gray-200 dark:border-slate-700 shadow-sm focus:outline-none focus:ring-2 focus:ring-sky-500 focus:border-sky-500 placeholder:text-gray-400 dark:placeholder:text-gray-400 text-gray-800 dark:text-gray-100"
           />
         </div>
 
@@ -93,7 +94,7 @@ export default function BlogGrid({ posts }: { posts: PostItem[] }) {
                 'whitespace-nowrap px-3 py-1 rounded-full text-sm border transition-colors ' +
                 (selectedTag === tag
                   ? 'bg-gradient-to-r from-indigo-600 to-sky-600 text-white border-transparent shadow'
-                  : 'bg-white/60 dark:bg-slate-800/70 text-gray-700 dark:text-gray-200 border-gray-200 dark:border-white/10 hover:border-sky-500/60')
+                  : 'bg-white/60 dark:bg-slate-700/60 text-gray-700 dark:text-gray-100 border-gray-200 dark:border-slate-600 hover:border-sky-500/60')
               }
             >
               {tag}
@@ -120,7 +121,7 @@ export default function BlogGrid({ posts }: { posts: PostItem[] }) {
         {!isLoading && filtered.map((post) => (
           <article
             key={post._id}
-            className="group relative rounded-xl border border-gray-200 dark:border-white/10 bg-white/70 dark:bg-slate-900/60 shadow-sm hover:shadow-xl transition-all overflow-hidden backdrop-blur-sm h-full flex flex-col"
+            className="group relative rounded-xl border border-gray-200 dark:border-slate-700 bg-white/70 dark:bg-slate-800/60 shadow-sm hover:shadow-xl transition-all overflow-hidden backdrop-blur-sm h-full flex flex-col"
           >
             <Link href={`/blogs/${post.slug.current}`} className="flex flex-col h-full">
               {post.imageUrl ? (
@@ -148,6 +149,12 @@ export default function BlogGrid({ posts }: { posts: PostItem[] }) {
                 </div>
               </div>
             </Link>
+            {/* views badge positioned bottom-right of the card */}
+            <div className="absolute bottom-3 right-3">
+              <div aria-label={`views-${post._id}`} className="text-xs px-2 py-1 rounded-full bg-white/90 dark:bg-slate-700/80 text-gray-700 dark:text-gray-100 border border-gray-200 dark:border-slate-600 shadow-sm">
+                {(post.views ?? 0).toLocaleString()} views
+              </div>
+            </div>
             <div className="pointer-events-none absolute inset-x-0 bottom-0 h-1 bg-gradient-to-r from-indigo-600/0 via-sky-600/40 to-cyan-500/0 opacity-0 group-hover:opacity-100 transition-opacity" />
           </article>
         ))}

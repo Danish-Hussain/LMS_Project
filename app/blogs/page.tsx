@@ -8,7 +8,7 @@ import BlogGrid from '@/components/BlogGrid/BlogGrid'
 const POSTS_QUERY = `*[
   _type == "post"
   && defined(slug.current)
-] | order(publishedAt desc)[0...12]{_id, title, slug, publishedAt, image, "excerptBlock": body[0], topics}`
+] | order(publishedAt desc)[0...12]{_id, title, slug, publishedAt, image, "excerptBlock": body[0], topics, views}`
 
 const options = { next: { revalidate: 30 } }
 
@@ -31,6 +31,7 @@ export default async function IndexPage() {
       imageUrl,
       excerpt,
       topics: (post as any).topics,
+      views: (post as any).views ?? 0,
     }
   })
 
