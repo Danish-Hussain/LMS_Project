@@ -8,7 +8,7 @@ import BlogGrid from '@/components/BlogGrid/BlogGrid'
 const POSTS_QUERY = `*[
   _type == "post"
   && defined(slug.current)
-] | order(publishedAt desc)[0...12]{_id, title, slug, publishedAt, image, "excerptBlock": body[0]}`
+] | order(publishedAt desc)[0...12]{_id, title, slug, publishedAt, image, "excerptBlock": body[0], topics}`
 
 const options = { next: { revalidate: 30 } }
 
@@ -30,6 +30,7 @@ export default async function IndexPage() {
       publishedAtFormatted: (post as any).publishedAt ? new Date((post as any).publishedAt).toISOString().slice(0, 10) : null,
       imageUrl,
       excerpt,
+      topics: (post as any).topics,
     }
   })
 

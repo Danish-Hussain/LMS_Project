@@ -26,28 +26,25 @@ export const postType = defineType({
       name: 'image',
       type: 'image',
     }),
+    // Switch to a checkbox-style object so editors always see all topic options as explicit checkboxes
     defineField({
       name: 'topics',
       title: 'Topics',
-      type: 'array',
-      // Provide a controlled list so editors can pick from predefined topics when creating/publishing
-      of: [
-        {
-          type: 'string',
-          options: {
-            list: [
-              { title: 'CPI', value: 'CPI' },
-              { title: 'APIM', value: 'APIM' },
-              { title: 'Event Mesh', value: 'Event Mesh' },
-              { title: 'EDI', value: 'EDI' },
-            ],
-          },
-        },
+      type: 'object',
+      description: 'Select one or more topics for this post (required). Use the checkboxes to choose topics.',
+      fields: [
+        { name: 'cpi', type: 'boolean', title: 'CPI' },
+        { name: 'apim', type: 'boolean', title: 'APIM' },
+        { name: 'eventMesh', type: 'boolean', title: 'Event Mesh' },
+        { name: 'edi', type: 'boolean', title: 'EDI' },
       ],
-      options: {
-        // Use 'tags' layout so selected topics appear as pills
-        layout: 'tags',
-      },
+      options: { columns: 2 },
+      validation: (rule) =>
+        rule.custom((value) => {
+          if (!value) return 'Select one or more topics'
+          const ok = Boolean(value['cpi'] || value['apim'] || value['eventMesh'] || value['edi'])
+          return ok ? true : 'Select one or more topics'
+        }),
     }),
     defineField({
       name: 'body',
@@ -98,6 +95,7 @@ export const postType = defineType({
             { title: 'H1', value: 'h1' },
             { title: 'H2', value: 'h2' },
             { title: 'H3', value: 'h3' },
+            { title: 'H4', value: 'h4' },
             { title: 'Quote', value: 'blockquote' },
           ],
         },

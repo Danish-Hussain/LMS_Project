@@ -10,7 +10,8 @@ type PostItem = {
   publishedAtFormatted?: string | null
   imageUrl?: string | null
   excerpt?: string
-  topics?: string[]
+  // topics can be either an array of strings (legacy) or an object of booleans (new checkbox-style)
+  topics?: string[] | Record<string, boolean>
 }
 
 export default function BlogGrid({ posts }: { posts: PostItem[] }) {
@@ -20,16 +21,28 @@ export default function BlogGrid({ posts }: { posts: PostItem[] }) {
 
   const TAGS = ['All', 'CPI', 'APIM', 'Event Mesh', 'EDI']
 
+  const extractTopics = (p: PostItem) => {
+    if (!p) return [] as string[]
+    const t = (p as any).topics
+    if (Array.isArray(t)) return t as string[]
+    if (t && typeof t === 'object') {
+      const MAP: Record<string, string> = { cpi: 'CPI', apim: 'APIM', eventMesh: 'Event Mesh', edi: 'EDI' }
+      return Object.keys(t).filter((k) => t[k]).map((k) => MAP[k] ?? k)
+    }
+    const tags = (p as any).tags
+    if (Array.isArray(tags)) return tags as string[]
+    return [] as string[]
+  }
+
   const filtered = useMemo(() => {
     const term = q.trim().toLowerCase()
 
       return posts.filter((p) => {
-      // Tag filter: if 'All' selected, pass; otherwise match post.tags if present or fallback to title/excerpt
+      // Tag filter: if 'All' selected, pass; otherwise only match post.topics (strict match)
       if (selectedTag !== 'All') {
-        const topics = (p as any).topics || (p as any).tags
+        const topics = extractTopics(p)
         const hasTag = Array.isArray(topics) ? topics.includes(selectedTag) : false
-        const fallback = ((p.title || '') + ' ' + (p.excerpt || '')).toLowerCase().includes(selectedTag.toLowerCase())
-        if (!hasTag && !fallback) return false
+        if (!hasTag) return false
       }
 
       if (!term) return true

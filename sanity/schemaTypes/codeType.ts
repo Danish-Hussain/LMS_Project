@@ -22,6 +22,8 @@ export const codeType = defineType({
           {title: 'JSON', value: 'json'},
           {title: 'Bash', value: 'bash'},
           {title: 'Python', value: 'python'},
+          {title: 'XML', value: 'xml'},
+          {title: 'Groovy', value: 'groovy'},
           {title: 'Other', value: 'text'},
         ],
       },

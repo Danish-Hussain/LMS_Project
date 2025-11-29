@@ -35,9 +35,23 @@ export default async function IndexPage({ searchParams }: { searchParams?: Recor
 
   // filter posts by selected topics (accept APIM or legacy "API Management") and search query (title)
   const filtered = posts.filter((p: any) => {
+    // normalize topics for this post to an array of strings (handle new object-checkbox shape, legacy array, or tags)
+    const postTopics: string[] = (() => {
+      if (!p) return []
+      // new object shape (checkboxes): { cpi: true, apim: false, eventMesh: true }
+      if (typeof p.topics === 'object' && !Array.isArray(p.topics)) {
+        const MAP: Record<string, string> = { cpi: 'CPI', apim: 'APIM', eventMesh: 'Event Mesh', edi: 'EDI' }
+        return Object.keys(p.topics).filter((k) => p.topics[k]).map((k) => MAP[k] ?? k)
+      }
+      // array shape: ['CPI', 'APIM']
+      if (Array.isArray(p.topics)) return p.topics
+      // fallback: maybe old 'tags' field
+      if (Array.isArray(p.tags)) return p.tags
+      return []
+    })()
+
     if (selectedTopics.length) {
-      const has = Array.isArray(p.topics) && p.topics.some((t: string) => {
-        // if user selected APIM, accept either 'APIM' or legacy 'API Management'
+      const has = postTopics.some((t: string) => {
         if (selectedTopics.includes('APIM')) {
           if (t === 'APIM' || t === 'API Management') return true
         }
