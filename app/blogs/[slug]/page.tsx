@@ -11,6 +11,120 @@ const portableTextComponents = {
     code: ({ value }: any) => (
       <pre className="bg-gray-100 rounded p-4 overflow-auto my-4 text-sm"><code>{value.code}</code></pre>
     ),
+      code: ({ value }: any) => {
+        const code = value?.code || ''
+        const lang = (value?.language || '').toLowerCase()
+
+        // simple XML pretty-printer
+        const formatXml = (xml: string) => {
+          if (!xml) return xml
+          // insert line breaks
+          const withBreaks = xml.replace(/>(\s*)</g, '>$1\n<')
+          let pad = 0
+          const lines = withBreaks.split(/\r?\n/)
+          const formatted = lines
+            .map((line) => {
+              line = line.trim()
+              if (!line) return ''
+              if (line.match(/^<\/?\w[^>]*>$/) && line.startsWith('</')) {
+                pad = Math.max(pad - 1, 0)
+              }
+              const out = '  '.repeat(pad) + line
+              if (line.match(/^<\w[^>]*[^\/]>/) && !line.includes('</')) {
+                pad += 1
+              }
+              return out
+            })
+            .filter(Boolean)
+            .join('\n')
+          return formatted
+        }
+
+        const pretty = lang === 'xml' ? formatXml(code) : code
+
+        // small HTML escaper
+        const escapeHtml = (str: string) =>
+          str
+            .replace(/&/g, '&amp;')
+            .replace(/</g, '&lt;')
+            .replace(/>/g, '&gt;')
+            .replace(/"/g, '&quot;')
+
+        // Render XML as React nodes (safe — no innerHTML) with coloured spans
+        const renderXmlNodes = (xml: string) => {
+          // split into tags and text
+          const parts = xml.split(/(<[^>]+>)/g).filter(Boolean)
+          const nodes: any[] = []
+          parts.forEach((part, idx) => {
+            if (part.startsWith('<') && part.endsWith('>')) {
+              // it's a tag — parse
+              const isClose = /^<\s*\//.test(part)
+              const tagMatch = part.match(/^<\s*\/?\s*([A-Za-z0-9_:-]+)/)
+              const tagName = tagMatch ? tagMatch[1] : ''
+              // attrs
+              const attrs: Array<{ name: string; value: string }> = []
+              const attrRegex = /([A-Za-z0-9_-]+)=("[^"]*"|'[^']*')/g
+              let m: RegExpExecArray | null
+              while ((m = attrRegex.exec(part)) !== null) {
+                attrs.push({ name: m[1], value: m[2] })
+              }
+
+              nodes.push(<span key={`lt-${idx}`} className="text-gray-700">{'<'}</span>)
+              if (isClose) {
+                nodes.push(<span key={`slash-${idx}`} style={{ color: '#6a737d' }}>{'/'}</span>)
+              }
+              nodes.push(
+                <span key={`tag-${idx}`} style={{ color: '#d73a49' }}>{tagName}</span>
+              )
+              attrs.forEach((a, ai) => {
+                nodes.push(<span key={`sp-${idx}-${ai}`}>{' '}</span>)
+                nodes.push(<span key={`an-${idx}-${ai}`} style={{ color: '#6f42c1' }}>{a.name}</span>)
+                nodes.push(<span key={`eq-${idx}-${ai}`} className="text-gray-700">{`=`}</span>)
+                nodes.push(<span key={`av-${idx}-${ai}`} style={{ color: '#032f62' }}>{a.value}</span>)
+              })
+              nodes.push(<span key={`gt-${idx}`} className="text-gray-700">{'>'}</span>)
+            } else {
+              // plain text
+              nodes.push(<span key={`txt-${idx}`}>{part}</span>)
+            }
+          })
+          return nodes
+        }
+
+        // basic Groovy highlighter: color keywords and strings
+        const highlightGroovy = (src: string) => {
+          const esc = escapeHtml(src)
+          const keywords = ['def', 'class', 'return', 'if', 'else', 'import', 'for', 'while', 'in', 'new']
+          let out = esc.replace(/(".*?"|'.*?')/g, (m) => `<span style="color:#032f62">${m}</span>`)
+          const kwRegex = new RegExp(`\\b(${keywords.join('|')})\\b`, 'g')
+          out = out.replace(kwRegex, (m) => `<span style="color:#d73a49">${m}</span>`)
+          return out
+        }
+
+        let highlighted: any = pretty
+        if (lang === 'xml') highlighted = renderXmlNodes(pretty)
+        else if (lang === 'groovy') highlighted = highlightGroovy(pretty)
+
+        return (
+          // render highlighted content inside code block
+          <pre className="bg-gray-100 rounded p-4 overflow-auto my-4 text-sm">
+            <code>{lang === 'xml' ? highlighted : <span dangerouslySetInnerHTML={{ __html: highlighted }} />}</code>
+          </pre>
+        )
+      },
+    image: ({ value }: any) => {
+      // Sanity image block: build a URL and render it
+      if (!value) return null
+      try {
+        const src = value?.asset ? urlFor(value).width(800).url() : value?.url
+        return src ? (
+          // eslint-disable-next-line @next/next/no-img-element
+          <img src={src} alt={value?.alt || ''} className="my-4 max-w-full" />
+        ) : null
+      } catch (e) {
+        return null
+      }
+    },
   },
   marks: {
     strong: ({ children }: any) => <strong>{children}</strong>,
