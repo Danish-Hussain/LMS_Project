@@ -1,6 +1,7 @@
 import { notFound } from 'next/navigation'
 import { getBlogById } from '@/lib/blogStorage'
 import BlogEditButton from '@/components/blogs/BlogEditButton'
+import BackButton from '@/components/BackButton/BackButton'
 
 function toEmbedUrl(url: string) {
   if (!url) return ''
@@ -56,7 +57,9 @@ export default async function BlogView({ params }: { params: { id: string } | Pr
   }
 
   return (
-    <div className="max-w-4xl mx-auto p-6">
+    <>
+      <BackButton />
+      <div className="max-w-4xl mx-auto p-6">
       <BlogEditButton id={id} />
       {blog.coverImage && <img src={blog.coverImage} alt="cover" className="w-full h-64 object-cover rounded mb-6" />}
       <h1 className="text-3xl font-bold mb-2">{blog.title}</h1>
@@ -66,7 +69,8 @@ export default async function BlogView({ params }: { params: { id: string } | Pr
           <div key={b.id}>{renderBlock(b)}</div>
         ))}
       </div>
-    </div>
+      </div>
+    </>
   )
 }
 

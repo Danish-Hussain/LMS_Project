@@ -10,7 +10,9 @@
 import { NextStudio } from 'next-sanity/studio'
 import config from '../../../sanity.config'
 
-export const dynamic = 'force-static'
+// Studio requires dynamic rendering (it uses client-side editor components).
+// Avoid forcing the route to be static which can cause hydration/update-in-render issues.
+export const dynamic = 'force-dynamic'
 
 export { metadata, viewport } from 'next-sanity/studio'
 
