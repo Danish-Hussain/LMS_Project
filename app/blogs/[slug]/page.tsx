@@ -2,16 +2,14 @@ import { notFound } from 'next/navigation'
 import { client } from '@/sanity/client'
 import urlFor from '@/sanity/urlFor'
 import { PortableText } from 'next-sanity'
+import BackButton from '@/components/BackButton/BackButton'
 
 const POST_QUERY = `*[_type=='post' && slug.current == $slug][0]{_id, title, publishedAt, image, body}`
 const options = { next: { revalidate: 30 } }
 
 const portableTextComponents = {
   types: {
-    code: ({ value }: any) => (
-      <pre className="bg-gray-100 rounded p-4 overflow-auto my-4 text-sm"><code>{value.code}</code></pre>
-    ),
-      code: ({ value }: any) => {
+    code: ({ value }: any) => {
         const code = value?.code || ''
         const lang = (value?.language || '').toLowerCase()
 
@@ -170,7 +168,9 @@ export default async function PostPage({ params }: any) {
   const hero = (post as any).image ? urlFor((post as any).image).width(1200).height(600).fit('crop').url() : null
 
   return (
-    <main className="max-w-3xl mx-auto p-8">
+    <>
+      <BackButton />
+      <main className="max-w-3xl mx-auto p-8">
       <h1 className="text-3xl font-bold mt-1">{post.title}</h1>
       <div className="text-sm text-gray-600 mb-4">
         {post.publishedAt ? new Date(post.publishedAt).toLocaleDateString() : ''}
@@ -184,6 +184,7 @@ export default async function PostPage({ params }: any) {
           <PortableText value={post.body} components={portableTextComponents} />
         )}
       </article>
-    </main>
+      </main>
+    </>
   )
 }

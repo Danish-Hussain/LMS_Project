@@ -87,6 +87,19 @@ export default function CoursesPage() {
 
   // only admins should see manage-specific counts/creator
   const isAdmin = user?.role === 'ADMIN'
+  // If there are no courses, show a minimal message only (no other UI elements)
+  if (!courses || courses.length === 0) {
+    return (
+      <div className="min-h-screen flex items-center justify-center" style={{ background: 'var(--background)' }}>
+        <div className="max-w-2xl px-4 text-center">
+          <BookOpen className="h-12 w-12 text-gray-400 mx-auto mb-4" />
+          <p className="text-lg text-center" style={{ color: 'var(--session-subtext)' }}>
+            New SAP Integration courses will be listed here once they’re ready. Please check back again soon!
+          </p>
+        </div>
+      </div>
+    )
+  }
 
   return (
     <div className="min-h-screen" style={{ background: 'var(--background)' }}>
@@ -104,14 +117,7 @@ export default function CoursesPage() {
           )}
         </div>
 
-        {courses.length === 0 ? (
-          <div className="text-center py-12">
-            <BookOpen className="h-12 w-12 text-gray-400 mx-auto mb-4" />
-            <h3 className="text-lg font-medium mb-2" style={{ color: 'var(--foreground)' }}>No courses found</h3>
-            <p style={{ color: 'var(--session-subtext)' }}>{isAdmin ? 'Create your first course to get started.' : 'Courses are on the way. Please check back soon!'}</p>
-          </div>
-        ) : (
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 auto-rows-fr">
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 auto-rows-fr">
             {courses.map((course) => {
               // Prefer a published recorded course price (choose lowest price) when available
               const publishedRecorded = (course.recordedCourses || []).filter(rc => rc.isPublished)
@@ -181,7 +187,6 @@ export default function CoursesPage() {
               )
             })}
           </div>
-        )}
       </div>
     </div>
   )
