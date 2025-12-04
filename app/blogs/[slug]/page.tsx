@@ -4,9 +4,7 @@ import { client } from '@/sanity/client'
 import urlFor from '@/sanity/urlFor'
 import { PortableText } from 'next-sanity'
 import BackButton from '@/components/BackButton/BackButton'
-import dynamic from 'next/dynamic'
-
-const PostViews = dynamic(() => import('@/components/PostViews/PostViews'), { ssr: false })
+import PostViews from '@/components/PostViews/PostViews'
 
 const POST_QUERY = `*[_type=='post' && slug.current == $slug][0]{_id, title, publishedAt, image, body, views, topics}`
 const options = { next: { revalidate: 30 } }
