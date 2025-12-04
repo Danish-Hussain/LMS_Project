@@ -26,15 +26,7 @@ export const postType = defineType({
       name: 'image',
       type: 'image',
     }),
-    // simple numeric views counter so site can surface view counts per post
-    defineField({
-      name: 'views',
-      type: 'number',
-      title: 'Views',
-      description: 'Number of times this post has been viewed (optional/manual or managed by a separate process).',
-      initialValue: 0,
-      validation: (rule) => rule.min(0),
-    }),
+    // `views` is intentionally not declared here — it's managed automatically by the site
     // Switch to a checkbox-style object so editors always see all topic options as explicit checkboxes
     defineField({
       name: 'topics',

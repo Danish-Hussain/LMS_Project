@@ -1,7 +1,7 @@
 import { notFound } from 'next/navigation'
-import { getBlogById } from '@/lib/blogStorage'
-import BlogEditButton from '@/components/blogs/BlogEditButton'
-import BackButton from '@/components/BackButton/BackButton'
+import { getBlogById } from '../../../lib/blogStorage'
+import BlogEditButton from '../../../components/blogs/BlogEditButton'
+import BackButton from '../../../components/BackButton/BackButton'
 
 function toEmbedUrl(url: string) {
   if (!url) return ''
