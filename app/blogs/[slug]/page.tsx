@@ -4,6 +4,9 @@ import { client } from '@/sanity/client'
 import urlFor from '@/sanity/urlFor'
 import { PortableText } from 'next-sanity'
 import BackButton from '@/components/BackButton/BackButton'
+import dynamic from 'next/dynamic'
+
+const PostViews = dynamic(() => import('@/components/PostViews/PostViews'), { ssr: false })
 
 const POST_QUERY = `*[_type=='post' && slug.current == $slug][0]{_id, title, publishedAt, image, body, views, topics}`
 const options = { next: { revalidate: 30 } }
@@ -229,7 +232,10 @@ export default async function PostPage({ params }: any) {
         <div className="text-sm text-gray-600 mb-4 flex items-center gap-3">
           <div>{post.publishedAt ? new Date(post.publishedAt).toLocaleDateString() : ''}</div>
           <div className="text-gray-500">•</div>
-          <div className="text-gray-600">{(post.views ?? 0).toLocaleString()} views</div>
+          <div className="text-gray-600">
+            {/* client component will increment and render updated views count */}
+            <PostViews slug={params.slug} initial={post.views ?? 0} />
+          </div>
         </div>
         {hero ? (
           // eslint-disable-next-line @next/next/no-img-element
