@@ -2,6 +2,7 @@ import { notFound } from 'next/navigation'
 import Link from 'next/link'
 import { client } from '@/sanity/client'
 import urlFor from '@/sanity/urlFor'
+import { getBlogById } from '../../../src/lib/blogStorage'
 import { PortableText } from 'next-sanity'
 import BackButton from '@/components/BackButton/BackButton'
 import PostViews from '@/components/PostViews/PostViews'
@@ -188,7 +189,31 @@ const portableTextComponents = {
 }
 
 export default async function PostPage({ params }: any) {
-  const post = await client.fetch(POST_QUERY, { slug: params.slug }, options)
+  let post: any = null
+  try {
+    post = await client.fetch(POST_QUERY, { slug: params.slug }, options)
+  } catch (err) {
+    // Sanity client failed (missing env or network). Try local fallback by slug -> id
+    try {
+      const local = await getBlogById(params.slug)
+      if (local) {
+        // map local blog shape to expected post shape used below
+        post = {
+          _id: local.id,
+          title: local.title,
+          publishedAt: local.createdAt,
+          image: local.coverImage ? { asset: { _ref: local.coverImage } } : null,
+          body: local.content || [],
+          views: (local as any).views ?? 0,
+          topics: local.topic || {},
+          slug: { current: local.id },
+        }
+      }
+    } catch (e) {
+      // ignore and let notFound trigger below
+    }
+  }
+
   if (!post) return notFound()
 
   const hero = (post as any).image ? urlFor((post as any).image).width(1200).height(600).fit('crop').url() : null
