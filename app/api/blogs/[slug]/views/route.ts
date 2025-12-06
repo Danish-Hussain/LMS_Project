@@ -20,8 +20,9 @@ async function writeViews(data: Record<string, number>) {
   await fs.writeFile(VIEWS_DATA, JSON.stringify(data, null, 2), 'utf-8')
 }
 
-export async function POST(request: Request, { params }: { params: { slug: string } }) {
-  const slug = params.slug
+export async function POST(request: Request, { params }: { params: any }) {
+  // `params` can be an awaited proxy in Next.js app routes — await it before use.
+  const { slug } = await params
   const token = process.env.SANITY_WRITE_TOKEN || process.env.SANITY_API_TOKEN
 
   // If a Sanity write token is configured, prefer updating the canonical document in Sanity.
@@ -60,6 +61,33 @@ export async function POST(request: Request, { params }: { params: { slug: strin
     return NextResponse.json({ views: next }, { status: 200 })
   } catch (err: any) {
     console.error('Error incrementing views (fallback):', err)
+    return NextResponse.json({ error: String(err?.message || err) }, { status: 500 })
+  }
+}
+
+export async function GET(_request: Request, { params }: { params: any }) {
+  // `params` may be an awaited proxy; await before accessing properties.
+  const { slug } = await params
+  const token = process.env.SANITY_WRITE_TOKEN || process.env.SANITY_API_TOKEN
+
+  if (token) {
+    try {
+      const serverClient = getServerClient(token)
+      const q = `*[_type == "post" && slug.current == $slug][0]{_id, views}`
+      const res = await serverClient.fetch(q, { slug })
+      if (!res) return NextResponse.json({ views: 0 }, { status: 200 })
+      return NextResponse.json({ views: res.views ?? 0 }, { status: 200 })
+    } catch (err: any) {
+      console.error('Error reading views (sanity GET):', err)
+      // fallthrough to file fallback
+    }
+  }
+
+  try {
+    const map = await readViews()
+    return NextResponse.json({ views: map[slug] ?? 0 }, { status: 200 })
+  } catch (err: any) {
+    console.error('Error reading views (fallback GET):', err)
     return NextResponse.json({ error: String(err?.message || err) }, { status: 500 })
   }
 }
