@@ -2,6 +2,31 @@
 import React, { useMemo, useState, useEffect } from 'react'
 import Link from 'next/link'
 
+// Client-side fetch to get batched view counts for visible posts
+function useBatchedViews(slugs: string[]) {
+  const [counts, setCounts] = useState<Record<string, number>>({})
+  useEffect(() => {
+    let mounted = true
+    if (!slugs || slugs.length === 0) return
+    const q = Array.from(new Set(slugs)).join(',')
+    async function read() {
+      try {
+        const res = await fetch(`/api/blogs/views?slugs=${encodeURIComponent(q)}`)
+        if (!res.ok) return
+        const data = await res.json()
+        if (mounted && data && typeof data === 'object') {
+          setCounts(data)
+        }
+      } catch (e) {
+        // ignore
+      }
+    }
+    read()
+    return () => { mounted = false }
+  }, [slugs.join('|')])
+  return counts
+}
+
 type PostItem = {
   _id: string
   title: string
@@ -52,6 +77,10 @@ export default function BlogGrid({ posts }: { posts: PostItem[] }) {
       return title.includes(term) || excerpt.includes(term)
     })
   }, [q, posts, selectedTag])
+
+  // build array of slugs for currently filtered posts and fetch counts once
+  const slugsForFetch = filtered.map((p) => p.slug?.current || '').filter(Boolean)
+  const countsMap = useBatchedViews(slugsForFetch)
 
   useEffect(() => {
     // Simulate loading state for UX polish; if posts are already there, brief delay for skeleton visibility
@@ -151,8 +180,22 @@ export default function BlogGrid({ posts }: { posts: PostItem[] }) {
             </Link>
             {/* views badge positioned bottom-right of the card */}
             <div className="absolute bottom-3 right-3">
-              <div aria-label={`views-${post._id}`} className="text-xs px-2 py-1 rounded-full bg-white/90 dark:bg-slate-700/80 text-gray-700 dark:text-gray-100 border border-gray-200 dark:border-slate-600 shadow-sm">
-                {(post.views ?? 0).toLocaleString()} views
+              {/* fetch latest views client-side so cards show up-to-date counts */}
+              <div
+                aria-label={`views-${post._id}`}
+                className="flex items-center gap-2 bg-white/90 dark:bg-slate-800/70 border border-gray-200 dark:border-slate-700 px-3 py-1 rounded-full shadow-sm text-xs"
+                title="Views"
+              >
+                <span className="font-semibold text-sm text-slate-900 dark:text-slate-100">
+                  {(countsMap && typeof countsMap[post.slug.current] !== 'undefined'
+                    ? countsMap[post.slug.current]
+                    : (post.views ?? 0)).toLocaleString()}
+                </span>
+                <span className="text-xs text-slate-500 dark:text-slate-400 ml-0.5">
+                  {((countsMap && typeof countsMap[post.slug.current] !== 'undefined'
+                    ? countsMap[post.slug.current]
+                    : (post.views ?? 0)) === 1 ? 'view' : 'views')}
+                </span>
               </div>
             </div>
             <div className="pointer-events-none absolute inset-x-0 bottom-0 h-1 bg-gradient-to-r from-indigo-600/0 via-sky-600/40 to-cyan-500/0 opacity-0 group-hover:opacity-100 transition-opacity" />

@@ -1,11 +1,11 @@
 import { notFound } from 'next/navigation'
 import Link from 'next/link'
-import { client } from '@/sanity/client'
-import urlFor from '@/sanity/urlFor'
+import { client } from '../../../src/sanity/client'
+import urlFor from '../../../src/sanity/urlFor'
 import { getBlogById } from '../../../src/lib/blogStorage'
 import { PortableText } from 'next-sanity'
-import BackButton from '@/components/BackButton/BackButton'
-import PostViews from '@/components/PostViews/PostViews'
+import BackButton from '../../../src/components/BackButton/BackButton'
+import PostViews from '../../../src/components/PostViews/PostViews'
 
 const POST_QUERY = `*[_type=='post' && slug.current == $slug][0]{_id, title, publishedAt, image, body, views, topics}`
 const options = { next: { revalidate: 30 } }
@@ -189,13 +189,14 @@ const portableTextComponents = {
 }
 
 export default async function PostPage({ params }: any) {
+  const { slug } = await params
   let post: any = null
   try {
-    post = await client.fetch(POST_QUERY, { slug: params.slug }, options)
+    post = await client.fetch(POST_QUERY, { slug }, options)
   } catch (err) {
     // Sanity client failed (missing env or network). Try local fallback by slug -> id
-    try {
-      const local = await getBlogById(params.slug)
+  try {
+  const local = await getBlogById(slug)
       if (local) {
         // map local blog shape to expected post shape used below
         post = {
@@ -257,7 +258,7 @@ export default async function PostPage({ params }: any) {
           <div className="text-gray-500">•</div>
           <div className="text-gray-600">
             {/* client component will increment and render updated views count */}
-            <PostViews slug={params.slug} initial={post.views ?? 0} />
+            <PostViews slug={slug} initial={post.views ?? 0} />
           </div>
         </div>
         {hero ? (

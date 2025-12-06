@@ -1,9 +1,9 @@
 import Link from 'next/link'
 import { type SanityDocument } from 'next-sanity'
 
-import { client } from '@/sanity/client'
-import urlFor from '@/sanity/urlFor'
-import BlogGrid from '@/components/BlogGrid/BlogGrid'
+import { client } from '../../src/sanity/client'
+import urlFor from '../../src/sanity/urlFor'
+import BlogGrid from '../../src/components/BlogGrid/BlogGrid'
 import { listBlogs } from '../../src/lib/blogStorage'
 
 const POSTS_QUERY = `*[
