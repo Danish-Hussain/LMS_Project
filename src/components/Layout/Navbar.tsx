@@ -12,8 +12,35 @@ import ContactModal from '@/components/ContactModal'
 type ContactDefaults = { name?: string; email?: string }
 
 export default function Navbar() {
-  const { user, logout } = useAuth()
+  const { user, logout, loading } = useAuth()
   const { darkMode, toggleDarkMode } = useDarkMode()
+  const [mounted, setMounted] = useState(false)
+  const [showSpinner, setShowSpinner] = useState(false)
+
+  useEffect(() => {
+    // mark mounted so we only show client-only UI (skeleton) after hydration
+    setMounted(true)
+    // If auth is already loading when we mount, show the spinner immediately
+    if (loading) setShowSpinner(true)
+  }, [])
+
+  // Debug: log spinner-related state to help diagnose why spinner doesn't appear
+  useEffect(() => {
+    // eslint-disable-next-line no-console
+    console.debug('Navbar state:', { mounted, loading, showSpinner })
+  }, [mounted, loading, showSpinner])
+
+  // Keep spinner visible if loading starts after mount, and hide shortly after loading ends
+  useEffect(() => {
+    if (!mounted) return
+    if (loading) {
+      setShowSpinner(true)
+      return
+    }
+    // small delay to avoid flickering when loading toggles quickly
+    const t = setTimeout(() => setShowSpinner(false), 150)
+    return () => clearTimeout(t)
+  }, [loading, mounted])
   
   const [isMenuOpen, setIsMenuOpen] = useState(false)
   const [isContactOpen, setIsContactOpen] = useState(false)
@@ -226,7 +253,13 @@ export default function Navbar() {
             >
               {darkMode ? <Sun className="h-5 w-5 text-yellow-400" /> : <Moon className="h-5 w-5" style={{ color: 'var(--session-text)' }} />}
             </button>
-            {user ? (
+            {showSpinner ? (
+              // Show skeleton placeholders for Login / Register while auth buffers
+              <div className="flex items-center space-x-3 animate-pulse" aria-hidden>
+                <span className="inline-block rounded-md bg-gray-200 dark:bg-gray-700 w-20 h-8" />
+                <span className="inline-block rounded-md bg-gray-200 dark:bg-gray-700 w-24 h-8" />
+              </div>
+            ) : user ? (
               <div className="flex items-center space-x-4">
                 {/* Combined clickable pill with name */}
                 <div className="relative" ref={accountRefDesktop}>
@@ -297,6 +330,7 @@ export default function Navbar() {
             >
               {darkMode ? <Sun className="h-5 w-5 text-yellow-400" /> : <Moon className="h-5 w-5 text-gray-700" />}
             </button>
+            {/* Remove spinner from mobile top bar; don't show loading indicator here */}
             {user && (
               <div className="relative" ref={accountRefMobile}>
                 <button
@@ -410,7 +444,15 @@ export default function Navbar() {
                   Contact Us
                 </button>
               )}
-              {user ? (
+              {showSpinner ? (
+                // In the mobile menu show skeletons for the guest Login/Register controls
+                <div className="border-t pt-4">
+                  <div className="px-3 py-3 space-y-2 animate-pulse" aria-hidden>
+                    <span className="block rounded-md bg-gray-200 dark:bg-gray-700 h-10 w-full" />
+                    <span className="block rounded-md bg-gray-200 dark:bg-gray-700 h-10 w-full" />
+                  </div>
+                </div>
+              ) : user ? (
                 <div className="border-t pt-4">
                   <div className="px-3 py-2">
                     <p className="text-sm text-gray-700 font-medium">{user.name}</p>

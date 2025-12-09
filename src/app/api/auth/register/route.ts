@@ -1,7 +1,9 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { createUser, generateToken } from '@/lib/auth'
+import { hashPassword } from '@/lib/auth'
 import { prisma } from '@/lib/db'
-import { cookies } from 'next/headers'
+import React from 'react'
+import { Resend } from 'resend'
+
 // import { Role } from '@prisma/client'
 
 export async function POST(request: NextRequest) {
@@ -20,42 +22,38 @@ export async function POST(request: NextRequest) {
     const userRole = role && validRoles.includes(role) ? role : 'STUDENT'
 
   const normalizedPhone = typeof phoneNumber === 'string' && phoneNumber.trim() ? normalizeE164(phoneNumber) : undefined
-  const user = await createUser(email, password, name, userRole, normalizedPhone)
-  // Newly created user should have tokenVersion on DB (default 0). Fetch to be explicit.
-  const dbUser = await prisma.user.findUnique({ where: { id: user.id } })
-  const token = generateToken(user, dbUser?.tokenVersion)
-    
-    // Set HTTP-only cookie
-    const cookieStore = await cookies()
-    const reqHost = request.headers.get('host') || ''
-    const envDomain = process.env.COOKIE_DOMAIN || process.env.NEXT_PUBLIC_COOKIE_DOMAIN
-    const deriveDomain = () => {
-      if (envDomain) return envDomain
-      if (!reqHost || reqHost.includes('localhost')) return undefined
-      const host = reqHost.split(':')[0]
-      const parts = host.split('.')
-      if (parts.length >= 2) {
-        const base = parts.slice(-2).join('.')
-        return `.${base}`
-      }
-      return undefined
-    }
-    cookieStore.set('auth-token', token, {
-      httpOnly: true,
-      secure: process.env.NODE_ENV === 'production',
-      sameSite: 'lax',
-      maxAge: 7 * 24 * 60 * 60, // 7 days
-      ...(process.env.NODE_ENV === 'production' && deriveDomain() ? { domain: deriveDomain() } : {})
-    })
 
-    return NextResponse.json({
-      user: {
-        id: user.id,
-        email: user.email,
-        name: user.name,
-        role: user.role
-      }
-    })
+  // Do not create a real user until verified. Create PendingUser instead.
+  const existing = await prisma.user.findUnique({ where: { email } })
+  if (existing) return NextResponse.json({ error: 'Email already exists' }, { status: 409 })
+  const existingPending = await (prisma as any).pendingUser.findUnique({ where: { email } })
+  if (existingPending) return NextResponse.json({ error: 'A pending verification already exists for this email' }, { status: 409 })
+
+  const hashed = await hashPassword(password)
+  const pending = await (prisma as any).pendingUser.create({ data: { email, name, password: hashed, role: userRole, phoneNumber: normalizedPhone } })
+  // Do NOT set cookies or sign in user immediately. Require email verification first.
+
+    // Send OTP email asynchronously
+    try {
+      const otp = String(Math.floor(100000 + Math.random() * 900000))
+      const expiresAt = new Date(Date.now() + 10 * 60 * 1000)
+  await (prisma as any).pendingUser.update({ where: { id: pending.id }, data: ({ otp, otpExpires: expiresAt, otpRequestCount: (pending.otpRequestCount || 0) + 1, otpLastRequestedAt: new Date(), otpFirstRequestAt: pending.otpFirstRequestAt || new Date() } as any) })
+      const resend = new Resend(process.env.RESEND_API_KEY)
+      const { default: EmailOTP } = await import('../../../../../emails/auth/EmailOTP')
+  const fromAddress = process.env.RESEND_FROM || 'SAPIntegrationExpert <onboarding@sapintegrationexpert.com>'
+      const sendResult = await resend.emails.send({
+        from: fromAddress,
+        to: pending.email,
+        subject: 'Your verification code',
+        react: React.createElement(EmailOTP, { firstName: pending.name || undefined, otp, expiresAt: expiresAt.toISOString() })
+      })
+      console.log('OTP email send result (app route):', sendResult)
+      if (sendResult?.error) console.warn('Resend returned an error object while sending OTP (app route):', sendResult.error)
+    } catch (e) {
+      console.error('Failed to send OTP email (app route):', e)
+    }
+
+    return NextResponse.json({ message: 'User created. Verification email sent if delivery succeeded.' })
   } catch (error: unknown) {
     // Log detailed error information to help debugging in production logs
     try {

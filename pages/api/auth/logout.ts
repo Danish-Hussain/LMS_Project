@@ -1,11 +1,29 @@
 import type { NextApiRequest, NextApiResponse } from 'next'
+import { prisma } from '@/lib/db'
+import jwt from 'jsonwebtoken'
 
 export default async function handler(req: NextApiRequest, res: NextApiResponse) {
   if (req.method !== 'POST') return res.status(405).json({ error: 'Method Not Allowed' })
   try {
     const isProd = process.env.NODE_ENV === 'production'
-    // Expire cookie immediately
-    res.setHeader('Set-Cookie', `auth-token=; HttpOnly; Path=/; SameSite=Lax; Max-Age=0; ${isProd ? 'Secure; ' : ''}`)
+    // Expire cookies immediately
+    const accessClear = `auth-token=; HttpOnly; Path=/; SameSite=Lax; Max-Age=0; ${isProd ? 'Secure; ' : ''}`
+    const refreshClear = `refresh-token=; HttpOnly; Path=/; SameSite=Lax; Max-Age=0; ${isProd ? 'Secure; ' : ''}`
+    res.setHeader('Set-Cookie', [accessClear, refreshClear])
+
+    // Try to invalidate refresh tokens server-side by bumping tokenVersion
+    try {
+      const token = req.cookies['refresh-token'] || req.cookies['auth-token']
+      if (token) {
+        const decoded = jwt.verify(token, process.env.JWT_SECRET || 'fallback-secret') as any
+        if (decoded?.userId) {
+          await prisma.user.update({ where: { id: decoded.userId }, data: { tokenVersion: { increment: 1 } } })
+        }
+      }
+    } catch (e) {
+      // ignore
+    }
+
     return res.status(200).json({ message: 'Logged out successfully' })
   } catch (error) {
     console.error('Pages API logout error:', error)

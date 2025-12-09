@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { authenticateUser, generateToken } from '@/lib/auth'
+import { authenticateUser, generateAccessToken, generateRefreshToken } from '@/lib/auth'
 import { prisma } from '@/lib/db'
 import { cookies } from 'next/headers'
 
@@ -25,7 +25,8 @@ export async function POST(request: NextRequest) {
 
   // Fetch tokenVersion from DB and include it in token payload
   const dbUser = await prisma.user.findUnique({ where: { id: user.id } })
-  const token = generateToken(user, dbUser?.tokenVersion)
+  const accessToken = generateAccessToken(user)
+  const refreshToken = generateRefreshToken(user, dbUser?.tokenVersion)
     
     // Set HTTP-only cookie
     const cookieStore = await cookies()
@@ -43,7 +44,14 @@ export async function POST(request: NextRequest) {
       }
       return undefined
     }
-    cookieStore.set('auth-token', token, {
+    cookieStore.set('auth-token', accessToken, {
+      httpOnly: true,
+      secure: process.env.NODE_ENV === 'production',
+      sameSite: 'lax',
+      maxAge: 15 * 60, // 15 minutes
+      ...(process.env.NODE_ENV === 'production' && deriveDomain() ? { domain: deriveDomain() } : {})
+    })
+    cookieStore.set('refresh-token', refreshToken, {
       httpOnly: true,
       secure: process.env.NODE_ENV === 'production',
       sameSite: 'lax',
