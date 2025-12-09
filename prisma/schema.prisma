@@ -17,6 +17,14 @@ datasource db {
 model User {
   id             String       @id @default(cuid())
   email          String       @unique
+  emailVerified  Boolean      @default(false)
+  // OTP-based verification fields (6-digit code)
+  verificationCode       String?    
+  verificationCodeExpires DateTime? 
+  // Rate limiting for OTP resends
+  otpRequestCount     Int       @default(0)
+  otpFirstRequestAt   DateTime?
+  otpLastRequestedAt  DateTime?
   name           String
   password       String
   tokenVersion   Int          @default(0)
@@ -37,6 +45,24 @@ model User {
   recordedCourseEnrollments RecordedCourseEnrollment[]
 
   @@map("users")
+}
+
+// Temporary storage for users who haven't verified their email yet
+model PendingUser {
+  id        String   @id @default(cuid())
+  email     String   @unique
+  name      String
+  password  String   // hashed password
+  role      String   @default("STUDENT")
+  phoneNumber String?
+  otp        String?
+  otpExpires DateTime?
+  otpRequestCount Int @default(0)
+  otpFirstRequestAt DateTime?
+  otpLastRequestedAt DateTime?
+  createdAt DateTime @default(now())
+
+  @@map("pending_users")
 }
 
 model Course {

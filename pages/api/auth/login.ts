@@ -1,5 +1,5 @@
 import type { NextApiRequest, NextApiResponse } from 'next'
-import { authenticateUser, generateToken } from '@/lib/auth'
+import { authenticateUser, generateAccessToken, generateRefreshToken } from '@/lib/auth'
 import { prisma } from '@/lib/db'
 
 export default async function handler(req: NextApiRequest, res: NextApiResponse) {
@@ -14,13 +14,16 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     const user = await authenticateUser(email, password)
     if (!user) return res.status(401).json({ error: 'Invalid credentials' })
 
-    const dbUser = await prisma.user.findUnique({ where: { id: user.id } })
-    const token = generateToken(user, dbUser?.tokenVersion)
+  const dbUser = await prisma.user.findUnique({ where: { id: user.id } })
+  const accessToken = generateAccessToken(user)
+  const refreshToken = generateRefreshToken(user, dbUser?.tokenVersion)
 
-    const isProd = process.env.NODE_ENV === 'production'
-    res.setHeader('Set-Cookie', `auth-token=${token}; HttpOnly; Path=/; SameSite=Lax; Max-Age=${7 * 24 * 60 * 60}; ${isProd ? 'Secure; ' : ''}`)
+  const isProd = process.env.NODE_ENV === 'production'
+  const accessCookie = `auth-token=${accessToken}; HttpOnly; Path=/; SameSite=Lax; Max-Age=${15 * 60}; ${isProd ? 'Secure; ' : ''}`
+  const refreshCookie = `refresh-token=${refreshToken}; HttpOnly; Path=/; SameSite=Lax; Max-Age=${7 * 24 * 60 * 60}; ${isProd ? 'Secure; ' : ''}`
+  res.setHeader('Set-Cookie', [accessCookie, refreshCookie])
 
-    return res.status(200).json({ user })
+  return res.status(200).json({ user })
   } catch (error) {
     console.error('Pages API login error:', error)
     return res.status(500).json({ error: 'Internal server error' })

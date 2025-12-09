@@ -32,9 +32,33 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [loading, setLoading] = useState(true)
   const router = useRouter()
 
+  // Hydrate user from localStorage immediately to avoid UI flicker when the
+  // provider remounts (happens when navigating between app/ and pages/ routes).
   useEffect(() => {
+    try {
+      const raw = localStorage.getItem('auth.user')
+      if (raw) {
+        const parsed = JSON.parse(raw) as User
+        setUser(parsed)
+      }
+    } catch (e) {
+      // ignore
+    }
+    // Always re-check with the server to validate the cookie/session.
     checkAuth()
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
+
+  // Wrapper that persists the user to localStorage when set.
+  const setUserAndPersist = (u: User | null) => {
+    setUser(u)
+    try {
+      if (u) localStorage.setItem('auth.user', JSON.stringify(u))
+      else localStorage.removeItem('auth.user')
+    } catch (_) {
+      // ignore storage errors
+    }
+  }
 
   const checkAuth = async () => {
     try {
@@ -46,7 +70,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       })
       if (response.ok) {
         const data = await response.json()
-        setUser(data.user)
+        setUserAndPersist(data.user)
       }
     } catch (error) {
       console.error('Auth check failed:', error)
@@ -69,7 +93,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
       if (response.ok) {
         const data = await response.json()
-        setUser(data.user)
+        setUserAndPersist(data.user)
         return true
       }
       return false
@@ -92,8 +116,12 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       try { data = text ? JSON.parse(text) : {} } catch (e) { data = { message: text } }
 
       if (response.ok) {
-        setUser(data.user)
-        return { success: true }
+        // If server returned a user object, set it. Otherwise registration succeeded but user must verify email first.
+        if (data && data.user) {
+          setUserAndPersist(data.user)
+          return { success: true }
+        }
+        return { success: true, message: data?.message || 'Registration successful. Please check your email to verify your account.' }
       }
 
       // Log server-provided error details for easier debugging

@@ -25,6 +25,7 @@ export default function RegisterPage() {
   })
   const [showPassword, setShowPassword] = useState(false)
   const [error, setError] = useState('')
+  // success message is no longer shown here; we redirect to /verify-otp
   const [loading, setLoading] = useState(false)
   
   const { register } = useAuth()
@@ -68,7 +69,14 @@ export default function RegisterPage() {
         phoneNumber
       )
       if (result.success) {
-        router.push('/dashboard')
+        if (result.message) {
+          // Save pending email so verify page can resend/verify without asking for email
+          try { localStorage.setItem('pendingEmail', formData.email) } catch (e) { /* ignore */ }
+          // Redirect user to verify-otp where they'll enter the OTP
+          router.push('/verify-otp')
+        } else {
+          router.push('/dashboard')
+        }
       } else {
         setError(result.message || 'Registration failed. Email might already exist.')
       }
@@ -111,6 +119,7 @@ export default function RegisterPage() {
                 <p className="text-sm font-medium">{error}</p>
               </div>
             )}
+            {/* successMessage removed: registration now redirects to /verify-otp */}
 
             <div>
               <label htmlFor="name" className="block text-sm font-medium mb-2" style={{ color: 'var(--foreground)' }}>
