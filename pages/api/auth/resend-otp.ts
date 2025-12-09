@@ -58,16 +58,21 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       const { Resend } = await import('resend')
       // Avoid TS path alias resolution during dynamic import; use relative path
       const { default: EmailOTP } = await import('../../../emails/auth/EmailOTP')
-      const resend = new Resend(process.env.RESEND_API_KEY)
-  const fromAddress = process.env.RESEND_FROM || 'SAPIntegrationExpert <onboarding@sapintegrationexpert.com>'
-      const sendResult = await resend.emails.send({
-        from: fromAddress,
-        to: updated.email,
-        subject: 'Your verification code',
-        react: EmailOTP({ firstName: updated.name || undefined, otp, expiresAt: expiresAt.toISOString() })
-      })
-      console.log('Resend OTP send result:', sendResult)
-      if (sendResult?.error) console.warn('Resend returned an error object while resending OTP:', sendResult.error)
+      const resendApiKey = process.env.RESEND_API_KEY
+      if (!resendApiKey) {
+        console.warn('RESEND_API_KEY is not configured; skipping resend OTP email. Set RESEND_API_KEY in your environment (Netlify env vars or .env for local).')
+      } else {
+        const resend = new Resend(resendApiKey)
+        const fromAddress = process.env.RESEND_FROM || 'SAPIntegrationExpert <onboarding@sapintegrationexpert.com>'
+        const sendResult = await resend.emails.send({
+          from: fromAddress,
+          to: updated.email,
+          subject: 'Your verification code',
+          react: EmailOTP({ firstName: updated.name || undefined, otp, expiresAt: expiresAt.toISOString() })
+        })
+        console.log('Resend OTP send result:', sendResult)
+        if (sendResult?.error) console.warn('Resend returned an error object while resending OTP:', sendResult.error)
+      }
     } catch (err) {
       console.error('Failed to send resend OTP email:', err)
     }

@@ -44,18 +44,23 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       // Store OTP on the pending user record
   await (prisma as any).pendingUser.update({ where: { id: pending.id }, data: ({ otp, otpExpires: expiresAt, otpRequestCount: (pending.otpRequestCount || 0) + 1, otpLastRequestedAt: new Date(), otpFirstRequestAt: pending.otpFirstRequestAt || new Date() } as any) })
 
-      const resend = new Resend(process.env.RESEND_API_KEY)
-      // Dynamically import the email template to avoid static module resolution issues
-      const { default: EmailOTP } = await import('../../../emails/auth/EmailOTP')
-  const fromAddress = process.env.RESEND_FROM || 'SAPIntegrationExpert <onboarding@sapintegrationexpert.com>'
-      const sendResult = await resend.emails.send({
-        from: fromAddress,
-        to: pending.email,
-        subject: 'Your verification code',
-        react: React.createElement(EmailOTP, { firstName: pending.name || undefined, otp, expiresAt: expiresAt.toISOString() })
-      })
-      console.log('OTP email send result:', sendResult)
-      if (sendResult?.error) console.warn('Resend returned an error object while sending OTP:', sendResult.error)
+      const resendApiKey = process.env.RESEND_API_KEY
+      if (!resendApiKey) {
+        console.warn('RESEND_API_KEY is not configured; skipping OTP email send. Set RESEND_API_KEY in your environment (Netlify env vars or .env for local).')
+      } else {
+        const resend = new Resend(resendApiKey)
+        // Dynamically import the email template to avoid static module resolution issues
+        const { default: EmailOTP } = await import('../../../emails/auth/EmailOTP')
+        const fromAddress = process.env.RESEND_FROM || 'SAPIntegrationExpert <onboarding@sapintegrationexpert.com>'
+        const sendResult = await resend.emails.send({
+          from: fromAddress,
+          to: pending.email,
+          subject: 'Your verification code',
+          react: React.createElement(EmailOTP, { firstName: pending.name || undefined, otp, expiresAt: expiresAt.toISOString() })
+        })
+        console.log('OTP email send result:', sendResult)
+        if (sendResult?.error) console.warn('Resend returned an error object while sending OTP:', sendResult.error)
+      }
     } catch (e) {
       console.error('Failed to send OTP email:', e)
     }
