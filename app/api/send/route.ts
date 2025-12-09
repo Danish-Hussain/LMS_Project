@@ -50,7 +50,13 @@ export async function POST(request: Request) {
 
     const Template = TEMPLATE_MAP[template]
 
-    const resend = new Resend(process.env.RESEND_API_KEY)
+    const resendApiKey = process.env.RESEND_API_KEY
+    if (!resendApiKey) {
+      console.warn('RESEND_API_KEY is not configured; skipping email send for app/api/send. Set RESEND_API_KEY in your environment (Netlify env vars).')
+      return NextResponse.json({ error: 'Mail provider not configured' }, { status: 503 })
+    }
+
+    const resend = new Resend(resendApiKey)
 
     const res = await resend.emails.send({
       from: from || `no-reply@${process.env.NEXT_PUBLIC_SITE_DOMAIN || 'example.com'}`,

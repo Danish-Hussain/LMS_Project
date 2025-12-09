@@ -38,17 +38,22 @@ export async function POST(request: NextRequest) {
       const otp = String(Math.floor(100000 + Math.random() * 900000))
       const expiresAt = new Date(Date.now() + 10 * 60 * 1000)
   await (prisma as any).pendingUser.update({ where: { id: pending.id }, data: ({ otp, otpExpires: expiresAt, otpRequestCount: (pending.otpRequestCount || 0) + 1, otpLastRequestedAt: new Date(), otpFirstRequestAt: pending.otpFirstRequestAt || new Date() } as any) })
-      const resend = new Resend(process.env.RESEND_API_KEY)
-      const { default: EmailOTP } = await import('../../../../../emails/auth/EmailOTP')
-  const fromAddress = process.env.RESEND_FROM || 'SAPIntegrationExpert <onboarding@sapintegrationexpert.com>'
-      const sendResult = await resend.emails.send({
-        from: fromAddress,
-        to: pending.email,
-        subject: 'Your verification code',
-        react: React.createElement(EmailOTP, { firstName: pending.name || undefined, otp, expiresAt: expiresAt.toISOString() })
-      })
-      console.log('OTP email send result (app route):', sendResult)
-      if (sendResult?.error) console.warn('Resend returned an error object while sending OTP (app route):', sendResult.error)
+      const resendApiKey = process.env.RESEND_API_KEY
+      if (!resendApiKey) {
+        console.warn('RESEND_API_KEY is not configured; skipping OTP email send (app route). Set RESEND_API_KEY in your environment (Netlify env vars or .env for local).')
+      } else {
+        const resend = new Resend(resendApiKey)
+        const { default: EmailOTP } = await import('../../../../../emails/auth/EmailOTP')
+        const fromAddress = process.env.RESEND_FROM || 'SAPIntegrationExpert <onboarding@sapintegrationexpert.com>'
+        const sendResult = await resend.emails.send({
+          from: fromAddress,
+          to: pending.email,
+          subject: 'Your verification code',
+          react: React.createElement(EmailOTP, { firstName: pending.name || undefined, otp, expiresAt: expiresAt.toISOString() })
+        })
+        console.log('OTP email send result (app route):', sendResult)
+        if (sendResult?.error) console.warn('Resend returned an error object while sending OTP (app route):', sendResult.error)
+      }
     } catch (e) {
       console.error('Failed to send OTP email (app route):', e)
     }
