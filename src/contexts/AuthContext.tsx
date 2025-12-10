@@ -137,7 +137,9 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const logout = async (): Promise<void> => {
     try {
       await fetch('/api/auth/logout', { method: 'POST' })
-      setUser(null)
+      // Clear persisted user in state and localStorage so we don't re-hydrate
+      // after a page refresh.
+      setUserAndPersist(null)
       // Redirect to home screen after logout
       try {
         router.push('/')

@@ -15,12 +15,18 @@ export function EmailOTP({ firstName = 'there', otp, expiresAt, logoUrl, product
       <Head />
       <Body style={{ backgroundColor: '#f6f9fc', fontFamily: 'Inter, Arial, sans-serif' }}>
         <Container style={{ margin: '32px auto', padding: 24, backgroundColor: '#ffffff', borderRadius: 12, maxWidth: 680 }}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 18 }}>
-            <div style={{ fontSize: 18, fontWeight: 700 }}>
-              <span style={{ color: '#0b5ea8' }}>SAP</span>
-              <span style={{ color: '#111827', marginLeft: 6 }}>Integration Expert</span>
-            </div>
-          </div>
+          <table role="presentation" width="100%" style={{ marginBottom: 18 }}>
+            <tbody>
+              <tr>
+                <td align="center" style={{ padding: 0 }}>
+                  <div style={{ fontSize: 18, fontWeight: 700 }}>
+                    <span style={{ color: '#0b5ea8' }}>SAP</span>
+                    <span style={{ color: '#111827', marginLeft: 6 }}>Integration Expert</span>
+                  </div>
+                </td>
+              </tr>
+            </tbody>
+          </table>
 
           <Heading style={{ margin: '6px 0 12px 0', fontSize: 20 }}>Verify your email</Heading>
 

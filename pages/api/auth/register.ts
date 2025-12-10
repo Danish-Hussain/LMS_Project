@@ -14,6 +14,21 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       return res.status(400).json({ error: 'Email, password, and name are required' })
     }
 
+    // Server-side password strength validation
+    const isStrongPassword = (p: string) => {
+      if (!p) return false
+      if (p.length < 8) return false
+      if (!/[A-Z]/.test(p)) return false
+      if (!/[a-z]/.test(p)) return false
+      if (!/[0-9]/.test(p)) return false
+      if (!/[!@#$%^&*()_+\-=[\]{};':"\\|,.<>\/?`~]/.test(p)) return false
+      return true
+    }
+
+    if (!isStrongPassword(password)) {
+      return res.status(400).json({ error: 'Password must be at least 8 characters and include uppercase, lowercase, number and special character.' })
+    }
+
     const validRoles = ['ADMIN', 'INSTRUCTOR', 'STUDENT'] as const
     const userRole = validRoles.includes(role) ? role : 'STUDENT'
 
@@ -52,6 +67,8 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
         // Dynamically import the email template to avoid static module resolution issues
         const { default: EmailOTP } = await import('../../../emails/auth/EmailOTP')
         const fromAddress = process.env.RESEND_FROM || 'SAPIntegrationExpert <onboarding@sapintegrationexpert.com>'
+        // Avatar images are not required in our transactional emails. Send OTP without an avatar.
+        console.log('Register - avatar not required; sending OTP email without avatar')
         const sendResult = await resend.emails.send({
           from: fromAddress,
           to: pending.email,
