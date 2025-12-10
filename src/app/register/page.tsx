@@ -1,11 +1,43 @@
  'use client'
 
-import { useState } from 'react'
+import { useState, useMemo } from 'react'
 import { useAuth } from '@/contexts/AuthContext'
 import { useRouter } from 'next/navigation'
 import Link from 'next/link'
 import { Eye, EyeOff } from 'lucide-react'
 import Image from 'next/image'
+
+// Password strength rules
+const passwordRulesDef = [
+  { key: 'length', label: 'Minimum 8 characters', test: (p: string) => p.length >= 8 },
+  { key: 'upper', label: 'At least 1 uppercase letter', test: (p: string) => /[A-Z]/.test(p) },
+  { key: 'lower', label: 'At least 1 lowercase letter', test: (p: string) => /[a-z]/.test(p) },
+  { key: 'number', label: 'At least 1 number', test: (p: string) => /[0-9]/.test(p) },
+  { key: 'special', label: 'At least 1 special character', test: (p: string) => /[!@#$%^&*()_+\-=[\]{};':"\\|,.<>\/?`~]/.test(p) }
+]
+
+export function validatePassword(pwd: string) {
+  if (!pwd) return false
+  return passwordRulesDef.every(r => r.test(pwd))
+}
+
+function PasswordRules({ password }: { password: string }) {
+  const checks = useMemo(() => passwordRulesDef.map(r => ({ ...r, ok: r.test(password || '') })), [password])
+  return (
+    <div className="mt-2">
+      <ul className="text-xs space-y-1" aria-live="polite">
+        {checks.map(c => (
+          <li key={c.key} style={{ display: 'flex', alignItems: 'center', gap: 8, color: c.ok ? '#047857' : '#6b7280' }}>
+            <span style={{ width: 18, height: 18, display: 'inline-flex', alignItems: 'center', justifyContent: 'center', borderRadius: 4, background: c.ok ? 'rgba(4,120,87,0.12)' : 'transparent', color: c.ok ? '#047857' : 'inherit', fontWeight: 700 }}>
+              {c.ok ? '✓' : '•'}
+            </span>
+            <span>{c.label}</span>
+          </li>
+        ))}
+      </ul>
+    </div>
+  )
+}
 
 export default function RegisterPage() {
   const [formData, setFormData] = useState<{
@@ -51,9 +83,11 @@ export default function RegisterPage() {
       setError('Passwords do not match')
       return
     }
-
-    if (formData.password.length < 6) {
-      setError('Password must be at least 6 characters long')
+    // Strong password validation
+    const pwd = formData.password || ''
+    const pwdValid = validatePassword(pwd)
+    if (!pwdValid) {
+      setError('Password does not meet the required strength. Please follow the rules below.')
       return
     }
 
@@ -78,7 +112,26 @@ export default function RegisterPage() {
           router.push('/dashboard')
         }
       } else {
-        setError(result.message || 'Registration failed. Email might already exist.')
+        const msg = result.message || 'Registration failed. Email might already exist.'
+        // If there's already a pending verification, automatically resend the OTP
+        // and navigate the user to the verify page so they can enter the code.
+        if (msg.includes('pending verification')) {
+          try {
+            try { localStorage.setItem('pendingEmail', formData.email) } catch (e) { /* ignore */ }
+            // Call resend endpoint (best-effort). If it fails, we'll still redirect to verify page
+            await fetch('/api/auth/resend-otp', {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({ email: formData.email })
+            })
+          } catch (e) {
+            // ignore resend failures here; user can request resend from verify page
+          }
+          router.push('/verify-otp')
+          return
+        }
+
+        setError(msg)
       }
     } catch {
       setError('An error occurred. Please try again.')
@@ -250,6 +303,8 @@ export default function RegisterPage() {
                   )}
                 </button>
               </div>
+                {/* Password strength rules */}
+                <PasswordRules password={formData.password} />
             </div>
 
             <div>
@@ -277,7 +332,8 @@ export default function RegisterPage() {
             <div className="pt-2">
               <button
                 type="submit"
-                disabled={loading}
+                disabled={loading || !validatePassword(formData.password)}
+                title={!validatePassword(formData.password) ? 'Password must meet strength requirements' : undefined}
                 className="w-full flex justify-center py-3 px-4 border border-transparent rounded-lg shadow-sm text-sm font-semibold text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 disabled:opacity-50 disabled:cursor-not-allowed transition-all"
               >
                 {loading ? 'Creating account...' : 'Create account'}

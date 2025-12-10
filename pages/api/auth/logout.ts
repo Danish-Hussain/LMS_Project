@@ -6,9 +6,12 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
   if (req.method !== 'POST') return res.status(405).json({ error: 'Method Not Allowed' })
   try {
     const isProd = process.env.NODE_ENV === 'production'
-    // Expire cookies immediately
-    const accessClear = `auth-token=; HttpOnly; Path=/; SameSite=Lax; Max-Age=0; ${isProd ? 'Secure; ' : ''}`
-    const refreshClear = `refresh-token=; HttpOnly; Path=/; SameSite=Lax; Max-Age=0; ${isProd ? 'Secure; ' : ''}`
+  // Expire cookies immediately. Include an explicit past Expires date to
+  // improve compatibility with some browsers/clients that don't honor
+  // Max-Age=0 in all contexts.
+  const expires = 'Thu, 01 Jan 1970 00:00:00 GMT'
+  const accessClear = `auth-token=; HttpOnly; Path=/; SameSite=Lax; Expires=${expires}; Max-Age=0; ${isProd ? 'Secure; ' : ''}`
+  const refreshClear = `refresh-token=; HttpOnly; Path=/; SameSite=Lax; Expires=${expires}; Max-Age=0; ${isProd ? 'Secure; ' : ''}`
     res.setHeader('Set-Cookie', [accessClear, refreshClear])
 
     // Try to invalidate refresh tokens server-side by bumping tokenVersion

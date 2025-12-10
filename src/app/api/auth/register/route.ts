@@ -17,6 +17,21 @@ export async function POST(request: NextRequest) {
       )
     }
 
+    // Server-side password strength validation (same rules as client)
+    const isStrongPassword = (p: string) => {
+      if (!p) return false
+      if (p.length < 8) return false
+      if (!/[A-Z]/.test(p)) return false
+      if (!/[a-z]/.test(p)) return false
+      if (!/[0-9]/.test(p)) return false
+      if (!/[!@#$%^&*()_+\-=[\]{};':"\\|,.<>\/?`~]/.test(p)) return false
+      return true
+    }
+
+    if (!isStrongPassword(password)) {
+      return NextResponse.json({ error: 'Password must be at least 8 characters and include uppercase, lowercase, number and special character.' }, { status: 400 })
+    }
+
     // Validate role if provided
     const validRoles = ['ADMIN', 'INSTRUCTOR', 'STUDENT']
     const userRole = role && validRoles.includes(role) ? role : 'STUDENT'
@@ -45,6 +60,8 @@ export async function POST(request: NextRequest) {
         const resend = new Resend(resendApiKey)
         const { default: EmailOTP } = await import('../../../../../emails/auth/EmailOTP')
         const fromAddress = process.env.RESEND_FROM || 'SAPIntegrationExpert <onboarding@sapintegrationexpert.com>'
+        // Avatar images are not required in our transactional emails. Send OTP without an avatar.
+        console.log('App route register - avatar not required; sending OTP email without avatar')
         const sendResult = await resend.emails.send({
           from: fromAddress,
           to: pending.email,

@@ -64,6 +64,9 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       } else {
         const resend = new Resend(resendApiKey)
         const fromAddress = process.env.RESEND_FROM || 'SAPIntegrationExpert <onboarding@sapintegrationexpert.com>'
+        // Avatar images are not required in emails for our current branding.
+        // Send the OTP without attaching or referencing an avatar image, but keep a clear log entry.
+        console.log('Resend OTP - avatar not required; sending email without avatar')
         const sendResult = await resend.emails.send({
           from: fromAddress,
           to: updated.email,
