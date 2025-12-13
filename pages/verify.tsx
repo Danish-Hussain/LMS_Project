@@ -21,8 +21,8 @@ export default function VerifyPage() {
         if (res.ok && data.ok) {
           setStatus('success')
           setMessage('Email verified — you are now signed in.')
-          // Redirect to dashboard after a short delay
-          setTimeout(() => router.replace('/dashboard'), 1500)
+          // Redirect to root after a short delay
+          setTimeout(() => router.replace('/'), 1500)
         } else {
           setStatus('error')
           setMessage(data?.error || 'Verification failed')

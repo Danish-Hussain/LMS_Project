@@ -109,7 +109,7 @@ export default function RegisterPage() {
           // Redirect user to verify-otp where they'll enter the OTP
           router.push('/verify-otp')
         } else {
-          router.push('/dashboard')
+          router.push('/')
         }
       } else {
         const msg = result.message || 'Registration failed. Email might already exist.'

@@ -7,13 +7,13 @@ import { Home, BookOpen, Users, GraduationCap, BarChart3, Video } from 'lucide-r
 import { clsx } from 'clsx'
 
 const navigation = [
-  { name: 'Dashboard', href: '/dashboard', icon: Home },
+  { name: 'Home', href: '/', icon: Home },
   { name: 'My Courses', href: '/courses', icon: BookOpen },
   { name: 'My Progress', href: '/progress', icon: BarChart3 },
 ]
 
 const adminNavigation = [
-  { name: 'Dashboard', href: '/dashboard', icon: Home },
+  { name: 'Home', href: '/', icon: Home },
   { name: 'Courses', href: '/courses', icon: BookOpen },
   { name: 'On-Demand Courses', href: '/on-demand-courses', icon: Video },
   { name: 'Students', href: '/students', icon: Users },
