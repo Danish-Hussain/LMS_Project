@@ -1,6 +1,11 @@
 "use client"
 import React, { useEffect, useState } from 'react'
 
+// Track slugs incremented during this page load to avoid double-counting.
+// This in-memory Set resets on full page refresh / navigation away, which
+// implements "once-per-page-load" behaviour.
+const seenThisPage = new Set<string>()
+
 export default function PostViews({ slug, initial = 0 }: { slug: string; initial?: number }) {
   const [views, setViews] = useState<number>(initial)
   const [error, setError] = useState<string | null>(null)
@@ -8,12 +13,7 @@ export default function PostViews({ slug, initial = 0 }: { slug: string; initial
   useEffect(() => {
     let mounted = true
 
-    // avoid counting multiple times per user within a short window
-    const key = `viewed-${slug}`
-    const last = typeof window !== 'undefined' ? window.localStorage.getItem(key) : null
-    const now = Date.now()
-    const ONE_HOUR = 1000 * 60 * 60
-    const shouldInc = !last || (now - Number(last) > ONE_HOUR)
+    const shouldInc = !seenThisPage.has(slug)
 
     async function inc() {
       try {
@@ -26,7 +26,7 @@ export default function PostViews({ slug, initial = 0 }: { slug: string; initial
         const data = await res.json()
         if (mounted && typeof data.views !== 'undefined') {
           setViews(Number(data.views))
-          try { window.localStorage.setItem(key, String(Date.now())) } catch (e) {}
+          seenThisPage.add(slug)
         }
       } catch (err: any) {
         if (mounted) setError(err?.message || String(err))
@@ -50,8 +50,8 @@ export default function PostViews({ slug, initial = 0 }: { slug: string; initial
       }
     }
 
-    // Always read the current value first so the UI shows latest count.
-    // Then, if we should increment (not viewed recently), POST to increment and update.
+    // Read the current value first so the UI shows the latest count.
+    // Then, increment once per page load if we haven't already.
     read().then(() => { if (shouldInc) inc() })
 
     return () => { mounted = false }

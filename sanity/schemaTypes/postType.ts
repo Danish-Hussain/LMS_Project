@@ -27,6 +27,15 @@ export const postType = defineType({
       type: 'image',
     }),
     // `views` is intentionally not declared here — it's managed automatically by the site
+    // Keep an explicit `views` field in the schema so editors can see and edit it.
+    // Default to 0 to ensure the field exists on new documents.
+    defineField({
+      name: 'views',
+      title: 'Views',
+      type: 'number',
+      initialValue: 0,
+      validation: (rule) => rule.min(0),
+    }),
     // Switch to a checkbox-style object so editors always see all topic options as explicit checkboxes
     defineField({
       name: 'topics',
