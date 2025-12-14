@@ -41,15 +41,16 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
 
     const updated = created
 
-    // Generate tokens and set cookies
-    const accessToken = generateAccessToken({ id: updated.id, email: updated.email, name: updated.name, role: updated.role })
-    const refreshToken = generateRefreshToken({ id: updated.id, email: updated.email, name: updated.name, role: updated.role }, updated.tokenVersion)
-    const isProd = process.env.NODE_ENV === 'production'
-    const accessCookie = `auth-token=${accessToken}; HttpOnly; Path=/; SameSite=Lax; Max-Age=${15 * 60}; ${isProd ? 'Secure; ' : ''}`
-    const refreshCookie = `refresh-token=${refreshToken}; HttpOnly; Path=/; SameSite=Lax; Max-Age=${7 * 24 * 60 * 60}; ${isProd ? 'Secure; ' : ''}`
-    res.setHeader('Set-Cookie', [accessCookie, refreshCookie])
+  // Generate tokens and set cookies so the user is authenticated immediately
+  // after verifying their email, then return success to the client.
+  const accessToken = generateAccessToken({ id: updated.id, email: updated.email, name: updated.name, role: updated.role })
+  const refreshToken = generateRefreshToken({ id: updated.id, email: updated.email, name: updated.name, role: updated.role }, updated.tokenVersion)
+  const isProd = process.env.NODE_ENV === 'production'
+  const accessCookie = `auth-token=${accessToken}; HttpOnly; Path=/; SameSite=Lax; Max-Age=${15 * 60}; ${isProd ? 'Secure; ' : ''}`
+  const refreshCookie = `refresh-token=${refreshToken}; HttpOnly; Path=/; SameSite=Lax; Max-Age=${7 * 24 * 60 * 60}; ${isProd ? 'Secure; ' : ''}`
+  res.setHeader('Set-Cookie', [accessCookie, refreshCookie])
 
-    return res.status(200).json({ ok: true })
+  return res.status(200).json({ ok: true })
   } catch (err: any) {
     console.error('Verify-OTP error:', err)
     return res.status(500).json({ error: err?.message || 'Internal server error' })

@@ -194,25 +194,9 @@ export default async function PostPage({ params }: any) {
   try {
     post = await client.fetch(POST_QUERY, { slug }, options)
   } catch (err) {
-    // Sanity client failed (missing env or network). Try local fallback by slug -> id
-  try {
-  const local = await getBlogById(slug)
-      if (local) {
-        // map local blog shape to expected post shape used below
-        post = {
-          _id: local.id,
-          title: local.title,
-          publishedAt: local.createdAt,
-          image: local.coverImage ? { asset: { _ref: local.coverImage } } : null,
-          body: local.content || [],
-          views: (local as any).views ?? 0,
-          topics: local.topic || {},
-          slug: { current: local.id },
-        }
-      }
-    } catch (e) {
-      // ignore and let notFound trigger below
-    }
+    // Sanity client failed (missing env or network). We do not fall back to
+    // local file-based posts for view counts — views are canonical in Sanity.
+    // Let notFound handle missing data.
   }
 
   if (!post) return notFound()

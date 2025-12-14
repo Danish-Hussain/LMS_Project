@@ -51,7 +51,7 @@ export default function VerifyOTPPage() {
         body: JSON.stringify({ email, code: payloadCode })
       })
       const data = await res.json()
-  if (res.ok && data.ok) {
+      if (res.ok && data.ok) {
         // Refresh client auth state so the user becomes signed-in immediately
         try {
           const meRes = await fetch('/api/auth/me', { credentials: 'same-origin' })
@@ -65,7 +65,7 @@ export default function VerifyOTPPage() {
         }
         // clear stored pending email
         try { localStorage.removeItem('pendingEmail') } catch (e) { /* noop */ }
-        router.push('/dashboard')
+        router.push('/')
       } else {
         setError(data?.error || 'Verification failed')
       }

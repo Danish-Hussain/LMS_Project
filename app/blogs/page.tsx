@@ -19,35 +19,13 @@ export default async function IndexPage() {
   try {
     posts = await client.fetch<SanityDocument[]>(POSTS_QUERY, {}, options)
   } catch (err) {
-    // Sanity not available (missing env/config or network). Fall back to local data.
-    try {
-      const local = await listBlogs()
-      const localPosts = (local || []).slice(0, 12)
-      const postsData = localPosts.map((post: any) => ({
-        _id: post.id,
-        title: post.title || '',
-        slug: { current: post.id },
-        publishedAt: post.createdAt,
-        publishedAtFormatted: post.createdAt ? new Date(post.createdAt).toISOString().slice(0, 10) : null,
-        imageUrl: post.coverImage || null,
-        excerpt: (post.excerpt || '').slice(0, 150),
-        topics: post.topic || {},
-        views: post.views ?? 0,
-      }))
-
-      return (
-        <main className="container mx-auto min-h-screen max-w-6xl p-8">
-          <BlogGrid posts={postsData} />
-        </main>
-      )
-    } catch (e) {
-      // If even the local read fails, surface an empty list instead of throwing.
-      return (
-        <main className="container mx-auto min-h-screen max-w-6xl p-8">
-          <BlogGrid posts={[]} />
-        </main>
-      )
-    }
+    // Sanity not available – per project policy views are canonical in Sanity only.
+    // Return an empty list instead of using local file-based view data.
+    return (
+      <main className="container mx-auto min-h-screen max-w-6xl p-8">
+        <BlogGrid posts={[]} />
+      </main>
+    )
   }
 
   const postsData = posts.map((post) => {

@@ -1,4 +1,4 @@
 {
-  "suppress-remove-empty-tags-in-sap-cpi-message-mapping": 13,
+  "suppress-remove-empty-tags-in-sap-cpi-message-mapping": 30,
   "aws-s3-adapter-in-sap-cpi": 14
 }

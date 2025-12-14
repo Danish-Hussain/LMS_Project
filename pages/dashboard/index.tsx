@@ -1,1 +1,10 @@
-export { default } from '@/app/page'
+import { useEffect } from 'react'
+import { useRouter } from 'next/router'
+
+export default function DashboardRedirect() {
+	const router = useRouter()
+	useEffect(() => {
+		router.replace('/')
+	}, [])
+	return null
+}
